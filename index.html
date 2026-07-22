@@ -108,7 +108,7 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
 <body>
 <header>
   <div class="eyebrow" id="eyebrow">Dublin Bay SC</div>
-  <h1>CourseCalc <small>2026 card v1</small></h1>
+  <h1>CourseCalc <small>2026 card v1.1</small></h1>
 </header>
 
 <details class="notes" id="setuptab" open style="background:var(--card);border:1px solid var(--rule)"><summary>Setup</summary>
@@ -257,6 +257,7 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
 </details>
 <details class="notes"><summary>Notes &amp; assumptions</summary>
 <p class="note"><span id="startNote">Start assumed <span id="mlTxt">0.5</span> NM downwind of mark 1.</span> Finish line per the course card instructions; where the card gives the finish as approximately upwind of the last mark, it is modelled as exactly 0.5 NM upwind. Sail calls from crossover chart at steady wind; <span class="warn">orange sail = different call in the gusts</span>. Times from full ORC polar targets for the selected boat (J/122 and J/109 from ORC-derived files; ETAP 28i derived from the Etap 30 polar scaled 0.96 on waterline length). Sail calls use the J/122 crossover chart for all boats. Targets (VMG-optimal angles on beats/runs; the boat is never modelled sailing dead downwind). Confirm the signalled course on Ch&nbsp;74; Merrion &amp; Battery moved slightly in 2026. Tide: Dublin Port 2026 tables (NOC); streams read from the Dublin Port Company Dublin Bay Tidal Atlas, both springs and neaps, at every DBSC mark in half-hourly steps from HW\u22126 h to HW+6 h. The app interpolates in time, between the two phases on the day\u2019s range (mean spring range 3.4 m, mean neap 1.9 m), and across position from the surrounding marks. Rate comes from the atlas colour bands so it carries about \u00B10.1 kt; set comes from the arrow field, and where the bay is close to slack the atlas draws too few arrows to fix a direction, so those steps are interpolated between the readings either side. Springs and neaps are blended as vectors rather than as angles, so a mid-range tide reads near-slack at a phase where the two turn at different times, which is what actually happens; In the leg panel: Dist (course) is the distance actually sailed along the recommended route (the tacked or gybed track, over the ground when tide is running), not the straight rhumb line, with the bracketed figures showing how the leg divides between the first and second legs (percentages after Dist, minutes after Est); Tgt VMG is the polar target speed made good along the leg for the selected boat, the number to hold on the instruments; Est is the leg time along that routed course over the ground, including the tidal stream, so on a foul tide it exceeds the still-water figure. The course table and totals remain still-water polar times. The Wind shifts tab\u2019s default From/To range scales with wind speed (\u00B134\u00B0 under 8 kt narrowing to \u00B19\u00B0 above 20 kt), calibrated from M2 buoy hourly records 2023\u20132026; edit any shift input to take manual control. Live wind: the needle follows the main wind box, which can be typed or fed from instruments via the NMEA/Signal K WebSocket connect in the Wind shifts tab (MWD sentences, MWV(T)+heading, or Signal K directionTrue; updates applied every 2 s). Browsers block plain ws:// from an https page, so a live feed needs either a wss:// source (e.g. Signal K with TLS) or the app opened over http from a local copy on the boat network. Race-day trend: the Wind shifts tab can fetch the hourly forecast for Dun Laoghaire (Open-Meteo) and fit a persistent drift in degrees per hour across your racing window, from your own start time for three hours; the figure is cached, so fetch it ashore and it still works offline afloat. Typing a figure in the Trend box overrides the forecast, and clearing the box returns to it. The trend adds a PERSISTENT layer to the oscillating mean-reversion model: it does not revert, so it accumulates with time on the leg (degrees per hour multiplied by the leg time) and is added to the expected shift before the side value is integrated. When the persistent shift is at least 3\u00B0 on the leg and larger than the mean-reversion term, the verdict declares a persistent shift and tells you to sail to the new wind and hold; otherwise it reports the oscillating regime and the tack-on-headers threshold. The forecast sampling window runs from your own start gun for three hours and stops there, so times after racing do not drag the fit. Band from forecast seeds Wind, Wind kt, Mean and From/To from the forecast at your start, with the band width from the wind-speed rule; it sets the starting picture rather than the drift, which the Trend still carries, so the same shift is never counted twice. Band from observed replaces those with what has actually been seen: every wind value, typed or fed from the instruments, is logged for 60 minutes, and the band is rebuilt from the circular mean and spread of that log. An observed drift is only promoted to a Trend when the wind has moved further than it scatters (total drift at least one standard deviation) and the rate is capped at 40\u00B0/h, so a swinging wind is not mistaken for a persistent shift. While the NMEA feed is connected this refresh happens automatically about once a minute. The preferred side (bold route) is chosen on the COMBINED value in minutes of the tidal-stream gradient and the expected wind-shift reversion (distribution mean vs current wind, discounted by a 2-hour relaxation timescale from M2 records; ladder-rung leverage taken as 0.35 of the leg length), called when the net is worth at least 0.5 min; its label, e.g. (−2.5m), is the time you save on that leg by taking the bold side rather than the other, with the percentage expressed against this leg\u2019s still-water time. Beats favour the side the wind is expected to shift toward, runs the side it shifts away from; the per-leg tack/gybe threshold is 0.7 of the fitted spread. The verdict banner on each beat and run integrates the side decision over the whole fitted wind distribution: the percentage is the share of possible winds for which that side comes out ahead once the tide is included; GO needs at least 1 min and roughly 68%, Lean at least 0.5 min, otherwise sail the shifts. The tinted half of the leg diagram marks the favoured side. The Tide/Wind/Both buttons isolate the components: Tide shows the stream call alone, Wind removes the tide from both the verdict and the geometry (still-water routes, no stream rose), Both combines them. On beats and runs the panel tables both candidate routes: the swatch matches the diagram line, each leg\u2019s course to steer is coloured by its tack, with minutes per leg beside it; \u25C0 best marks the recommended route. The slider under the diagram spans the From\u2013To band set in the Wind shifts panel; From and To are fixed by the user (auto-filled once from wind speed), and sliding moves only the wind and its mean within them, updating live: laylines, routes, courses to steer and the side verdict all follow as you slide. Not for navigation.</p>
+<p class="note" style="margin-top:10px;color:#48627A">App developed by Michael Keatinge.</p>
 </details>
 
 <script>
@@ -595,30 +596,34 @@ function drawTideFlow(){
   const LO=[[-6.15,66],[-6.13333,212],[-6.11667,360],[-6.10,507],[-6.08333,652]];
   const pw=(pairs,v)=>{let a=pairs[0],b=pairs[1];if(v>=pairs[pairs.length-1][0]){a=pairs[pairs.length-2];b=pairs[pairs.length-1];}else for(let i=1;i<pairs.length;i++){if(v<=pairs[i][0]){a=pairs[i-1];b=pairs[i];break;}}return a[1]+(v-a[0])/(b[0]-a[0])*(b[1]-a[1]);};
   const px=p=>[pw(LO,p[1]),pw(LA,p[0])];
-  // a handful of representative points: two inshore, three offshore
-  const pts=[
-    ["inshore",[53.3025,-6.132]], ["inshore",[53.3155,-6.118]],
-    ["offshore",[53.3255,-6.108]], ["offshore",[53.3330,-6.092]], ["offshore",[53.3380,-6.120]]
-  ];
   let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block;margin:8px auto 2px;border-radius:10px">`;
   s+=`<image href="data:image/jpeg;base64,${CHART}" x="0" y="0" width="${W}" height="${H}"/>`;
   const RED="#C8102E";
-  for(const [zone,ll] of pts){
-    const st=streamAtPos(ll,off,range), q=px(ll);
-    s+=`<circle cx="${q[0]}" cy="${q[1]}" r="40" fill="#fff" opacity=".4"/>`;
-    if(st.slack){ s+=`<text x="${q[0]}" y="${q[1]+6}" font-size="17" font-weight="800" text-anchor="middle" fill="${RED}" stroke="#fff" stroke-width="3.5" paint-order="stroke">slack</text>`; continue; }
+  // an arrow at every DBSC mark, straight off that mark's own atlas row
+  const placed=[];                                  // label anchors already used, for decluttering
+  for(const mk of TIDE_MARKS){
+    const M=MARKS[mk]; if(!M)continue;
+    const st=streamAtMark(mk,off,range), q=px([M[1],M[2]]);
+    s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="13" fill="#fff" opacity=".45"/>`;
+    if(st.slack){
+      s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="4.5" fill="none" stroke="${RED}" stroke-width="2.2"/>`;
+      continue;
+    }
     const th=rad(st.dir);                            // set direction (stream flows toward th)
-    const L=Math.min(72,52+st.kt*14);               // full length; arrow spans the disc
-    const half=L/2;                                 // centre the arrow on q
-    const ux=Math.sin(th), uy=-Math.cos(th);        // unit vector toward th (screen)
-    const nx=-uy, ny=ux;                            // perpendicular
+    const L=Math.min(34,24+st.kt*8);                 // half the old length; still grows with rate
+    const half=L/2;
+    const ux=Math.sin(th), uy=-Math.cos(th);
+    const nx=-uy, ny=ux;
     const shaftW=L*0.15, headW=L*0.30, headL=L*0.34;
     const P=(along,across)=>`${(q[0]+ux*(along-half)+nx*across).toFixed(1)},${(q[1]+uy*(along-half)+ny*across).toFixed(1)}`;
     const pts2=[P(0,shaftW),P(L-headL,shaftW),P(L-headL,headW),P(L,0),P(L-headL,-headW),P(L-headL,-shaftW),P(0,-shaftW)];
-    s+=`<polygon points="${pts2.join(" ")}" fill="${RED}" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>`;
-    // knots just beyond the tip
-    const lx=q[0]+ux*(half+16), ly=q[1]+uy*(half+16);
-    s+=`<text x="${lx.toFixed(1)}" y="${(ly+6).toFixed(1)}" font-size="20" font-weight="800" text-anchor="middle" fill="${RED}" stroke="#fff" stroke-width="4" paint-order="stroke">${st.kt.toFixed(1)}</text>`;
+    s+=`<polygon points="${pts2.join(" ")}" fill="${RED}" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>`;
+    // rate just beyond the tip, skipped where it would sit on top of one already drawn
+    const lx=q[0]+ux*(half+9), ly=q[1]+uy*(half+9);
+    if(!placed.some(p=>Math.hypot(p[0]-lx,p[1]-ly)<30)){
+      placed.push([lx,ly]);
+      s+=`<text x="${lx.toFixed(1)}" y="${(ly+4).toFixed(1)}" font-size="13" font-weight="800" text-anchor="middle" fill="${RED}" stroke="#fff" stroke-width="2.6" paint-order="stroke">${st.kt.toFixed(1)}</text>`;
+    }
   }
   s+=`</svg>`;
   el.innerHTML=s;
@@ -707,6 +712,13 @@ function offsetPos(p,brgDeg,nm){
 // which is the same sign convention the wind-shift term uses.
 function sideStream(L,offHrs,range,sgn,lever){
   return streamAtPos(offsetPos(legMid(L),L.co+sgn*90,lever),offHrs,range);
+}
+// Set and drift at a mark, evaluated at the time we expect to be there.
+function tideCell(pos,elapsedH){
+  if(typeof TIDECTX==="undefined"||!TIDECTX||!pos)return '<span style="color:#9FB3C0">\u2013</span>';
+  const st=streamAtPos(pos,TIDECTX.off+elapsedH,TIDECTX.range);
+  if(st.slack)return '<span style="color:#0E7C94">slack</span>';
+  return `${String(Math.round(st.dir)).padStart(3,"0")}\u00B0<br>${st.kt.toFixed(1)}'`;
 }
 function sidePref(L,effOff,range){
   // Combined side call in MINUTES: tidal-stream gradient plus the expected wind-shift
@@ -1587,8 +1599,10 @@ function render(){
   const r=compute(state.card,wdir,wspd,wgst,state.letter,state.num);
   $("courseName").textContent=state.letter+state.num;
   $("courseSummary").innerHTML=`${r.legs.length} legs \u00B7 card wind ${WINDLTR.find(x=>x[0]===state.letter)[1]}\u00B0 \u00B7 your wind ${wdir}\u00B0/${wspd}kt`;
-  let html=`<tr><th>#</th><th>From</th><th>Co<br>NM</th><th>Leg</th><th>TWA<br>AW</th><th>Sail</th><th>To</th></tr>`;
+  let html=`<tr><th>#</th><th>From</th><th>Co<br>NM</th><th>Leg</th><th>TWA<br>AW</th><th>Sail</th><th>Set<br>Drift</th><th>To</th></tr>`;
+  let cumH=0;                                   // hours from the gun to the end of this leg
   r.legs.forEach((L,li)=>{
+    cumH+=L.time;
     const numCell=String(li+1);
     const gustDiff=L.gsail!==L.sail;
     const sideWord=L.from.side==="P"?"Port":L.from.side==="S"?"Stbd":"";
@@ -1604,13 +1618,14 @@ function render(){
       <td class="pos">${L.pos.replace(" ","<br>")}</td>
       <td class="mono">${Math.round(L.twa)}\u00B0<br><span class="${L.tack==="P"?"rp":L.tack==="S"?"rs":""}">${L.tack}</span>${Math.round(L.awa)}\u00B0</td>
       <td><span class="sail${gustDiff?" gust":""}">${gustDiff?L.sail+"\u2192<br>"+L.gsail:L.sail}</span></td>
+      <td class="mono">${tideCell(L.to.pos,cumH)}</td>
       <td>${L.to.side==="F"?(L.to.m==="O"?"Hut finish":"Finish"):L.to.name}</td></tr>`;
     if(li===r.legs.length-1&&L.to.m){                 // finish mark: next point number
       const fs2=L.to.side==="P"?"Port":L.to.side==="S"?"Stbd":"";
       html+=`<tr>
         <td class="mono" style="font-weight:800;color:#48627A">${li+2}</td>
         <td><span class="mk3"><span class="mkrow">${chipHTML(MARKS[L.to.m][3])}<span class="mkl">${L.to.m}</span></span><span>${L.to.name}</span>${fs2?`<span class="${L.to.side==="P"?"rp":"rs"}">${fs2}</span>`:""}</span></td>
-        <td class="mono">\u2013</td><td class="pos">Finish</td><td></td><td></td><td></td></tr>`;
+        <td class="mono">\u2013</td><td class="pos">Finish</td><td></td><td></td><td></td><td></td></tr>`;
     }
   });
   $("legTable").innerHTML=html;
@@ -1884,7 +1899,7 @@ function drawLeg(r,idx,wdir,wspd){
     } else {
       s+=`<text x="${tideC[0]}" y="${tideC[1]-44}" font-size="12" font-weight="700" text-anchor="middle" fill="#0E7C94">tide slack</text>`;
     }
-    if(stL)s+=`<text x="${tideC[0]}" y="${tideC[1]-58}" font-size="10" text-anchor="middle" fill="#0E7C94">at leg (HW${effOff>=0?"+":"\u2212"}${Math.abs(effOff).toFixed(1)})</text>`;
+    if(stL)s+=`<text x="${W-8}" y="${H-10}" font-size="11" text-anchor="end" fill="#0E7C94">tide at leg (HW${effOff>=0?"+":"\u2212"}${Math.abs(effOff).toFixed(1)})</text>`;
   }
   // tacking / gybing routes (corners precomputed for the fit)
   for(const [sgn,nx,ny] of corners){
