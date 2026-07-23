@@ -12,6 +12,7 @@
 <style>
 :root{
   --paper:#F7FAFC; --ink:#12283A; --ink2:#48627A; --rule:#D6E2EB; --zebra:#EEF4F8;
+  --ctlh:52px;                 /* one height for inputs and buttons that share a row */
   --port:#C8102E; --stbd:#007A33; --start:#FF6A13; --buoyY:#F2C230;
   --card:#FFFFFF;
 }
@@ -45,12 +46,22 @@ h1 small{font-weight:600;color:var(--ink2);font-size:14px}
 .card{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px;margin:10px 0}
 label{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:700;margin-bottom:4px}
 .inrow{display:flex;gap:10px}
+/* Inputs and buttons that sit side by side are set to one height. Number inputs are
+   the tallest of the three, so nothing shrinks; the date, text and button controls
+   grow to match them. */
+.inrow input[type=number],.inrow input[type=date],.inrow input[type=time],
+.inrow input[type=text],.inrow button.pick{height:var(--ctlh);box-sizing:border-box}
+.inrow button.pick{min-height:0}
 .inrow>div{min-width:0}
 input[type=date],input[type=time]{font-size:19px;padding:12px 4px;text-align:center;-webkit-appearance:none;appearance:none}
 .inrow>div{flex:1}
 input[type=number],input[type=date],input[type=time]{width:100%;font-size:24px;font-weight:700;padding:10px 8px;border:1.5px solid var(--rule);box-sizing:border-box;min-width:0;
   border-radius:10px;background:#FBFDFE;color:var(--ink);text-align:center;
   font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+/* a field the app is filling in for you: tinted, and the value shown at full strength */
+input.autoval{background:#E4F2F6;border-color:#9CCFDA}
+input.autoval::placeholder{color:#0E7C94;opacity:1;font-weight:700}
+input.autoval::-webkit-input-placeholder{color:#0E7C94;opacity:1;font-weight:700}
 input[type=number]:focus,input[type=date]:focus,input[type=time]:focus{outline:none;border-color:var(--ink)}
 .letters{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:4px}
 .numbtns{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:4px}
@@ -164,7 +175,7 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
     <button class="pick" id="gpsBtn" style="background:#0E7C94;color:#fff;border:none;padding:12px 14px;font-size:14px;font-weight:800;width:100%">Use my location</button>
     <div id="gpsStatus" style="font-size:11.5px;color:#7C93A4;margin-top:8px">Tap to allow location. Needs a clear sky view; a few metres accuracy. Best used on the water.</div>
     <div id="gpsOut" style="margin-top:10px"></div>
-    <div id="posWrap" style="position:relative;margin-top:10px"><svg id="posMap" viewBox="0 0 865 869" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;touch-action:none;border:1px solid var(--rule);border-radius:12px;background:#dfeaf0"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="posIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="posOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="posZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px">1x</div></div>
+    <div id="posWrap" style="position:relative;margin-top:10px"><svg id="posMap" viewBox="0 0 865 869" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;border:1px solid var(--rule);border-radius:12px;background:#dfeaf0"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="posIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="posOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="posZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px">1x</div></div>
   </div>
   <div style="font-size:11px;color:#7C93A4;margin-top:8px">Distance and bearing are great-circle from your fix to the committee-boat end of the line and to the next mark of the selected course. Speed and course over the ground come from GPS movement, so they read true only when you are moving. Not for navigation.</div>
 </details>
@@ -173,16 +184,16 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
   <div style="font-size:12px;color:#333;margin:2px 0 6px">Dun Laoghaire (Dublin North Wall)</div>
   <div id="tideDay" class="tiderow"></div>
   <div id="tideNow" class="tidenow"></div>
-  <div id="tideFlow"></div>
+  <div id="tideWrap" style="position:relative"><div id="tideFlow"></div><div style="position:absolute;top:16px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="tideIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="tideOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="tideZlab" style="position:absolute;bottom:12px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
   <div style="margin-top:6px;display:flex;align-items:center;gap:10px">
     <label style="white-space:nowrap;margin:0">Time <span id="tflowLbl" class="mono" style="font-weight:800;color:#0E7C94">now</span></label>
     <input id="tflow" type="range" min="0" max="6" step="0.5" value="0" style="flex:1">
   </div>
-  <div style="font-size:11px;color:#7C93A4;margin-top:4px">Stream from the Dublin Port Company tidal atlas, springs and neaps blended on the day\u2019s range. Slide from the race start to 6 h ahead; each red arrow shows the stream set, with rate in knots at the arrowhead.</div>
+  <div style="font-size:11px;color:#7C93A4;margin-top:4px">Stream from the Dublin Port Company tidal atlas, springs and neaps blended on the day\u2019s range. Slide from the race start to 6 h ahead; each navy arrow shows the stream set, with rate in knots at the arrowhead.</div>
 </details>
 
 <details class="notes" id="charttab"><summary>Course chart</summary>
-  <svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%"></svg>
+  <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
 </details>
 
 <details class="notes" id="tabletab"><summary>Course table</summary>
@@ -219,7 +230,7 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
 
 <details class="notes" id="windtab"><summary>Wind shifts</summary>
 <div id="wsGauge"></div>
-<div style="font-size:12px;color:#333;margin:8px 0 4px">Describe the day's wind. Bands are the outer 5° at each limit.</div>
+<div style="font-size:12px;color:#333;margin:8px 0 4px">Describe the day’s wind: the range you expect, and the mean it sits around. Tap Forecast and it fills itself in.</div>
 <div class="inrow" style="margin-bottom:8px">
   <div style="flex:1"><label>Mean °</label><input id="wsMean" type="number" inputmode="numeric" value="234"></div>
   <div style="flex:1"><label>From °</label><input id="wsLo" type="number" inputmode="numeric" value="220"></div>
@@ -227,8 +238,7 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
 </div>
 <div class="inrow" style="margin-bottom:8px">
   <div style="flex:1"><label>Swing min</label><input id="wsPer" type="number" inputmode="numeric" value="20"></div>
-  <div style="flex:1"><label>% at From</label><input id="wsPlo" type="number" inputmode="numeric" value="20"></div>
-  <div style="flex:1"><label>% at To</label><input id="wsPhi" type="number" inputmode="numeric" value="10"></div>
+  <div style="flex:2;font-size:11.5px;color:#48627A;align-self:flex-end;padding-bottom:9px">How long one full oscillation takes. The shape of the curve follows where the mean sits inside the band.</div>
 </div>
 <div class="inrow" style="margin-bottom:8px;align-items:flex-end">
   <div style="flex:2.2"><label>NMEA / Signal K WebSocket</label><input id="nmeaUrl" type="text" placeholder="ws://192.168.1.10:2000" style="width:100%;font-size:14px;font-weight:600;padding:10px 8px;border:1.5px solid var(--rule);border-radius:10px;box-sizing:border-box"></div>
@@ -237,19 +247,15 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
 <div id="nmeaStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px"></div>
 <div class="inrow" style="margin-bottom:8px;align-items:flex-end">
   <div style="flex:1.5"><label>Trend &deg;/h (+ veer)</label><input id="trRate" type="number" inputmode="decimal" step="0.5" placeholder="auto"></div>
-  <div style="flex:1"><button class="pick" id="trFetch" style="width:100%">Forecast</button></div>
-  <div style="flex:0.8"><button class="pick" id="trPasteBtn" style="width:100%">Paste</button></div>
-  <div style="flex:0.8"><button class="pick" id="trClear" style="width:100%">Clear</button></div>
+  <div style="flex:1.2"><button class="pick" id="trFetch" style="width:100%">Forecast</button></div>
 </div>
 <div id="trStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px">No trend set: oscillating model only.</div>
-<div class="inrow" style="margin-bottom:6px">
-  <div style="flex:1"><button class="pick" id="bandFc" style="width:100%">Band from forecast</button></div>
-  <div style="flex:1"><button class="pick" id="bandObs" style="width:100%">Band from observed</button></div>
-  <div style="flex:0.9"><button class="pick" id="windNow" style="width:100%">Wind now</button></div>
+<div id="trLinks" class="inrow" style="margin:-2px 0 8px;display:none">
+  <div style="flex:1"><button class="pick" id="trManual" style="width:100%">Get forecast</button></div>
 </div>
 <div id="bandStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px"></div>
 <div id="trPasteWrap" style="display:none;margin:0 0 8px">
-  <div style="font-size:12px;color:#48627A;margin-bottom:4px"><a id="trOpen" href="#" target="_blank" rel="noopener" style="color:#0E7C94;text-decoration:underline">Open the forecast link</a> in Safari, select all, copy, then paste the whole page here.</div>
+  <div style="font-size:12px;color:#48627A;margin-bottom:4px">The forecast page should have opened in your browser: select all, copy, come back, and paste it below. If it did not open, <a id="trOpen" href="#" target="_blank" rel="noopener" style="color:#0E7C94;text-decoration:underline">tap here</a>.</div>
   <textarea id="trPaste" rows="3" placeholder="Paste the forecast data here" style="width:100%;font-size:12px;padding:8px;border:1.5px solid var(--rule);border-radius:10px;box-sizing:border-box"></textarea>
   <button class="pick" id="trPasteGo" style="width:100%;margin-top:4px">Use pasted forecast</button>
 </div>
@@ -598,35 +604,77 @@ function drawTideFlow(){
   const px=p=>[pw(LO,p[1]),pw(LA,p[0])];
   let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block;margin:8px auto 2px;border-radius:10px">`;
   s+=`<image href="data:image/jpeg;base64,${CHART}" x="0" y="0" width="${W}" height="${H}"/>`;
-  const RED="#C8102E";
+  const RED=TIDECOL;
   // an arrow at every DBSC mark, straight off that mark's own atlas row
   const placed=[];                                  // label anchors already used, for decluttering
   for(const mk of TIDE_MARKS){
     const M=MARKS[mk]; if(!M)continue;
     const st=streamAtMark(mk,off,range), q=px([M[1],M[2]]);
-    s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="13" fill="#fff" opacity=".45"/>`;
+    s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="16" fill="#fff" opacity=".45"/>`;
     if(st.slack){
-      s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="4.5" fill="none" stroke="${RED}" stroke-width="2.2"/>`;
+      s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="5.5" fill="none" stroke="${RED}" stroke-width="2.8"/>`;
       continue;
     }
     const th=rad(st.dir);                            // set direction (stream flows toward th)
-    const L=Math.min(34,24+st.kt*8);                 // half the old length; still grows with rate
+    const L=Math.min(44,31+st.kt*10);                // sized to be read at arm's length on the rail
     const half=L/2;
     const ux=Math.sin(th), uy=-Math.cos(th);
     const nx=-uy, ny=ux;
     const shaftW=L*0.15, headW=L*0.30, headL=L*0.34;
     const P=(along,across)=>`${(q[0]+ux*(along-half)+nx*across).toFixed(1)},${(q[1]+uy*(along-half)+ny*across).toFixed(1)}`;
     const pts2=[P(0,shaftW),P(L-headL,shaftW),P(L-headL,headW),P(L,0),P(L-headL,-headW),P(L-headL,-shaftW),P(0,-shaftW)];
-    s+=`<polygon points="${pts2.join(" ")}" fill="${RED}" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>`;
+    s+=`<polygon points="${pts2.join(" ")}" fill="${RED}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>`;
     // rate just beyond the tip, skipped where it would sit on top of one already drawn
-    const lx=q[0]+ux*(half+9), ly=q[1]+uy*(half+9);
-    if(!placed.some(p=>Math.hypot(p[0]-lx,p[1]-ly)<30)){
+    const lx=q[0]+ux*(half+11), ly=q[1]+uy*(half+11);
+    if(!placed.some(p=>Math.hypot(p[0]-lx,p[1]-ly)<36)){
       placed.push([lx,ly]);
-      s+=`<text x="${lx.toFixed(1)}" y="${(ly+4).toFixed(1)}" font-size="13" font-weight="800" text-anchor="middle" fill="${RED}" stroke="#fff" stroke-width="2.6" paint-order="stroke">${st.kt.toFixed(1)}</text>`;
+      s+=`<text x="${lx.toFixed(1)}" y="${(ly+5.5).toFixed(1)}" font-size="18" font-weight="800" text-anchor="middle" fill="${RED}" stroke="#fff" stroke-width="3.4" paint-order="stroke">${st.kt.toFixed(1)}</text>`;
     }
   }
+  s+=courseOverlay(px);
   s+=`</svg>`;
   el.innerHTML=s;
+  TIDEZ.apply();                                 // rebuilt each redraw: restore zoom and pan
+}
+
+// The racing course drawn over the stream field, so the tide at each mark and along
+// each leg can be read directly. Purple to stay clear of the stream colours; the leg
+// numbers keep their rounding colours but drop the discs, which would hide the water.
+const COURSE_PURPLE="#6D28D9";
+// The sailed track: one solid purple line with the direction of travel shown midway
+// along each leg. Shared by the course chart and the tide map so they always match.
+function courseTrack(px,pts){
+  if(!pts||pts.length<2)return "";
+  const PUR=COURSE_PURPLE;
+  let d="";
+  pts.forEach((p,i)=>{ const q=px(p.pos); d+=(i?"L":"M")+q[0].toFixed(1)+","+q[1].toFixed(1)+" "; });
+  let s=`<g opacity="0.75">`;                        // see the marks and the water through the track
+  s+=`<path d="${d}" fill="none" stroke="#fff" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round" opacity=".8"/>`;
+  s+=`<path d="${d}" fill="none" stroke="${PUR}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
+  for(let i=0;i<pts.length-1;i++){
+    const a=px(pts[i].pos), b=px(pts[i+1].pos);
+    const mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2, an=Math.atan2(b[1]-a[1],b[0]-a[0]);
+    if(Math.hypot(b[0]-a[0],b[1]-a[1])<26)continue;
+    const ux=Math.cos(an), uy=Math.sin(an), nx=-uy, ny=ux;
+    const L=13, Wd=7;
+    const P=(al,ac)=>`${(mx+ux*al+nx*ac).toFixed(1)},${(my+uy*al+ny*ac).toFixed(1)}`;
+    s+=`<polygon points="${[P(L,0),P(-L*0.55,Wd),P(-L*0.55,-Wd)].join(" ")}" fill="${PUR}" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/>`;
+  }
+  return s+`</g>`;
+}
+function courseOverlay(px){
+  const r=CURROUTE; if(!r||!r.pts||r.pts.length<2)return "";
+  let s=courseTrack(px,r.pts);
+  const OFF=[[15,-13],[15,15],[-15,15],[-15,-13]], seen={};
+  r.pts.forEach((p,i)=>{
+    if(!p.m&&i!==0)return;
+    const q=px(p.pos);
+    const col=i===0?"#12283A":p.side==="P"?"#C8102E":p.side==="S"?"#007A33":"#FF6A13";
+    const key=p.m||("s"+i), n=(seen[key]=(seen[key]||0)+1)-1;
+    const o=OFF[n%4], g=1+Math.floor(n/4)*0.8;
+    s+=`<text x="${(q[0]+o[0]*g).toFixed(1)}" y="${(q[1]+o[1]*g).toFixed(1)}" font-size="18" font-weight="800" text-anchor="middle" fill="${col}" stroke="#fff" stroke-width="3.6" paint-order="stroke">${i+1}</text>`;
+  });
+  return s;
 }
 function renderTide(){
   const ds=$("rdate").value, ts=$("rtime").value||"14:00";
@@ -818,19 +866,17 @@ function logGamma(x){const g=[76.18009172947146,-86.50532032941677,24.0140982408
 function betacf(a,b,x){const MAXIT=100,EPS=3e-7,FPMIN=1e-30;let qab=a+b,qap=a+1,qam=a-1,c=1,d=1-qab*x/qap;if(Math.abs(d)<FPMIN)d=FPMIN;d=1/d;let h=d;for(let m=1;m<=MAXIT;m++){const m2=2*m;let aa=m*(b-m)*x/((qam+m2)*(a+m2));d=1+aa*d;if(Math.abs(d)<FPMIN)d=FPMIN;c=1+aa/c;if(Math.abs(c)<FPMIN)c=FPMIN;d=1/d;h*=d*c;aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));d=1+aa*d;if(Math.abs(d)<FPMIN)d=FPMIN;c=1+aa/c;if(Math.abs(c)<FPMIN)c=FPMIN;d=1/d;const del=d*c;h*=del;if(Math.abs(del-1)<EPS)break;}return h;}
 function ibeta(a,b,x){if(x<=0)return 0;if(x>=1)return 1;const bt=Math.exp(logGamma(a+b)-logGamma(a)-logGamma(b)+a*Math.log(x)+b*Math.log(1-x));return x<(a+1)/(a+b+2)?bt*betacf(a,b,x)/a:1-bt*betacf(b,a,1-x)/b;}
 function betaPpf(a,b,q){let lo=0,hi=1;for(let i=0;i<60;i++){const mid=(lo+hi)/2;(ibeta(a,b,mid)<q)?lo=mid:hi=mid;}return (lo+hi)/2;}
-function fitShiftDist(lo,hi,mean,plo,phi){
-  const span=hi-lo, m=(mean-lo)/span, band=Math.min(5,span/4)/span;
-  const score=(a,b)=>{const e1=a/(a+b)-m,e2=ibeta(a,b,band)-plo,e3=(1-ibeta(a,b,1-band))-phi;return 4*e1*e1+e2*e2+e3*e3;};
-  const MN=1.3;                                     // density vanishes at both stated limits: always a hump
-  let best=[1.6,1.6,1e9];
-  for(let la=Math.log(MN);la<=2.3;la+=0.06)for(let lb=Math.log(MN);lb<=2.3;lb+=0.06){
-    const a=Math.exp(la),b=Math.exp(lb),s=score(a,b);if(s<best[2])best=[a,b,s];}
-  for(let step=0.05;step>0.004;step*=0.5){
-    for(const [da,db] of [[step,0],[-step,0],[0,step],[0,-step],[step,step],[-step,-step],[step,-step],[-step,step]]){
-      const a=Math.max(MN,best[0]*Math.exp(da)),b=Math.max(MN,best[1]*Math.exp(db)),s=score(a,b);if(s<best[2])best=[a,b,s];}}
-  const A2=best[0],B2=best[1];
-  return {a:A2,b:B2,res:best[2],span,lo,hi,band,
-          gotMean:lo+span*A2/(A2+B2), gotPlo:ibeta(A2,B2,band), gotPhi:1-ibeta(A2,B2,1-band)};
+function fitShiftDist(lo,hi,mean){
+  // Beta shape from one anchor only: where the mean sits inside the band. The
+  // concentration is fixed, then widened just enough to keep a single hump that
+  // still vanishes at both stated limits, so every input is satisfiable and the
+  // old "those anchors cannot all be met" case cannot arise.
+  const span=hi-lo, band=Math.min(5,span/4)/span;
+  const m=Math.max(0.06,Math.min(0.94,(mean-lo)/span));
+  const MN=1.3;                                     // below this the curve stops being a hump
+  const C=Math.max(2.8, MN/Math.min(m,1-m));        // total concentration a+b
+  const a=Math.max(MN,C*m), b=Math.max(MN,C*(1-m));
+  return {a,b,span,lo,hi,band,gotMean:lo+span*a/(a+b)};
 }
 // ---------- live wind: NMEA 0183 over WebSocket, or Signal K deltas ----------
 let NMEA={sock:null,lastHdg:null,lastApply:0};
@@ -859,12 +905,12 @@ function parseForTWD(txt){
 }
 function nmeaToggle(){
   const st=$("nmeaStat"),btn=$("nmeaBtn");
-  if(NMEA.sock){try{NMEA.sock.close();}catch(e){} NMEA.sock=null;OBS.auto=false;btn.textContent="Connect";st.textContent="disconnected";return;}
+  if(NMEA.sock){try{NMEA.sock.close();}catch(e){} NMEA.sock=null;OBS.auto=false;btn.textContent="Connect";st.textContent="disconnected";windAvail();return;}
   const url=($("nmeaUrl").value||"").trim();
   if(!/^wss?:\/\//.test(url)){st.textContent="enter a ws:// or wss:// address";return;}
   try{
     const s=new WebSocket(url);NMEA.sock=s;btn.textContent="Disconnect";st.textContent="connecting\u2026";
-    s.onopen=()=>{OBS.auto=true;st.textContent="connected \u00B7 waiting for wind data";
+    s.onopen=()=>{OBS.auto=true;st.textContent="connected \u00B7 waiting for wind data";windAvail();
       try{s.send(JSON.stringify({context:"vessels.self",subscribe:[{path:"environment.wind.directionTrue"},{path:"navigation.headingTrue"}]}));}catch(e){}};
     s.onmessage=ev=>{
       const twd=parseForTWD(ev.data);
@@ -938,19 +984,77 @@ function fcIngest(j){                           // accepts an Open-Meteo reply f
   FC.cur = (C&&C.wind_direction_10m!=null) ? {dir:+C.wind_direction_10m, spd:+C.wind_speed_10m, gust:(C.wind_gusts_10m!=null?+C.wind_gusts_10m:null), t:C.time||""} : null;
   fcCacheSave();
   const rb=$("trRate"); if(rb)rb.value="";      // forecast takes over unless a manual figure is typed
-  if(trendFromForecast())render();
+  trendFromForecast();
+  seedFromForecast();                          // one tap now does the whole job
+  windAvail();
+  render();
 }
-function swProbe(cb){                           // which service worker is actually running? old ones stay silent
-  try{
-    if(typeof navigator==="undefined"||!navigator.serviceWorker)return cb("none");
-    if(!navigator.serviceWorker.controller)return cb("none");
-    let done=false;
-    const fin=v=>{ if(!done){done=true;try{navigator.serviceWorker.removeEventListener("message",onMsg);}catch(e){} cb(v);} };
-    const onMsg=ev=>{ if(ev.data&&ev.data.sw)fin(ev.data.sw); };
-    navigator.serviceWorker.addEventListener("message",onMsg);
-    setTimeout(()=>fin("old"),900);
-    navigator.serviceWorker.controller.postMessage("version");
-  }catch(e){ cb("?"); }
+
+// Seed the wind boxes and the band from the forecast. Uses the live "now" reading if
+// the gun is within the hour, otherwise the forecast at the start time. Anything the
+// sailor has typed by hand is left alone: wsMeanDirty / wsBandDirty already track that.
+function seedFromForecast(){
+  const bs=$("bandStat"); if(!bs)return;
+  const t0=trendWindow()[0], soon=(t0-Date.now())<3600000;
+  const live=(soon&&FC.cur&&isFinite(FC.cur.dir))?FC.cur:null;
+  const f=live?{dir:live.dir,spd:live.spd}:fcAt(t0);
+  if(!f){ bs.textContent=""; return; }
+  const spd=(f.spd!=null&&isFinite(f.spd))?f.spd:+($("wspd").value||12);
+  $("wdir").value=String(Math.round(norm(f.dir)));
+  if(f.spd!=null&&isFinite(f.spd))$("wspd").value=String(Math.round(f.spd*10)/10);
+  if(live&&live.gust!=null&&isFinite(live.gust)&&$("wgst"))$("wgst").value=String(Math.round(live.gust));
+  obsAdd(f.dir);
+  const keptMean=window.wsMeanDirty, keptBand=window.wsBandDirty;
+  let hw=null;
+  if(!keptMean&&!keptBand){ hw=bandSetFromWind(f.dir,spd); window.wsMeanDirty=false; window.wsBandDirty=false; }
+  const when=live?(FC.cur.t?(" at "+String(FC.cur.t).slice(11,16)):" now"):" at your start";
+  bs.innerHTML=`Wind${when}: <b>${Math.round(norm(f.dir))}\u00B0</b>`+
+    ((f.spd!=null&&isFinite(f.spd))?` at <b>${Math.round(f.spd)} kt</b>`:"")+
+    ((live&&live.gust!=null)?`, gusting ${Math.round(live.gust)} kt`:"")+
+    (hw!==null?`. Band seeded \u00B1${hw}\u00B0.`:". Your own band kept.")+
+    (live?" Model wind for Dun Laoghaire, so trust your own instruments over it.":"");
+}
+
+// The trend box: empty means the app is driving it from the forecast or from the
+// instruments. Rather than leaving it blank, show the figure actually in use and tint
+// the field, so it reads as a live value rather than as something waiting to be typed.
+function trRateShow(){
+  const rb=$("trRate"); if(!rb)return;
+  const typed=(rb.value||"").trim()!=="";
+  const t=(typeof TREND!=="undefined"&&TREND)?TREND:null;
+  if(typed){ rb.classList.remove("autoval"); rb.placeholder="auto"; return; }
+  rb.classList.add("autoval");
+  rb.placeholder = (t&&isFinite(t.rate)&&t.src!=="manual")
+    ? `${t.rate>=0?"+":"\u2212"}${Math.abs(t.rate).toFixed(1)} auto`
+    : "auto";
+}
+
+// Which controls make sense right now. Anything that cannot do its job is dimmed or hidden.
+function windAvail(){
+  trRateShow();
+  const off=(typeof navigator!=="undefined"&&navigator.onLine===false);
+  const fb=$("trFetch");
+  if(fb){
+    const busy=!!window.fcBusy;
+    fb.disabled=off||busy;
+    fb.style.opacity=(off||busy)?0.45:1;
+    fb.style.cursor=(off||busy)?"default":"pointer";
+    fb.textContent=busy?"fetching\u2026":"Forecast";
+    fb.title=off?"no data connection":"";
+  }
+  const nb=$("nmeaBtn"), nu=$("nmeaUrl");
+  if(nb&&nu){
+    const live=!!(typeof NMEA!=="undefined"&&NMEA.sock);
+    const ok=live||!!nu.value.trim();
+    nb.disabled=!ok; nb.style.opacity=ok?1:0.45; nb.style.cursor=ok?"pointer":"default";
+    nb.title=ok?"":"enter your instrument address first";
+  }
+  // Get forecast is offered only when the automatic fetch cannot do the job, and it
+  // steps aside once the paste box is open or a forecast has been read in.
+  const pasteOpen=(($("trPasteWrap")||{}).style||{}).display==="block";
+  const show=(off||!!window.fcFailed)&&!pasteOpen;
+  const wrap=$("trLinks");
+  if(wrap)wrap.style.display=show?"flex":"none";
 }
 function fcUrl(bust){
   return "https://api.open-meteo.com/v1/forecast?latitude="+FC.lat+"&longitude="+FC.lon+
@@ -960,26 +1064,22 @@ function fcUrl(bust){
 function trendFetch(){
   const st=$("trStat");
   const offline=()=>(typeof navigator!=="undefined"&&navigator.onLine===false);
-  if(offline()){ if(st)st.innerHTML="No data connection. Type a trend in the box, or tap Paste."; return; }
+  if(offline()){ window.fcFailed=true; windAvail();
+    if(st)st.innerHTML="No data connection. Type a trend in the box, or paste a forecast below."; return; }
+  window.fcBusy=true; window.fcFailed=false; windAvail();
   if(st)st.textContent="fetching forecast\u2026";
+  const done=()=>{ window.fcBusy=false; windAvail(); };
   const get=u=>fetch(u).then(r=>{ if(!r.ok)throw new Error("HTTP "+r.status); return r.json(); });
   get(fcUrl(false))
     .catch(()=>get(fcUrl(true)))               // second try, cache-busted, in case a stale entry is in the way
-    .then(fcIngest)
+    .then(j=>{ fcIngest(j); done(); })
     .catch(e=>{
+      window.fcFailed=true; done();
       if(!st)return;
-      swProbe(sw=>{
-        const swTxt = sw==="none" ? "no service worker is running"
-                    : sw==="old"  ? "<b>an old service worker is still running</b>, so the fix is not live yet: fully quit and reopen the app twice"
-                    : "service worker "+sw+" is running";
-        st.innerHTML=`Forecast did not load (${e.message}). ${swTxt}. `+
-          `<a href="${fcUrl(false)}" target="_blank" rel="noopener" style="color:#0E7C94;text-decoration:underline">Tap to test the link</a>`+
-          ` &middot; <a href="#" id="trPasteLink" style="color:#0E7C94;text-decoration:underline">paste it instead</a>`+
-          ` &middot; or type a trend in the box.`;
-        const pl=$("trPasteLink"); if(pl)pl.onclick=ev=>{ev.preventDefault();trendPasteShow();};
-      });
+      st.textContent=`Forecast did not load (${e.message}). Tap Get forecast, or type a trend in the box.`;
     });
 }
+
 // ---------- seeding the oscillation band: from the forecast before the start, from observations during ----------
 const OBS={pts:[], win:60, auto:false, lastAuto:0};   // rolling log of observed wind, newest last
 function obsAdd(dir){
@@ -1024,31 +1124,6 @@ function bandSetFromWind(w,ws){                        // centre the band on a w
   window.wsMeanDirty=true; window.wsBandDirty=true;    // seeded values are authoritative from here
   return hw;
 }
-function bandFromForecast(){
-  const bs=$("bandStat");
-  const f=fcAt(trendWindow()[0]);
-  if(!f){ if(bs)bs.textContent="load a forecast first (Forecast or Paste)"; return; }
-  const spd=f.spd!=null?f.spd:+($("wspd").value||12);
-  $("wdir").value=String(Math.round(f.dir));
-  if(f.spd!=null)$("wspd").value=String(Math.round(f.spd*10)/10);
-  const hw=bandSetFromWind(f.dir,spd);
-  if(bs)bs.innerHTML=`Band seeded from the forecast at your start: mean <b>${Math.round(norm(f.dir))}\u00B0</b>, \u00B1${hw}\u00B0`+
-    (f.spd!=null?`, ${Math.round(f.spd)} kt`:"")+". Trend still handles the drift.";
-  render();
-}
-function windNow(){
-  const bs=$("bandStat");
-  if(!FC.cur){ if(bs)bs.textContent="no live wind yet: tap Forecast (or Paste) first"; return; }
-  $("wdir").value=String(Math.round(norm(FC.cur.dir)));
-  if(isFinite(FC.cur.spd))$("wspd").value=String(Math.round(FC.cur.spd*10)/10);
-  if(FC.cur.gust!=null&&isFinite(FC.cur.gust)&&$("wgst"))$("wgst").value=String(Math.round(FC.cur.gust));
-  obsAdd(FC.cur.dir);
-  const when=FC.cur.t?(" at "+String(FC.cur.t).slice(11,16)):"";
-  if(bs)bs.innerHTML=`Live wind${when}: <b>${Math.round(norm(FC.cur.dir))}\u00B0</b> at <b>${Math.round(FC.cur.spd)} kt</b>`+
-    (FC.cur.gust!=null?`, gusting ${Math.round(FC.cur.gust)} kt`:"")+
-    `. Model wind for Dun Laoghaire, so trust your own instruments over it.`;
-  render();
-}
 function bandFromObserved(quiet){
   const bs=$("bandStat"), s=obsStats();
   if(!s){ if(bs&&!quiet)bs.textContent="not enough observed wind yet: connect instruments, or change the wind box a few times"; return false; }
@@ -1060,7 +1135,7 @@ function bandFromObserved(quiet){
   const drift=s.rate!==null?Math.abs(s.rate)*(s.spanMin/60):0;   // total movement across the window
   if(s.rate!==null&&Math.abs(s.rate)>=1&&drift>=s.sd){            // a real shift, not just the wind swinging
     const rate=Math.max(-40,Math.min(40,s.rate));                 // cap: a short window can extrapolate wildly
-    trendSet({rate, src:"observed"});
+    trendSet({rate, src:"observed"}); trRateShow();
     const rb=$("trRate"); if(rb)rb.value="";
     const ts=$("trStat"); if(ts)ts.innerHTML=`<b>Observed trend</b> ${rate>=0?"+":"\u2212"}${Math.abs(rate).toFixed(1)}\u00B0/h (${rate>=0?"veering":"backing"}) from the last ${Math.round(s.spanMin)} min on the water.`;
     tTxt=` \u00B7 trend ${rate>=0?"+":"\u2212"}${Math.abs(rate).toFixed(1)}\u00B0/h`;
@@ -1071,10 +1146,19 @@ function bandFromObserved(quiet){
   render();
   return true;
 }
+// Get forecast: open the forecast page in the browser and open the paste box in one
+// action, so there is nothing to read and nothing to tap in between.
+function getForecastManual(){
+  try{ window.open(fcUrl(true),"_blank","noopener"); }catch(e){}
+  const w=$("trPasteWrap");
+  if(w&&w.style.display!=="block")trendPasteShow();      // never toggle it shut from here
+  else windAvail();
+}
 function trendPasteShow(){
   const w=$("trPasteWrap"); if(!w)return;
   w.style.display = w.style.display==="none" ? "block" : "none";
   if(w.style.display==="block"){ const t=$("trPaste"); if(t)t.focus(); }
+  windAvail();                                   // the button that opened it steps aside
 }
 function trendPasteGo(){
   const t=$("trPaste"), st=$("trStat"); if(!t)return;
@@ -1084,23 +1168,19 @@ function trendPasteGo(){
     const start=raw.indexOf("{"), end=raw.lastIndexOf("}");
     fcIngest(JSON.parse(start>=0&&end>start?raw.slice(start,end+1):raw));
     const w=$("trPasteWrap"); if(w)w.style.display="none"; t.value="";
+    window.fcFailed=false; windAvail();          // forecast is in: hide the paste box and the button
   }catch(e){ if(st)st.textContent="could not read that ("+e.message+"): copy the whole page of data from the link"; }
 }
 function trendManual(){
   const v=($("trRate").value||"").trim(), st=$("trStat");
   if(v===""){                                   // cleared: fall back to the forecast if one is loaded
     if(!trendFromForecast(true)){ trendSet(null); if(st)st.textContent="No trend set: oscillating model only."; }
+    trRateShow();
     render(); return;
   }
   const r=+v; if(!isFinite(r)){ if(st)st.textContent="trend must be a number, degrees per hour"; return; }
-  trendSet({rate:r, src:"manual"});
+  trendSet({rate:r, src:"manual"}); trRateShow();
   if(st)st.innerHTML=`<b>Manual trend</b> ${r>=0?"+":"\u2212"}${Math.abs(r).toFixed(1)}\u00B0/h (${r>=0?"veering":"backing"}) \u00B7 overrides the forecast.`;
-  render();
-}
-function trendClear(){
-  $("trRate").value=""; FC.data=null; trendSet(null);
-  try{ localStorage.removeItem("cc_fc"); }catch(e){}
-  const st=$("trStat"); if(st)st.textContent="No trend set: oscillating model only.";
   render();
 }
 function syncWindTab(){
@@ -1119,10 +1199,10 @@ function syncWindTab(){
 function updateWindTab(){
   const out=$("wsOut"); if(!out)return;
   let lo=+$("wsLo").value, hi=+$("wsHi").value, mean=+$("wsMean").value;
-  const plo=(+$("wsPlo").value)/100, phi=(+$("wsPhi").value)/100, per=Math.max(2,+$("wsPer").value||20);
+  const per=Math.max(2,+$("wsPer").value||20);
   if(hi<=lo)hi+=360; if(mean<lo)mean+=360;              // ranges crossing north
-  if(!(mean>lo&&mean<hi)||plo<0||phi<0||plo+phi>0.9){out.innerHTML="<i>Check the parameters: mean must sit inside the range, band percentages sensible.</i>";const ge=$("wsGauge");if(ge)ge.innerHTML="";window.SHIFT=null;return;}
-  const f=fitShiftDist(lo,hi,mean,plo,phi);
+  if(!(mean>lo&&mean<hi)){out.innerHTML="<i>Check the parameters: mean must sit inside the range, band percentages sensible.</i>";const ge=$("wsGauge");if(ge)ge.innerHTML="";window.SHIFT=null;return;}
+  const f=fitShiftDist(lo,hi,mean);
   const sd=f.span*Math.sqrt(f.a*f.b/((f.a+f.b)**2*(f.a+f.b+1)));
   const fMean=lo+f.span*(f.a/(f.a+f.b));
   const p10=lo+f.span*betaPpf(f.a,f.b,0.10), p50=lo+f.span*betaPpf(f.a,f.b,0.50), p90=lo+f.span*betaPpf(f.a,f.b,0.90);
@@ -1184,9 +1264,9 @@ function updateWindTab(){
      gEl.innerHTML=g;
    }}
   window.SHIFT={mean:fMean,sd,per,lo,hi,a:f.a,b:f.b};   // live shift model for the leg engine
-  const meanOff=Math.abs(f.gotMean-mean), pOff=Math.max(Math.abs(f.gotPlo-plo),Math.abs(f.gotPhi-phi));
-  const warn=(meanOff>2||pOff>0.05)?
-    `<span style="color:#B45309"><b>Note:</b> those anchors cannot all be met by a single-peaked distribution; nearest fit shown (mean ${Math.round(((f.gotMean%360)+360)%360)}°${", "+Math.round(f.gotPlo*100)+"%/"+Math.round(f.gotPhi*100)+"% in the edge bands"}).</span><br>`:"";
+  const meanOff=Math.abs(f.gotMean-mean);
+  const warn=(meanOff>2)?
+    `<span style="color:#B45309"><b>Note:</b> the mean must sit inside the band; nearest fit shown (mean ${Math.round(((f.gotMean%360)+360)%360)}\u00B0).</span><br>`:"";
   out.innerHTML=warn+
     `<b>Fitted:</b> mean ${((fMean%360)+360)%360|0}°, spread ±${sd.toFixed(0)}° (sd), 10/50/90% at ${((p10%360)+360)%360|0}° / ${((p50%360)+360)%360|0}° / ${((p90%360)+360)%360|0}°<br>`+
     `<b>Wind now ${((wnow%360)+360)%360|0}°:</b> backed of this ${pct}% of the time · expected move ${dShift>=0?"+":"−"}${Math.abs(dShift).toFixed(0)}°<br>`+
@@ -1228,8 +1308,11 @@ function posApply(){
   x=Math.max(0,Math.min(POSW-w,x)); y=Math.max(0,Math.min(POSH-hh,y));   // never scroll off the sheet
   POSVIEW.cx=x+w/2; POSVIEW.cy=y+hh/2;
   svg.setAttribute("viewBox",x.toFixed(1)+" "+y.toFixed(1)+" "+w.toFixed(1)+" "+hh.toFixed(1));
+  {const ta=POSVIEW.z>1?"none":"", wrap=$("posWrap");
+   if(wrap)wrap.style.touchAction=ta; svg.style.touchAction=ta;}
   posScale();
   const lab=$("posZlab"); if(lab)lab.textContent=(Math.round(POSVIEW.z*10)/10)+"x";
+  if(typeof posBtns==="function")posBtns();
 }
 function posScale(){                                   // keep marks, labels and the dot a constant size on screen
   const k=1/POSVIEW.z, g=$("posMarks");
@@ -1271,12 +1354,14 @@ function posMapInit(){
   if(bo)bo.onclick=()=>posZoom(1/1.6);
   let drag=null;                                        // drag to pan once zoomed in
   svg.addEventListener("pointerdown",e=>{ if(POSVIEW.z<=1)return; drag={x:e.clientX,y:e.clientY,cx:POSVIEW.cx,cy:POSVIEW.cy};
-    POSVIEW.follow=false; try{svg.setPointerCapture(e.pointerId);}catch(err){} });
-  svg.addEventListener("pointermove",e=>{ if(!drag)return;
+    POSVIEW.follow=false; e.preventDefault();          // else a downward drag becomes a page scroll
+    try{svg.setPointerCapture(e.pointerId);}catch(err){} },{passive:false});
+  svg.addEventListener("pointermove",e=>{ if(!drag)return; e.preventDefault();
     const r=svg.getBoundingClientRect(), sc=(POSW/POSVIEW.z)/Math.max(1,r.width);
-    POSVIEW.cx=drag.cx-(e.clientX-drag.x)*sc; POSVIEW.cy=drag.cy-(e.clientY-drag.y)*sc; posApply(); });
+    POSVIEW.cx=drag.cx-(e.clientX-drag.x)*sc; POSVIEW.cy=drag.cy-(e.clientY-drag.y)*sc; posApply(); },{passive:false});
   const stop=()=>{drag=null;};
   svg.addEventListener("pointerup",stop); svg.addEventListener("pointercancel",stop);
+  svg.addEventListener("touchmove",e=>{ if(drag)e.preventDefault(); },{passive:false});
   posApply();
 }
 function posUpdate(pos){
@@ -1529,25 +1614,28 @@ function buildPickers(){
   }
   window.buildNums=buildNums;buildNums();
   window.wsMeanDirty=false; window.wsBandDirty=false; window.lastBandWs=null;
-  ["wsMean","wsLo","wsHi","wsPlo","wsPhi","wsPer"].forEach(id=>{const el=$(id);if(el)el.addEventListener("input",()=>{
+  ["wsMean","wsLo","wsHi","wsPer"].forEach(id=>{const el=$(id);if(el)el.addEventListener("input",()=>{
     if(id==="wsMean")window.wsMeanDirty=true;
     if(id==="wsLo"||id==="wsHi")window.wsBandDirty=true;
     updateWindTab();});});
   const nb=$("nmeaBtn"); if(nb)nb.onclick=nmeaToggle;
   {const fb=$("trFetch"); if(fb)fb.onclick=trendFetch;
-   const cb=$("trClear"); if(cb)cb.onclick=trendClear;
    const rb=$("trRate"); if(rb){rb.onchange=trendManual; rb.oninput=null;}
-   const pb=$("trPasteBtn"); if(pb)pb.onclick=trendPasteShow;
+   const mf=$("trManual"); if(mf)mf.onclick=getForecastManual;
    const pg=$("trPasteGo"); if(pg)pg.onclick=trendPasteGo;
    const po=$("trOpen"); if(po)po.href=fcUrl(false);
-   const bf=$("bandFc"); if(bf)bf.onclick=bandFromForecast;
-   const bo=$("bandObs"); if(bo)bo.onclick=()=>bandFromObserved(false);
-   const wn=$("windNow"); if(wn)wn.onclick=windNow;
-   fcCacheLoad(); if(FC.data)trendFromForecast(true);}   // offline: reuse the forecast fetched ashore
+   const nu=$("nmeaUrl"); if(nu)nu.addEventListener("input",windAvail);
+   window.addEventListener("online",windAvail); window.addEventListener("offline",windAvail);
+   fcCacheLoad(); if(FC.data)trendFromForecast(true);   // offline: reuse the forecast fetched ashore
+   // keep the band tracking the wind you are actually seeing, instruments or typed
+   setInterval(()=>{ if(window.wsBandDirty||window.holdBand)return;
+                     if(obsStats())bandFromObserved(true); },60000);
+   windAvail();}
   rtInit();
   const tf=$("tflow"); if(tf)tf.addEventListener("input",drawTideFlow);
   const gb=$("gpsBtn"); if(gb)gb.onclick=gpsToggle;
   posMapInit();
+  mapInit();
   const sl=$("wslide");
   if(sl){
     let last=0;
@@ -1637,6 +1725,7 @@ function render(){
   $("startNote").innerHTML=CARDS[state.card].start==="hut"
     ?"Start is a transit above the West Pier hut; finish between the hut corner and the orange limit mark."
     :`Start assumed ${MLADJ.toFixed(1)} NM downwind of mark 1.`;
+  CURROUTE=r;                                  // the tide map draws the same course
   renderTide();
   drawMap(r,wdir);
   if(state.leg>=r.legs.length)state.leg=0;
@@ -1648,6 +1737,129 @@ function render(){
   document.querySelectorAll("#viewbtns .pick").forEach(b=>b.classList.toggle("on",b.dataset.vm===state.viewMode));
   drawLeg(r,state.leg,wdir,wspd);
 }
+let CURROUTE=null;
+const TIDECOL="#123C69";     // dark navy: the tidal stream, on every view that draws it
+const MAPW=710, MAPH=1008;
+// lat/lon -> chart pixels, shared by the course chart and the tide map (same base image)
+const CHART_LA=[[53.30,749],[53.31667,498],[53.33333,271],[53.35,66]];
+const CHART_LO=[[-6.15,66],[-6.13333,212],[-6.11667,360],[-6.10,507],[-6.08333,652]];
+function chartInterp(pairs,v){
+  let a=pairs[0],b=pairs[1];
+  if(v>=pairs[pairs.length-1][0]){a=pairs[pairs.length-2];b=pairs[pairs.length-1];}
+  else for(let i=1;i<pairs.length;i++){if(v<=pairs[i][0]){a=pairs[i-1];b=pairs[i];break;}}
+  return a[1]+(v-a[0])/(b[0]-a[0])*(b[1]-a[1]);
+}
+function chartPx(p){ return [chartInterp(CHART_LO,p[1]), chartInterp(CHART_LA,p[0])]; }
+// How the app's own annotations behave when a chart is zoomed.
+//   1   = magnify with the chart, exactly like the printed mark names on the base image
+//   0.5 = grow, but only by the square root of the zoom
+//   0   = hold a constant size on screen
+// The chart lettering scales 1:1, so anything less than 1 makes the annotations shrink
+// away from the labels they sit beside, and gives no help to weaker eyesight.
+const MAPGROW=1;
+
+// One zoom implementation, shared by the course chart and the tide map, so the two
+// cannot drift apart. Each caller says how to find its <svg> and where its course sits.
+function makeZoom(cfg){
+  const V={z:1,cx:cfg.w/2,cy:cfg.h/2};
+  function scale(svg){
+    const k=Math.pow(V.z,MAPGROW-1);
+    if(k===1)return;                                   // full magnification: nothing to undo
+    svg.querySelectorAll("[font-size]").forEach(el=>{
+      let b=el.getAttribute("data-fs");
+      if(b===null){ b=el.getAttribute("font-size"); el.setAttribute("data-fs",b); }
+      el.setAttribute("font-size",(+b*k).toFixed(2));
+    });
+    svg.querySelectorAll("[stroke-width]").forEach(el=>{
+      let b=el.getAttribute("data-sw");
+      if(b===null){ b=el.getAttribute("stroke-width"); el.setAttribute("data-sw",b); }
+      el.setAttribute("stroke-width",(+b*k).toFixed(2));
+    });
+    svg.querySelectorAll("[data-r]").forEach(el=>el.setAttribute("r",(+el.getAttribute("data-r")*k).toFixed(2)));
+    svg.querySelectorAll("[data-ax]").forEach(el=>{    // badges keep their offset in screen terms
+      const ax=+el.getAttribute("data-ax"), ay=+el.getAttribute("data-ay");
+      const x=ax+(+el.getAttribute("data-ox"))*k, y=ay+(+el.getAttribute("data-oy"))*k;
+      const t=el.tagName.toLowerCase();
+      if(t==="text"){ el.setAttribute("x",x.toFixed(1)); el.setAttribute("y",y.toFixed(1)); }
+      else if(t==="line"){ el.setAttribute("x2",x.toFixed(1)); el.setAttribute("y2",y.toFixed(1)); }
+      else { el.setAttribute("cx",x.toFixed(1)); el.setAttribute("cy",y.toFixed(1)); }
+    });
+  }
+  function btns(){
+    const dim=(el,off)=>{ if(!el)return; el.disabled=off; el.style.opacity=off?0.4:1; el.style.cursor=off?"default":"pointer"; };
+    dim($(cfg.outId), V.z<=1.001);   // cannot zoom out below fit
+    dim($(cfg.inId),  V.z>=7.999);   // cannot zoom in past the limit
+  }
+  function apply(){
+    const svg=cfg.get(); if(!svg)return;
+    const w=cfg.w/V.z, hh=cfg.h/V.z;
+    let x=V.cx-w/2, y=V.cy-hh/2;
+    x=Math.max(0,Math.min(cfg.w-w,x)); y=Math.max(0,Math.min(cfg.h-hh,y));   // never scroll off the sheet
+    V.cx=x+w/2; V.cy=y+hh/2;
+    svg.setAttribute("viewBox",x.toFixed(1)+" "+y.toFixed(1)+" "+w.toFixed(1)+" "+hh.toFixed(1));
+    // At fit the chart must not swallow the page scroll; zoomed in, the drag is ours.
+    const host=$(cfg.hostId), ta=V.z>1?"none":"";
+    if(host)host.style.touchAction=ta;
+    svg.style.touchAction=ta;
+    scale(svg);
+    const lab=$(cfg.labId);
+    if(lab){ lab.textContent=(Math.round(V.z*10)/10)+"x"; lab.style.display=V.z>1?"block":"none"; }
+    btns();
+  }
+  function zoom(f){
+    const wasFit=V.z<=1.001;
+    V.z=Math.max(1,Math.min(8,V.z*f));
+    if(V.z===1){ V.cx=cfg.w/2; V.cy=cfg.h/2; }
+    else if(wasFit){                                   // first press goes to the course, not the sheet centre
+      const c=cfg.centre&&cfg.centre();
+      if(c){ V.cx=c[0]; V.cy=c[1]; }
+    }
+    apply();
+  }
+  function init(){
+    const host=$(cfg.hostId); if(!host||host.dataset.zoomWired)return;
+    host.dataset.zoomWired="1";
+    const bi=$(cfg.inId), bo=$(cfg.outId);
+    if(bi)bi.onclick=()=>zoom(1.6);
+    if(bo)bo.onclick=()=>zoom(1/1.6);
+    let drag=null;                                     // drag to pan once zoomed in
+    host.addEventListener("pointerdown",e=>{ if(V.z<=1)return;
+      drag={x:e.clientX,y:e.clientY,cx:V.cx,cy:V.cy};
+      e.preventDefault();                              // else a downward drag becomes a page scroll
+      try{host.setPointerCapture(e.pointerId);}catch(err){} },{passive:false});
+    host.addEventListener("pointermove",e=>{ if(!drag)return;
+      e.preventDefault();
+      const svg=cfg.get(); if(!svg)return;
+      const rc=svg.getBoundingClientRect(), sc=(cfg.w/V.z)/Math.max(1,rc.width);
+      V.cx=drag.cx-(e.clientX-drag.x)*sc; V.cy=drag.cy-(e.clientY-drag.y)*sc; apply(); },{passive:false});
+    const stop=()=>{drag=null;};
+    host.addEventListener("pointerup",stop); host.addEventListener("pointercancel",stop);
+    // Safari ignores preventDefault on pointermove, so the scroll has to be stopped here.
+    host.addEventListener("touchmove",e=>{ if(drag)e.preventDefault(); },{passive:false});
+    apply();
+  }
+  return {V,apply,zoom,init,btns};
+}
+
+// Where the current course sits on the chart, in chart pixels.
+function courseCentre(){
+  const r=CURROUTE; if(!r||!r.pts||!r.pts.length)return null;
+  let sx=0,sy=0,n=0;
+  for(const p of r.pts){ if(!p||!p.pos)continue; const q=chartPx(p.pos); sx+=q[0]; sy+=q[1]; n++; }
+  return n?[sx/n,sy/n]:null;
+}
+
+const MAPZ=makeZoom({hostId:"mapWrap",inId:"mapIn",outId:"mapOut",labId:"mapZlab",
+  w:MAPW,h:MAPH,get:()=>$("map"),centre:courseCentre});
+const TIDEZ=makeZoom({hostId:"tideWrap",inId:"tideIn",outId:"tideOut",labId:"tideZlab",
+  w:MAPW,h:MAPH,get:()=>{const d=$("tideFlow");return d?d.querySelector("svg"):null;},centre:courseCentre});
+function mapApply(){ MAPZ.apply(); MAPZ.btns(); if(typeof POSVIEW!=="undefined")posBtns(); }
+function mapInit(){ MAPZ.init(); TIDEZ.init(); }
+function posBtns(){
+  const dim=(el,off)=>{ if(!el)return; el.disabled=off; el.style.opacity=off?0.4:1; el.style.cursor=off?"default":"pointer"; };
+  dim($("posOut"), POSVIEW.z<=1.001); dim($("posIn"), POSVIEW.z>=7.999);
+}
+
 function drawMap(r,wdir){
   const svg=$("map"); const W=710,H=1008;
   const LA=[[53.30,749],[53.31667,498],[53.33333,271],[53.35,66]];
@@ -1667,18 +1879,26 @@ function drawMap(r,wdir){
   s+=`<line x1="${wx+wl*Math.sin(a)}" y1="${wy-wl*Math.cos(a)}" x2="${wx-wl*Math.sin(a)}" y2="${wy+wl*Math.cos(a)}" stroke="#12283A" stroke-width="5" marker-end="url(#ah)"/>`;
   s+=`<text x="${wx}" y="${wy+62}" font-size="15" text-anchor="middle" fill="#12283A" font-weight="700">${wdir}\u00B0</text>`;
   // track
-  let d="";r.pts.forEach((p,i)=>{const q=px(p.pos);d+=(i?"L":"M")+q[0].toFixed(1)+","+q[1].toFixed(1)+" ";});
-  s+=`<path d="${d}" fill="none" stroke="#12283A" stroke-width="3.5" stroke-linejoin="round" stroke-dasharray="9 5" marker-end="url(#ah)" opacity=".9"/>`;
+  s+=courseTrack(px,r.pts);
   // number every point 1-based: start (CV/hut) = 1, marks 2,3,... matching table & leg analysis
+  // A mark can be rounded more than once in a course, so fan the badges around it
+  // instead of dropping every visit on the same spot.
+  const BOFF=[[15,-15],[15,15],[-15,15],[-15,-15]];   // up-right, down-right, down-left, up-left
+  const seen={};
   r.pts.forEach((p,i)=>{
     if(!p.m&&i!==0)return;
     const q=px(p.pos);
     const isStart=i===0;
     const badgeCol=isStart?"#12283A":p.side==="P"?"#C8102E":p.side==="S"?"#007A33":"#FF6A13";
     const col=isStart?"#FF6A13":badgeCol;
-    if(!isStart)s+=`<circle cx="${q[0]}" cy="${q[1]}" r="13" fill="none" stroke="${col}" stroke-width="3.5"/>`;
-    s+=`<circle cx="${q[0]+15}" cy="${q[1]-15}" r="13" fill="${badgeCol}"/>`;
-    s+=`<text x="${q[0]+15}" y="${q[1]-10.5}" font-size="16" font-weight="800" text-anchor="middle" fill="#fff">${i+1}</text>`;
+    const key=p.m||("start"+i);
+    const n=(seen[key]=(seen[key]||0)+1)-1;           // 0 first visit, 1 second, ...
+    const o=BOFF[n%4], grow=1+Math.floor(n/4)*0.8;
+    const ox=o[0]*grow, oy=o[1]*grow;
+    if(!isStart)s+=`<circle cx="${q[0]}" cy="${q[1]}" r="13" data-r="13" stroke="${col}" fill="none" stroke-width="3.5"/>`;
+    if(n)s+=`<line x1="${q[0]}" y1="${q[1]}" x2="${(q[0]+ox).toFixed(1)}" y2="${(q[1]+oy).toFixed(1)}" data-ax="${q[0].toFixed(1)}" data-ay="${q[1].toFixed(1)}" data-ox="${ox.toFixed(1)}" data-oy="${oy.toFixed(1)}" stroke="${badgeCol}" stroke-width="2" opacity=".8"/>`;
+    s+=`<circle cx="${(q[0]+ox).toFixed(1)}" cy="${(q[1]+oy).toFixed(1)}" r="13" data-r="13" data-ax="${q[0].toFixed(1)}" data-ay="${q[1].toFixed(1)}" data-ox="${ox.toFixed(1)}" data-oy="${oy.toFixed(1)}" fill="${badgeCol}"/>`;
+    s+=`<text x="${(q[0]+ox).toFixed(1)}" y="${(q[1]+oy+4.5).toFixed(1)}" font-size="16" font-weight="800" text-anchor="middle" fill="#fff" data-ax="${q[0].toFixed(1)}" data-ay="${q[1].toFixed(1)}" data-ox="${ox.toFixed(1)}" data-oy="${(oy+4.5).toFixed(1)}">${i+1}</text>`;
   });
   // tidal stream arrows at start time: one inshore, one offshore (3-head stream convention)
   if(typeof TIDECTX!=="undefined"&&TIDECTX){
@@ -1692,7 +1912,7 @@ function drawMap(r,wdir){
       s+=`<circle cx="${q[0]}" cy="${q[1]}" r="${R}" fill="#fff" opacity=".55"/>`;
       const ly=lab==="above"?q[1]-R-9:q[1]+R+17;
       if(st.slack){
-        s+=`<text x="${q[0]}" y="${q[1]+5}" font-size="13" font-weight="800" text-anchor="middle" fill="#C8102E" stroke="#fff" stroke-width="3" paint-order="stroke">slack</text>`;
+        s+=`<text x="${q[0]}" y="${q[1]+5}" font-size="13" font-weight="800" text-anchor="middle" fill="${TIDECOL}" stroke="#fff" stroke-width="3" paint-order="stroke">slack</text>`;
         continue;
       }
       // block arrow (matches the Tides flow map), centred on the disc
@@ -1700,8 +1920,8 @@ function drawMap(r,wdir){
       const ux=Math.sin(th), uy=-Math.cos(th), nx=-uy, ny=ux;
       const shaftW=L*0.15, headW=L*0.30, headL=L*0.34;
       const P=(a2,c2)=>`${(q[0]+ux*(a2-half)+nx*c2).toFixed(1)},${(q[1]+uy*(a2-half)+ny*c2).toFixed(1)}`;
-      s+=`<polygon points="${[P(0,shaftW),P(L-headL,shaftW),P(L-headL,headW),P(L,0),P(L-headL,-headW),P(L-headL,-shaftW),P(0,-shaftW)].join(" ")}" fill="#C8102E" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>`;
-      s+=`<text x="${q[0]}" y="${ly}" font-size="${sc<1?13:14}" font-weight="800" text-anchor="middle" fill="#C8102E" stroke="#fff" stroke-width="3.5" paint-order="stroke">${fmtStream(st)}</text>`;
+      s+=`<polygon points="${[P(0,shaftW),P(L-headL,shaftW),P(L-headL,headW),P(L,0),P(L-headL,-headW),P(L-headL,-shaftW),P(0,-shaftW)].join(" ")}" fill="${TIDECOL}" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>`;
+      s+=`<text x="${q[0]}" y="${ly}" font-size="${sc<1?13:14}" font-weight="800" text-anchor="middle" fill="${TIDECOL}" stroke="#fff" stroke-width="3.5" paint-order="stroke">${fmtStream(st)}</text>`;
     }
   }
   // start
@@ -1709,6 +1929,7 @@ function drawMap(r,wdir){
   s+=`<rect x="${sq[0]-8}" y="${sq[1]-8}" width="16" height="16" fill="#FF6A13" stroke="#fff" stroke-width="2" transform="rotate(45 ${sq[0]} ${sq[1]})"/>`;
   s+=`<text x="${sq[0]+13}" y="${sq[1]+5}" font-size="14" font-weight="800" fill="#FF6A13" stroke="#fff" stroke-width="3" paint-order="stroke">${r.pts[0].lbl}</text>`;
   svg.innerHTML=s;
+  mapApply();                                  // the chart is rebuilt each render: restore zoom, pan and label sizes
 }
 
 function arrowAt(x1,y1,x2,y2,f,col,sz){
@@ -1894,8 +2115,8 @@ function drawLeg(r,idx,wdir,wspd){
       const ux=Math.sin(tth), uy=-Math.cos(tth), nx=-uy, ny=ux;
       const shaftW=L*0.15, headW=L*0.30, headL=L*0.34;
       const P=(a2,c2)=>`${(tx+ux*(a2-half)+nx*c2).toFixed(1)},${(tyc+uy*(a2-half)+ny*c2).toFixed(1)}`;
-      s+=`<polygon points="${[P(0,shaftW),P(L-headL,shaftW),P(L-headL,headW),P(L,0),P(L-headL,-headW),P(L-headL,-shaftW),P(0,-shaftW)].join(" ")}" fill="#C8102E" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>`;
-      s+=`<text x="${tx}" y="${tyc-44}" font-size="11.5" font-weight="700" text-anchor="middle" fill="#C8102E" stroke="#fff" stroke-width="3" paint-order="stroke">Tide ${fmtStream(st)}</text>`;
+      s+=`<polygon points="${[P(0,shaftW),P(L-headL,shaftW),P(L-headL,headW),P(L,0),P(L-headL,-headW),P(L-headL,-shaftW),P(0,-shaftW)].join(" ")}" fill="${TIDECOL}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>`;
+      s+=`<text x="${tx}" y="${tyc-44}" font-size="11.5" font-weight="700" text-anchor="middle" fill="${TIDECOL}" stroke="#fff" stroke-width="3" paint-order="stroke">Tide ${fmtStream(st)}</text>`;
     } else {
       s+=`<text x="${tideC[0]}" y="${tideC[1]-44}" font-size="12" font-weight="700" text-anchor="middle" fill="#0E7C94">tide slack</text>`;
     }
