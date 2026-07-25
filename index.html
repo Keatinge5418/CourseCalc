@@ -45,6 +45,7 @@ h1{margin:2px 0 0;font-size:22px;font-weight:800;letter-spacing:-.01em}
 h1 small{font-weight:600;color:var(--ink2);font-size:14px}
 .card{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px;margin:10px 0}
 label{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);font-weight:700;margin-bottom:4px}
+#setuptab label{color:#6B4E00}
 .inrow{display:flex;gap:10px}
 /* Inputs and buttons that sit side by side are set to one height. Number inputs are
    the tallest of the three, so nothing shrinks; the date, text and button controls
@@ -70,8 +71,10 @@ input[type=number]:focus,input[type=date]:focus,input[type=time]:focus{outline:n
 button.pick{min-height:44px;border:1.5px solid var(--rule);background:#FBFDFE;border-radius:10px;
   font-size:16px;font-weight:700;color:var(--ink);padding:0}
 button.pick.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-button.pick.sug{border-color:var(--start);box-shadow:inset 0 0 0 1px var(--start)}
-.rtbtn{min-height:46px;border:1.5px solid #4A6076;background:#2C4A63;color:#fff;border-radius:10px;font-weight:800;-webkit-tap-highlight-color:transparent}
+button.pick.sug{border-color:var(--start);box-shadow:inset 0 0 0 2px var(--start)}
+/* black course button can also carry the orange "used wind" ring: outline sits outside */
+button.pick.on.sug{box-shadow:0 0 0 2px var(--start)}
+.rtbtn{min-height:46px;border:1.5px solid #6098BE;background:#3D7CA3;color:#fff;border-radius:10px;font-weight:800;-webkit-tap-highlight-color:transparent}
 .rtbtn:active{filter:brightness(1.18)}
 .rtbtn.on{background:#4ADE80;color:#0E1E2C;border-color:#4ADE80}
 .rtbtn.adj{background:#FACC15;color:#0E1E2C;border-color:#FACC15}
@@ -114,6 +117,12 @@ tr:nth-child(even) td{background:var(--zebra)}
 svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA}
 .note{font-size:11.5px;color:var(--ink2);line-height:1.45;margin-top:10px}
 .warn{color:var(--port);font-weight:600}
+.garmin-frame{background:#6B7684;border-radius:14px;padding:3px;display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:10px}
+.garmin-tile{background:#F4F6F8;border-radius:11px;padding:12px 8px;text-align:center;min-height:64px;display:flex;flex-direction:column;justify-content:center}
+.garmin-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#5B6672;font-weight:800}
+.garmin-value{font-size:26px;font-weight:800;color:#12283A;margin-top:2px;font-family:ui-monospace,"SF Mono",Menlo,monospace;line-height:1.1}
+.garmin-unit{font-size:13px;font-weight:700;color:#5B6672;margin-left:3px}
+.garmin-compass-wrap{background:#EDEFF1;border-radius:14px;margin-top:12px;padding:10px;display:flex;justify-content:center}
 </style>
 </head>
 <body>
@@ -122,7 +131,7 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
   <h1>CourseCalc <small>2026 card v1.1</small></h1>
 </header>
 
-<details class="notes" id="setuptab" open style="background:var(--card);border:1px solid var(--rule)"><summary>Setup</summary>
+<details class="notes" id="setuptab" open style="background:#F2C230;border:1px solid #C89B1F"><summary style="color:#12283A">Setup</summary>
   <div style="margin-bottom:12px;margin-top:4px"><label>Boat</label>
     <div class="cardbtns" id="boatbtns" style="grid-template-columns:repeat(3,1fr)"></div>
   </div>
@@ -134,7 +143,7 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
     <div><label>Start time</label><input id="rtime" type="time" value="19:00"></div>
   </div>
   <div class="inrow">
-    <div><label>Wind &deg;T</label><input id="wdir" type="number" inputmode="numeric" value="0" min="0" max="359"></div>
+    <div><label>Wind &deg;T</label><input id="wdir" type="number" inputmode="numeric" value="0" min="0" max="359" title="the wind the app is using; type to override"></div>
     <div><label>Wind kt</label><input id="wspd" type="number" inputmode="numeric" value="10" min="0" max="40"></div>
     <div><label>Gusts kt</label><input id="wgst" type="number" inputmode="numeric" value="15" min="0" max="50"></div>
   </div>
@@ -146,95 +155,9 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
   </div>
 </details>
 
-<details class="notes" id="timertab" style="background:#12283A;color:#fff">
-  <summary style="color:#fff">Race timer</summary>
-  <div style="text-align:center;margin:8px 0 4px">
-    <div id="rtBig" class="mono" style="font-size:clamp(76px,25vw,108px);font-weight:800;line-height:1;letter-spacing:.01em">5:00</div>
-    <div id="rtLabel" style="font-size:13px;color:#9FB6C6;margin-top:6px;min-height:18px">Ready</div>
-  </div>
-  <div style="display:flex;gap:8px;justify-content:center;margin:12px 0 8px">
-    <button class="rtbtn" id="rtAuto" style="flex:1;padding:13px 8px;font-size:15px">Auto</button>
-    <button class="rtbtn" id="rtReset" style="flex:1;padding:13px 8px;font-size:15px">Reset</button>
-    <button class="rtbtn" id="rtStart" style="flex:1;padding:13px 8px;font-size:15px">Start</button>
-  </div>
-  <div style="display:flex;gap:8px;justify-content:center;margin:8px 0">
-    <button class="rtbtn" id="rtM5" style="flex:1;padding:12px 6px;font-size:16px">&minus;5</button>
-    <button class="rtbtn" id="rtM1" style="flex:1;padding:12px 6px;font-size:16px">&minus;1</button>
-    <button class="rtbtn" id="rtP1" style="flex:1;padding:12px 6px;font-size:16px">+1</button>
-    <button class="rtbtn" id="rtP5" style="flex:1;padding:12px 6px;font-size:16px">+5</button>
-  </div>
-  <div style="display:flex;gap:8px;justify-content:center;margin:8px 0 2px">
-    <button class="rtbtn" id="rtSync" style="flex:2;padding:14px 8px;font-size:16px">Sync</button>
-    <button class="rtbtn" id="rtSilent" style="flex:1;padding:14px 8px;font-size:15px">Sounds Off</button>
-  </div>
-  <div id="rtInfo" style="font-size:14px;color:#9FB6C6;line-height:1.55;margin-top:12px"></div>
-</details>
-
-<details class="notes" id="gpstab"><summary>GPS &middot; distance to line &amp; mark</summary>
-  <div id="gpsBody" style="font-size:13px;color:#333">
-    <button class="pick" id="gpsBtn" style="background:#0E7C94;color:#fff;border:none;padding:12px 14px;font-size:14px;font-weight:800;width:100%">Use my location</button>
-    <div id="gpsStatus" style="font-size:11.5px;color:#7C93A4;margin-top:8px">Tap to allow location. Needs a clear sky view; a few metres accuracy. Best used on the water.</div>
-    <div id="gpsOut" style="margin-top:10px"></div>
-    <div id="posWrap" style="position:relative;margin-top:10px"><svg id="posMap" viewBox="0 0 865 869" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;border:1px solid var(--rule);border-radius:12px;background:#dfeaf0"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="posIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="posOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="posZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px">1x</div></div>
-  </div>
-  <div style="font-size:11px;color:#7C93A4;margin-top:8px">Distance and bearing are great-circle from your fix to the committee-boat end of the line and to the next mark of the selected course. Speed and course over the ground come from GPS movement, so they read true only when you are moving. Not for navigation.</div>
-</details>
-
-<details class="notes" id="tidetab"><summary>Tides</summary>
-  <div style="font-size:12px;color:#333;margin:2px 0 6px">Dun Laoghaire (Dublin North Wall)</div>
-  <div id="tideDay" class="tiderow"></div>
-  <div id="tideNow" class="tidenow"></div>
-  <div id="tideWrap" style="position:relative"><div id="tideFlow"></div><div style="position:absolute;top:16px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="tideIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="tideOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="tideZlab" style="position:absolute;bottom:12px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
-  <div style="margin-top:6px;display:flex;align-items:center;gap:10px">
-    <label style="white-space:nowrap;margin:0">Time <span id="tflowLbl" class="mono" style="font-weight:800;color:#0E7C94">now</span></label>
-    <input id="tflow" type="range" min="0" max="6" step="0.5" value="0" style="flex:1">
-  </div>
-  <div style="font-size:11px;color:#7C93A4;margin-top:4px">Stream from the Dublin Port Company tidal atlas, springs and neaps blended on the day’s range. Slide from the race start to 6 h ahead; each navy arrow shows the stream set, with rate in knots at the arrowhead.</div>
-</details>
-
-<details class="notes" id="charttab"><summary>Course chart</summary>
-  <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
-    <label style="white-space:nowrap;margin:0">Wind <span class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
-    <input class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
-  </div>
-  <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
-</details>
-
-<details class="notes" id="tabletab"><summary>Course table</summary>
-  <div class="badge"><div class="big" id="courseName">C1</div><div class="sub" id="courseSummary"></div></div>
-  <table id="legTable"></table>
-  <div class="tot">
-    <div>Rhumb<br><b class="mono" id="totDist">&ndash;</b> NM</div>
-    <div>Est sailed<br><b class="mono" id="totSail">&ndash;</b> NM</div>
-    <div>Est time<br><b class="mono" id="totTime">&ndash;</b></div>
-    <div>Hoists<br><b class="mono" id="totHoist">&ndash;</b></div>
-  </div>
-</details>
-
-<details class="notes" id="diagramtab"><summary>Leg diagram</summary>
-  <div class="legbtns" id="legbtns"></div>
-  <div style="margin-top:2px;margin-bottom:-4px;display:flex;justify-content:space-between;align-items:center">
-    <div id="viewbtns" style="display:flex;gap:6px">
-      <button class="pick" data-vm="tide" style="padding:8px 10px;font-size:13px">Tide</button>
-      <button class="pick" data-vm="wind" style="padding:8px 10px;font-size:13px">Wind</button>
-      <button class="pick" data-vm="both" style="padding:8px 10px;font-size:13px">Both</button>
-    </div>
-    <button class="pick" id="orientBtn" style="min-width:110px">Course-up</button>
-  </div>
-  <svg id="legview" viewBox="0 0 360 430" preserveAspectRatio="xMidYMid meet" style="margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA"></svg>
-  <div id="startCtl" style="display:none;margin-top:8px"></div>
-  <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
-    <label style="white-space:nowrap;margin:0">Wind <span id="wslideLbl" class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
-    <input id="wslide" class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
-  </div>
-</details>
-
-<details class="notes legpanel" id="tacticstab"><summary>Tactics</summary>
-  <div class="tot leginfo" id="leginfo"></div>
-</details>
-
-<details class="notes" id="windtab"><summary>Wind shifts</summary>
+<details class="notes" id="windtab" style="background:var(--start);border:1px solid #E8892E"><summary style="color:#12283A">Wind</summary>
 <div id="wsGauge"></div>
+<div style="margin:8px 0 2px;display:flex;align-items:center;gap:10px"><label style="white-space:nowrap;margin:0;color:#12283A">Wind <span class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label><input class="wslide" type="range" min="0" max="359" step="1" style="flex:1"></div>
 <div style="font-size:12px;color:#333;margin:8px 0 4px">Describe the day’s wind: the range you expect, and the mean it sits around. Tap Forecast and it fills itself in.</div>
 <div class="inrow" style="margin-bottom:8px">
   <div style="flex:1"><label>Mean °</label><input id="wsMean" type="number" inputmode="numeric" value="234"></div>
@@ -266,7 +189,126 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
 </div>
 <div id="wsOut" style="font-size:13px;line-height:1.5"></div>
 </details>
-<details class="notes"><summary>Notes &amp; assumptions</summary>
+
+<details class="notes" id="timertab" style="background:#2A6285;color:#fff;border:1px solid #1C4E6D">
+  <summary style="color:#fff">Race timer</summary>
+  <div style="text-align:center;margin:8px 0 4px">
+    <div id="rtBig" class="mono" style="font-size:clamp(76px,25vw,108px);font-weight:800;line-height:1;letter-spacing:.01em">5:00</div>
+    <div id="rtLabel" style="font-size:13px;color:#C9DFEC;margin-top:6px;min-height:18px">Ready</div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:center;margin:12px 0 8px">
+    <button class="rtbtn" id="rtAuto" style="flex:1;padding:13px 8px;font-size:15px">Auto</button>
+    <button class="rtbtn" id="rtReset" style="flex:1;padding:13px 8px;font-size:15px">Reset</button>
+    <button class="rtbtn" id="rtStart" style="flex:1;padding:13px 8px;font-size:15px">Start</button>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:center;margin:8px 0">
+    <button class="rtbtn" id="rtM5" style="flex:1;padding:12px 6px;font-size:16px">&minus;5</button>
+    <button class="rtbtn" id="rtM1" style="flex:1;padding:12px 6px;font-size:16px">&minus;1</button>
+    <button class="rtbtn" id="rtP1" style="flex:1;padding:12px 6px;font-size:16px">+1</button>
+    <button class="rtbtn" id="rtP5" style="flex:1;padding:12px 6px;font-size:16px">+5</button>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:center;margin:8px 0 2px">
+    <button class="rtbtn" id="rtSync" style="flex:2;padding:14px 8px;font-size:16px">Sync</button>
+    <button class="rtbtn" id="rtSilent" style="flex:1;padding:14px 8px;font-size:15px">Sounds Off</button>
+  </div>
+  <div id="rtInfo" style="font-size:14px;color:#C9DFEC;line-height:1.55;margin-top:12px"></div>
+</details>
+
+
+<details class="notes" id="tidetab" style="background:#0B5D3C;color:#fff;border:1px solid #073F29">
+  <summary style="color:#fff">Tides</summary>
+  <div id="tideSubtitle" style="font-size:12px;color:#BFE8D4;margin:2px 0 6px">Dun Laoghaire (Dublin North Wall)</div>
+  <div id="tideDay" class="tiderow"></div>
+  <div id="tideNow" class="tidenow" style="color:#fff"></div>
+  <div id="tideWrap" style="position:relative"><div id="tideFlow"></div><div style="position:absolute;top:16px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="tideIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="tideOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="tideZlab" style="position:absolute;bottom:12px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
+  <div style="margin-top:6px;display:flex;align-items:center;gap:10px">
+    <label style="white-space:nowrap;margin:0;color:#BFE8D4">Time <span id="tflowLbl" class="mono" style="font-weight:800;color:#fff">now</span></label>
+    <input id="tflow" type="range" min="0" max="6" step="0.5" value="0" style="flex:1">
+  </div>
+  <div style="font-size:11px;color:#BFE8D4;margin-top:4px">Stream from the Dublin Port Company tidal atlas, springs and neaps blended on the day’s range. Slide from the race start to 6 h ahead; each navy arrow shows the stream set, with rate in knots at the arrowhead.</div>
+</details>
+
+<details class="notes" id="charttab"><summary>Course Chart</summary>
+  <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
+  <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
+    <label style="white-space:nowrap;margin:0">Wind <span class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
+    <input class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
+  </div>
+</details>
+
+<details class="notes" id="tabletab"><summary>Course Table</summary>
+  <div class="badge"><div class="big" id="courseName">C1</div><div class="sub" id="courseSummary"></div></div>
+  <table id="legTable"></table>
+  <div class="tot">
+    <div>Rhumb<br><b class="mono" id="totDist">&ndash;</b> NM</div>
+    <div>Est sailed<br><b class="mono" id="totSail">&ndash;</b> NM</div>
+    <div>Est time<br><b class="mono" id="totTime">&ndash;</b></div>
+    <div>Hoists<br><b class="mono" id="totHoist">&ndash;</b></div>
+  </div>
+</details>
+
+<details class="notes" id="diagramtab"><summary>Course Analysis</summary>
+  <div class="legbtns" id="legbtns"></div>
+  <div style="margin-top:2px;margin-bottom:-4px;display:flex;justify-content:space-between;align-items:center">
+    <div id="viewbtns" style="display:flex;gap:6px">
+      <button class="pick" data-vm="tide" style="padding:8px 10px;font-size:13px">Tide</button>
+      <button class="pick" data-vm="wind" style="padding:8px 10px;font-size:13px">Wind</button>
+      <button class="pick" data-vm="both" style="padding:8px 10px;font-size:13px">Both</button>
+    </div>
+    <button class="pick" id="orientBtn" style="min-width:110px">Course-up</button>
+  </div>
+  <svg id="legview" viewBox="0 0 360 430" preserveAspectRatio="xMidYMid meet" style="margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA"></svg>
+  <div id="startCtl" style="display:none;margin-top:8px"></div>
+  <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
+    <label style="white-space:nowrap;margin:0">Wind <span id="wslideLbl" class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
+    <input id="wslide" class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
+  </div>
+</details>
+
+<details class="notes legpanel" id="tacticstab"><summary>Course Tactics</summary>
+  <div class="tot leginfo" id="leginfo"></div>
+</details>
+
+<details class="notes" id="gpstab" style="background:#D6ECF7;border:1px solid #A9D3E8"><summary>GPS</summary>
+  <div id="gpsBody" style="font-size:13px;color:#333">
+    <button class="pick" id="gpsBtn" style="background:#0E7C94;color:#fff;border:none;padding:12px 14px;font-size:14px;font-weight:800;width:100%">Use my location</button>
+    <div id="gpsStatus" style="font-size:11.5px;color:#7C93A4;margin-top:8px">Tap to allow location. Needs a clear sky view; a few metres accuracy. Best used on the water.</div>
+    <div id="gpsOut" style="margin-top:10px"></div>
+    <div id="posWrap" style="position:relative;margin-top:10px"><svg id="posMap" viewBox="0 0 865 869" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;border:1px solid var(--rule);border-radius:12px;background:#dfeaf0"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="posIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="posOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="posZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px">1x</div></div>
+  </div>
+  <div style="font-size:11px;color:#7C93A4;margin-top:8px">Distance and bearing are great-circle from your fix to the committee-boat end of the line and to the next mark of the selected course. Speed and course over the ground come from GPS movement, so they read true only when you are moving. Not for navigation.</div>
+</details>
+
+<details class="notes" id="garmintab" style="background:#3A4552;border:1px solid #2A323C"><summary style="color:#fff">GPS Display</summary>
+  <button class="pick" id="garminBtn" style="background:#0E7C94;color:#fff;border:none;padding:12px 14px;font-size:14px;font-weight:800;width:100%">Use my location</button>
+  <div id="garminStatus" style="font-size:11.5px;color:#C9D3DC;margin-top:8px">Tap to allow location. Needs a clear sky view; best used on the water.</div>
+
+  <div class="garmin-frame">
+    <div class="garmin-tile">
+      <div class="garmin-label">Speed</div>
+      <div class="garmin-value" id="gSpeed">&ndash;<span class="garmin-unit">kt</span></div>
+    </div>
+    <div class="garmin-tile">
+      <div class="garmin-label" id="gDistLabel">Dist to Next</div>
+      <div class="garmin-value" id="gDist">&ndash;</div>
+    </div>
+    <div class="garmin-tile">
+      <div class="garmin-label" id="gEtaLabel">ETA at Dest</div>
+      <div class="garmin-value" id="gEta">&ndash;</div>
+    </div>
+    <div class="garmin-tile">
+      <div class="garmin-label" id="gTimeLabel">Time to Next</div>
+      <div class="garmin-value" id="gTime">&ndash;</div>
+    </div>
+  </div>
+
+  <div class="garmin-compass-wrap">
+    <svg id="garminCompass" viewBox="0 0 300 300" style="width:100%;max-width:320px;display:block"></svg>
+  </div>
+  <div style="font-size:11px;color:#C9D3DC;margin-top:8px">Shows the start line before your start, then switches to the next mark once the gun has gone. The pointer is the true bearing to that target on a north-up ring. Not for navigation.</div>
+</details>
+
+<details class="notes" id="notestab" style="background:#A9C3DE;border:1px solid #7A9CC4"><summary style="color:#12283A">Notes &amp; assumptions</summary>
 <p class="note"><span id="startNote">Start assumed <span id="mlTxt">0.5</span> NM downwind of mark 1.</span> Finish line per the course card instructions; where the card gives the finish as approximately upwind of the last mark, it is modelled as exactly 0.5 NM upwind. Sail calls from crossover chart at steady wind; <span class="warn">orange sail = different call in the gusts</span>. Times from full ORC polar targets for the selected boat (J/122 and J/109 from ORC-derived files; ETAP 28i derived from the Etap 30 polar scaled 0.96 on waterline length). Sail calls use the J/122 crossover chart for all boats. Targets (VMG-optimal angles on beats/runs; the boat is never modelled sailing dead downwind). Confirm the signalled course on Ch&nbsp;74; Merrion &amp; Battery moved slightly in 2026. Tide: Dublin Port 2026 tables (NOC); streams read from the Dublin Port Company Dublin Bay Tidal Atlas, both springs and neaps, at every DBSC mark in half-hourly steps from HW−6 h to HW+6 h. The app interpolates in time, between the two phases on the day’s range (mean spring range 3.4 m, mean neap 1.9 m), and across position from the surrounding marks. Rate comes from the atlas colour bands so it carries about ±0.1 kt; set comes from the arrow field, and where the bay is close to slack the atlas draws too few arrows to fix a direction, so those steps are interpolated between the readings either side. Springs and neaps are blended as vectors rather than as angles, so a mid-range tide reads near-slack at a phase where the two turn at different times, which is what actually happens; In the leg panel: Dist (course) is the distance actually sailed along the recommended route (the tacked or gybed track, over the ground when tide is running), not the straight rhumb line, with the bracketed figures showing how the leg divides between the first and second legs (percentages after Dist, minutes after Est); Tgt VMG is the polar target speed made good along the leg for the selected boat, the number to hold on the instruments; Est is the leg time along that routed course over the ground, including the tidal stream, so on a foul tide it exceeds the still-water figure. The course table and totals remain still-water polar times. The Wind shifts tab’s default From/To range scales with wind speed (±34° under 8 kt narrowing to ±9° above 20 kt), calibrated from M2 buoy hourly records 2023–2026; edit any shift input to take manual control. Live wind: the needle follows the main wind box, which can be typed or fed from instruments via the NMEA/Signal K WebSocket connect in the Wind shifts tab (MWD sentences, MWV(T)+heading, or Signal K directionTrue; updates applied every 2 s). Browsers block plain ws:// from an https page, so a live feed needs either a wss:// source (e.g. Signal K with TLS) or the app opened over http from a local copy on the boat network. Race-day trend: the Wind shifts tab can fetch the hourly forecast for Dun Laoghaire (Open-Meteo) and fit a persistent drift in degrees per hour across your racing window, from your own start time for three hours; the figure is cached, so fetch it ashore and it still works offline afloat. Typing a figure in the Trend box overrides the forecast, and clearing the box returns to it. The trend adds a PERSISTENT layer to the oscillating mean-reversion model: it does not revert, so it accumulates with time on the leg (degrees per hour multiplied by the leg time) and is added to the expected shift before the side value is integrated. When the persistent shift is at least 3° on the leg and larger than the mean-reversion term, the verdict declares a persistent shift and tells you to sail to the new wind and hold; otherwise it reports the oscillating regime and the tack-on-headers threshold. The forecast sampling window runs from your own start gun for three hours and stops there, so times after racing do not drag the fit. Band from forecast seeds Wind, Wind kt, Mean and From/To from the forecast at your start, with the band width from the wind-speed rule; it sets the starting picture rather than the drift, which the Trend still carries, so the same shift is never counted twice. Band from observed replaces those with what has actually been seen: every wind value, typed or fed from the instruments, is logged for 60 minutes, and the band is rebuilt from the circular mean and spread of that log. An observed drift is only promoted to a Trend when the wind has moved further than it scatters (total drift at least one standard deviation) and the rate is capped at 40°/h, so a swinging wind is not mistaken for a persistent shift. While the NMEA feed is connected this refresh happens automatically about once a minute. The preferred side (bold route) is chosen on the COMBINED value in minutes of the tidal-stream gradient and the expected wind-shift reversion (distribution mean vs current wind, discounted by a 2-hour relaxation timescale from M2 records; ladder-rung leverage taken as 0.35 of the leg length), called when the net is worth at least 0.5 min; its label, e.g. (−2.5m), is the time you save on that leg by taking the bold side rather than the other, with the percentage expressed against this leg’s still-water time. Beats favour the side the wind is expected to shift toward, runs the side it shifts away from; the per-leg tack/gybe threshold is 0.7 of the fitted spread. The verdict banner on each beat and run integrates the side decision over the whole fitted wind distribution: the percentage is the share of possible winds for which that side comes out ahead once the tide is included; GO needs at least 1 min and roughly 68%, Lean at least 0.5 min, otherwise sail the shifts. The tinted half of the leg diagram marks the favoured side. The Tide/Wind/Both buttons isolate the components: Tide shows the stream call alone, Wind removes the tide from both the verdict and the geometry (still-water routes, no stream rose), Both combines them. On beats and runs the panel tables both candidate routes: the swatch matches the diagram line, each leg’s course to steer is coloured by its tack, with minutes per leg beside it; ◀ best marks the recommended route. The slider under the diagram spans the From–To band set in the Wind shifts panel; From and To are fixed by the user (auto-filled once from wind speed), and sliding moves only the wind and its mean within them, updating live: laylines, routes, courses to steer and the side verdict all follow as you slide. Not for navigation.</p>
 <p class="note" style="margin-top:10px;color:#48627A">App developed by Michael Keatinge.</p>
 </details>
@@ -686,8 +728,17 @@ function courseOverlay(px){
   });
   return s;
 }
+const TIDE_WEEKDAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const TIDE_MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+function fmtTideDate(dateStr){
+  const d=new Date(dateStr+"T12:00:00");
+  if(isNaN(d.getTime()))return "";
+  return `${TIDE_WEEKDAYS[d.getDay()]}, ${String(d.getDate()).padStart(2,"0")}-${TIDE_MONTHS[d.getMonth()]}-${d.getFullYear()}`;
+}
 function renderTide(){
   const ds=$("rdate").value, ts=$("rtime").value||"14:00";
+  const sub=$("tideSubtitle");
+  if(sub)sub.textContent=ds?`Dun Laoghaire (Dublin North Wall) \u00B7 ${fmtTideDate(ds)}`:"Dun Laoghaire (Dublin North Wall)";
   const st=ds?tideState(ds,ts):null;
   if(!st){$("tideDay").innerHTML='<div class="tev">No table data (covers Apr\u2013Oct 2026)</div>';$("tideNow").textContent="";return;}
   $("tideDay").innerHTML=st.ev.map(e=>{
@@ -869,6 +920,57 @@ function arrivalInfo(r,idx,wdir,wspd){
 // ---------- UI ----------
 const $=id=>document.getElementById(id);
 let state={card:"thublue",letter:"A",num:1,leg:0,northUp:true,boat:"etap28i",viewMode:"both"};
+// Four winds. "used" is what the whole app calculates from; it always equals one of the
+// other three, whichever was set last under these rules:
+//   expected  - a course letter button. Claims "used" ONLY until the first Forecast press.
+//   forecast  - the Forecast button. Sets mean/from/to/trend, clears observed, claims used.
+//   observed  - a wind slider. Moves the mean only, holds from/to, claims used.
+// The course itself is state.letter and is changed ONLY by a letter button, never by wind.
+const WIND={expected:0, forecast:null, observed:null, manual:null, src:"expected", chosen:false, numChosen:false, fLive:false};
+// "F" slot is a fetched forecast; when NMEA is connected it feeds the same slot live and
+// the marker shows "N". Observed (slider or manual) still overrides it; pressing Resume on
+// the Connect button hands control back to the live feed.
+// Wind speed and gust follow the same idea as direction, one step simpler: a course
+// letter says nothing about strength, so there is no "expected". Sources are the
+// forecast (or live instruments) and your own typing, with a plain default underneath.
+const SPD_DEF=10, GST_DEF=15;
+const WSPD={forecast:null, manual:null, src:"default", fLive:false};
+const WGST={forecast:null, manual:null, src:"default"};
+function usedSpd(){ return WSPD.src==="manual"?WSPD.manual : WSPD.src==="forecast"?WSPD.forecast : SPD_DEF; }
+function usedGst(){ const g=(WGST.src==="manual")?WGST.manual : (WGST.src==="forecast")?WGST.forecast : GST_DEF;
+                    return Math.max(g, usedSpd()); }        // a gust is never below the wind
+function setUsedSpd(v,src){ if(v==null||!isFinite(v))return; WSPD[src]=Math.round(v*10)/10; WSPD.src=src;
+  const el=$("wspd"); if(el)el.value=String(WSPD[src]); }
+function setUsedGst(v,src){ if(v==null||!isFinite(v))return; WGST[src]=Math.round(v); WGST.src=src;
+  const el=$("wgst"); if(el)el.value=String(WGST[src]); }
+function windResume(){ if(!(typeof NMEA!=="undefined"&&NMEA.sock))return;
+  WIND.observed=null; WIND.manual=null;
+  if(WIND.forecast!==null){ WIND.src="forecast"; setUsed(WIND.forecast,"forecast"); }
+  WSPD.manual=null; if(WSPD.forecast!==null)setUsedSpd(WSPD.forecast,"forecast");
+  WGST.manual=null; if(WGST.forecast!==null)setUsedGst(WGST.forecast,"forecast");
+  render(); }
+// Hand the wind back to the forecast held in memory, and recentre the band (and so the
+// sliders) on it. The stored figure is the last one fetched or pasted, not a fresh pull.
+function fcResume(){
+  if(WIND.forecast===null)return;
+  WIND.observed=null; WIND.manual=null;
+  WIND.src="forecast"; setUsed(WIND.forecast,"forecast");
+  WSPD.manual=null; if(WSPD.forecast!==null)setUsedSpd(WSPD.forecast,"forecast");
+  WGST.manual=null; if(WGST.forecast!==null)setUsedGst(WGST.forecast,"forecast");
+  try{ const spd=usedSpd(); bandSetFromWind(WIND.forecast,spd);
+       window.wsMeanDirty=false; window.wsBandDirty=false; }catch(e){}
+  windAvail(); render();
+}
+function usedWind(){
+  return WIND.src==="manual"   ? WIND.manual
+       : WIND.src==="observed" ? WIND.observed
+       : WIND.src==="forecast" ? WIND.forecast
+       : WIND.expected;
+}
+function setUsed(v,src){                        // v degrees, src expected|forecast|observed
+  WIND[src]=norm(v); WIND.src=src;
+  const el=$("wdir"); if(el)el.value=String(Math.round(norm(v)));
+}
 setBoat("etap28i");
 function suggestLetter(w){let best="A",bd=1e9;WINDLTR.forEach(([l,d])=>{const dd=angdiff(w,d);if(dd<bd){bd=dd;best=l;}});return best;}
 // ---------- wind-shift distribution (beta fit on the stated range) ----------
@@ -889,15 +991,17 @@ function fitShiftDist(lo,hi,mean){
   return {a,b,span,lo,hi,band,gotMean:lo+span*a/(a+b)};
 }
 // ---------- live wind: NMEA 0183 over WebSocket, or Signal K deltas ----------
-let NMEA={sock:null,lastHdg:null,lastApply:0};
+let NMEA={sock:null,lastHdg:null,lastTWS:null,lastApply:0};
 function parseForTWD(txt){
   txt=String(txt);
   if(txt.trim().startsWith("{")){                       // Signal K delta
-    try{const d=JSON.parse(txt);
+    try{const d=JSON.parse(txt); let dir=null;
       for(const u of d.updates||[])for(const v of u.values||[]){
-        if(v.path==="environment.wind.directionTrue")return norm(v.value*180/Math.PI);
+        if(v.path==="environment.wind.directionTrue")dir=norm(v.value*180/Math.PI);
+        if(v.path==="environment.wind.speedTrue")NMEA.lastTWS=v.value*1.94384;   // m/s to knots
         if(v.path==="navigation.headingTrue")NMEA.lastHdg=v.value*180/Math.PI;
       }
+      return dir;
     }catch(e){}
     return null;
   }
@@ -905,17 +1009,20 @@ function parseForTWD(txt){
   for(const line of txt.split(/\r?\n/)){
     const f=line.trim().split("*")[0].split(",");
     const typ=(f[0]||"").slice(3);
-    if(typ==="MWD"&&f[1])twd=+f[1];                     // true wind direction, direct
+    if(typ==="MWD"&&f[1]){ twd=+f[1];                   // true wind direction, direct
+      if(f[6]==="N"&&f[5]!=="")NMEA.lastTWS=+f[5]; }     // ...with speed in knots
     else if(typ==="HDT"&&f[1])NMEA.lastHdg=+f[1];
     else if(typ==="HDG"&&f[1])NMEA.lastHdg=+f[1];
-    else if(typ==="MWV"&&f[2]==="T"&&f[1]!==""&&NMEA.lastHdg!==null)
-      twd=norm(NMEA.lastHdg+ +f[1]);                    // true wind angle + heading
+    else if(typ==="MWV"&&f[2]==="T"&&f[1]!==""){
+      if(NMEA.lastHdg!==null)twd=norm(NMEA.lastHdg+ +f[1]);   // true wind angle + heading
+      if(f[4]==="N"&&f[3]!=="")NMEA.lastTWS=+f[3];            // true wind speed in knots
+    }
   }
   return (twd!==null&&isFinite(twd))?norm(twd):null;
 }
 function nmeaToggle(){
   const st=$("nmeaStat"),btn=$("nmeaBtn");
-  if(NMEA.sock){try{NMEA.sock.close();}catch(e){} NMEA.sock=null;OBS.auto=false;btn.textContent="Connect";st.textContent="disconnected";windAvail();return;}
+  if(NMEA.sock){try{NMEA.sock.close();}catch(e){} NMEA.sock=null;OBS.auto=false;WIND.fLive=false;WSPD.fLive=false;btn.textContent="Connect";st.textContent="disconnected";windAvail();return;}
   const url=($("nmeaUrl").value||"").trim();
   if(!/^wss?:\/\//.test(url)){st.textContent="enter a ws:// or wss:// address";return;}
   try{
@@ -927,7 +1034,15 @@ function nmeaToggle(){
       if(twd!==null){
         st.textContent=`live TWD ${Math.round(twd)}\u00B0`;
         const now=Date.now();
-        if(now-NMEA.lastApply>2000){NMEA.lastApply=now;$("wdir").value=String(Math.round(twd));window.lastBandW=Math.round(twd);window.holdBand=true;render();window.holdBand=false;
+        if(now-NMEA.lastApply>2000){NMEA.lastApply=now;
+          WIND.forecast=norm(twd); WIND.fLive=true;             // live instruments fill the F/N slot
+          if(NMEA.lastTWS!=null&&isFinite(NMEA.lastTWS)){       // instruments measure strength too
+            WSPD.forecast=Math.round(NMEA.lastTWS*10)/10; WSPD.fLive=true;
+            if(WSPD.manual===null)setUsedSpd(WSPD.forecast,"forecast");
+          }
+          window.lastBandW=Math.round(twd);
+          if(WIND.observed===null&&WIND.manual===null){ WIND.src="forecast"; setUsed(twd,"forecast"); }
+          window.holdBand=true;render();window.holdBand=false;
           obsAdd(twd);
           if(OBS.auto&&now-OBS.lastAuto>60000&&obsStats()){OBS.lastAuto=now;bandFromObserved(true);}  // instruments live: keep the band on the real wind
         }
@@ -999,11 +1114,13 @@ function trendFromForecast(quiet){
 function fcIngest(j){                           // accepts an Open-Meteo reply from fetch or from paste
   const H=j&&j.hourly;
   if(!H||!H.time||!H.wind_direction_10m)throw new Error("no hourly wind in that data");
-  FC.data={time:H.time, dir:H.wind_direction_10m, spd:H.wind_speed_10m||[]}; FC.stamp=Date.now();
+  FC.data={time:H.time, dir:H.wind_direction_10m, spd:H.wind_speed_10m||[], gst:H.wind_gusts_10m||[]}; FC.stamp=Date.now();
   const C=j&&j.current;
   FC.cur = (C&&C.wind_direction_10m!=null) ? {dir:+C.wind_direction_10m, spd:+C.wind_speed_10m, gust:(C.wind_gusts_10m!=null?+C.wind_gusts_10m:null), t:C.time||""} : null;
   fcCacheSave();
   const rb=$("trRate"); if(rb)rb.value="";      // forecast takes over unless a manual figure is typed
+  WIND.observed=null; WIND.manual=null; WIND.fLive=false;   // a fetched forecast: marker "F", clears overrides
+  WSPD.manual=null; WGST.manual=null; WSPD.fLive=false;     // strength comes from the forecast too
   trendFromForecast();
   seedFromForecast();                          // one tap now does the whole job
   windAvail();
@@ -1019,14 +1136,15 @@ function seedFromForecast(){
   const live=(soon&&FC.cur&&isFinite(FC.cur.dir))?FC.cur:null;
   const f=live?{dir:live.dir,spd:live.spd}:fcAt(t0);
   if(!f){ bs.textContent=""; return; }
-  const spd=(f.spd!=null&&isFinite(f.spd))?f.spd:+($("wspd").value||12);
-  $("wdir").value=String(Math.round(norm(f.dir)));
-  if(f.spd!=null&&isFinite(f.spd))$("wspd").value=String(Math.round(f.spd*10)/10);
-  if(live&&live.gust!=null&&isFinite(live.gust)&&$("wgst"))$("wgst").value=String(Math.round(live.gust));
+  const spd=(f.spd!=null&&isFinite(f.spd))?f.spd:usedSpd();
+  setUsed(f.dir,"forecast");                   // forecast now determines the used wind
+  if(f.spd!=null&&isFinite(f.spd))setUsedSpd(f.spd,"forecast");
+  const gu=(live&&live.gust!=null&&isFinite(live.gust))?live.gust
+          :((f.gst!=null&&isFinite(f.gst))?f.gst:null);     // hourly gusts, or the live reading
+  if(gu!=null)setUsedGst(gu,"forecast");
   obsAdd(f.dir);
-  const keptMean=window.wsMeanDirty, keptBand=window.wsBandDirty;
-  let hw=null;
-  if(!keptMean&&!keptBand){ hw=bandSetFromWind(f.dir,spd); window.wsMeanDirty=false; window.wsBandDirty=false; }
+  let hw=bandSetFromWind(f.dir,spd);            // Forecast always recentres the band on its mean
+  window.wsMeanDirty=false; window.wsBandDirty=false;
   const when=live?(FC.cur.t?(" at "+String(FC.cur.t).slice(11,16)):" now"):" at your start";
   bs.innerHTML=`Wind${when}: <b>${Math.round(norm(f.dir))}\u00B0</b>`+
     ((f.spd!=null&&isFinite(f.spd))?` at <b>${Math.round(f.spd)} kt</b>`:"")+
@@ -1059,15 +1177,20 @@ function windAvail(){
     fb.disabled=off||busy;
     fb.style.opacity=(off||busy)?0.45:1;
     fb.style.cursor=(off||busy)?"default":"pointer";
-    fb.textContent=busy?"fetching\u2026":"Forecast";
-    fb.title=off?"no data connection":"";
+    const fcOverridden=(WIND.forecast!==null||WSPD.forecast!==null||WGST.forecast!==null)&&
+                       (WIND.observed!==null||WIND.manual!==null||WSPD.manual!==null||WGST.manual!==null);
+    fb.textContent = busy ? "fetching\u2026" : (fcOverridden ? "Resume" : "Forecast");
+    if(fcOverridden){ fb.disabled=busy; fb.style.opacity=busy?0.45:1; fb.style.cursor=busy?"default":"pointer"; }
+    fb.title = fcOverridden ? "hand the wind back to the forecast" : (off?"no data connection":"");
   }
   const nb=$("nmeaBtn"), nu=$("nmeaUrl");
   if(nb&&nu){
     const live=!!(typeof NMEA!=="undefined"&&NMEA.sock);
+    const overridden=live&&(WIND.observed!==null||WIND.manual!==null);
+    nb.textContent = !live ? "Connect" : overridden ? "Resume" : "Disconnect";
+    nb.title = overridden ? "hand the wind back to your instruments" : "";
     const ok=live||!!nu.value.trim();
     nb.disabled=!ok; nb.style.opacity=ok?1:0.45; nb.style.cursor=ok?"pointer":"default";
-    nb.title=ok?"":"enter your instrument address first";
   }
   // Get forecast is offered only when the automatic fetch cannot do the job, and it
   // steps aside once the paste box is open or a forecast has been read in.
@@ -1078,7 +1201,7 @@ function windAvail(){
 }
 function fcUrl(bust){
   return "https://api.open-meteo.com/v1/forecast?latitude="+FC.lat+"&longitude="+FC.lon+
-         "&hourly=wind_direction_10m,wind_speed_10m&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kn&timezone=Europe%2FDublin&forecast_days=2"+
+         "&hourly=wind_direction_10m,wind_speed_10m,wind_gusts_10m&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kn&timezone=Europe%2FDublin&forecast_days=2"+
          (bust?("&_="+Date.now()):"");
 }
 function trendFetch(){
@@ -1123,18 +1246,19 @@ function obsStats(){
 }
 function fcAt(ms){                                     // forecast wind interpolated to a moment
   if(!FC.data||!FC.data.time||!FC.data.time.length)return null;
-  const T=FC.data.time, D=FC.data.dir, S=FC.data.spd||[];
+  const T=FC.data.time, D=FC.data.dir, S=FC.data.spd||[], G=FC.data.gst||[];
   const ts=T.map(x=>new Date(x).getTime());
-  if(ms<=ts[0])return {dir:norm(D[0]), spd:S[0]!=null?+S[0]:null};
+  if(ms<=ts[0])return {dir:norm(D[0]), spd:S[0]!=null?+S[0]:null, gst:G[0]!=null?+G[0]:null};
   for(let i=1;i<ts.length;i++){
     if(ms<=ts[i]){
       const f=(ms-ts[i-1])/Math.max(1,ts[i]-ts[i-1]);
       const step=((((+D[i])-(+D[i-1]))+540)%360)-180;   // shortest way round
       const sp=(S[i-1]!=null&&S[i]!=null)?(+S[i-1]+((+S[i])-(+S[i-1]))*f):null;
-      return {dir:norm(+D[i-1]+step*f), spd:sp};
+      const gu=(G[i-1]!=null&&G[i]!=null)?(+G[i-1]+((+G[i])-(+G[i-1]))*f):null;
+      return {dir:norm(+D[i-1]+step*f), spd:sp, gst:gu};
     }
   }
-  return {dir:norm(D[D.length-1]), spd:S.length?+S[S.length-1]:null};
+  return {dir:norm(D[D.length-1]), spd:S.length?+S[S.length-1]:null, gst:G.length?+G[G.length-1]:null};
 }
 function bandSetFromWind(w,ws){                        // centre the band on a wind, width from the calibrated rule
   const hw=Math.round(interp([6,11,17,25],[34,16,11,9],Math.max(4,Math.min(30,ws||12))));
@@ -1252,7 +1376,23 @@ function updateWindTab(){
    if(gEl){
      const W2=320,H2=172,L=14,Rm=14,T=16,B=26;      // plot frame
      const PW=W2-L-Rm,PH=H2-T-B;
-     const pad=0.09*f.span, x0=lo-pad, x1=hi+pad;
+     // gather the live wind markers first, so the axis can stretch to fit any that fall
+     // outside the band (an expected wind well off the forecast, say).
+     const NAVY="#12283A", ORANGE="#FF6A13", GREEN="#1B7A3D";
+     const _marks=[];
+     if(WIND.chosen) _marks.push({v:WIND.expected, ltr:"E", h:0.90, ring:NAVY, fg:"#fff",
+       suf:" ("+state.letter+")"});   // the letter this expected wind came from
+     if(WIND.forecast!==null){ const dr=(WIND.src==="forecast");
+       _marks.push({v:WIND.forecast, ltr:WIND.fLive?"N":"F", h:0.62, ring:dr?ORANGE:GREEN, fg:"#fff"}); }
+     if(WIND.observed!==null||WIND.manual!==null){
+       const man=(WIND.src==="manual")||(WIND.manual!==null&&WIND.observed===null);
+       const v=(WIND.manual!==null?WIND.manual:WIND.observed);
+       _marks.push({v, ltr:"O", h:0.34, ring:ORANGE, fg:man?NAVY:"#fff"}); }
+     // put every marker on the same turn as the band, then let them stretch the axis
+     const near=t=>{ let a=t; while(a<lo-180)a+=360; while(a>lo+180)a-=360; return a; };
+     const mvs=_marks.map(m=>near(m.v));
+     const pad=0.09*f.span;
+     let x0=Math.min(lo,...mvs)-pad, x1=Math.max(hi,...mvs)+pad;
      const X=v=>L+(v-x0)/(x1-x0)*PW, Y=d=>T+PH-d*PH;
      const Bnorm=Math.exp(logGamma(f.a)+logGamma(f.b)-logGamma(f.a+f.b));
      const pdf=v=>{const u=(v-lo)/f.span;if(u<0||u>1)return 0;
@@ -1276,10 +1416,24 @@ function updateWindTab(){
      // range labels
      g+=`<text x="${X(lo)}" y="${T+PH+16}" font-size="12" font-weight="700" text-anchor="middle" fill="#48627A">${((lo%360)+360)%360|0}\u00B0</text>`;
      g+=`<text x="${X(hi)}" y="${T+PH+16}" font-size="12" font-weight="700" text-anchor="middle" fill="#48627A">${((hi%360)+360)%360|0}\u00B0</text>`;
-     // current wind: red needle line
-     {const xn=X(Math.max(x0,Math.min(x1,wnow)));
-      g+=`<line x1="${xn}" y1="${T-2}" x2="${xn}" y2="${T+PH}" stroke="#C8102E" stroke-width="2.5"/>`;
-      g+=`<text x="${xn}" y="${T-4}" font-size="11.5" font-weight="800" text-anchor="middle" fill="#C8102E" stroke="#fff" stroke-width="3" paint-order="stroke">now ${((wnow%360)+360)%360|0}\u00B0</text>`;}
+     // Wind source markers: E expected, F/N forecast or instruments, O observed.
+     // Only the source driving "used" is orange; E is always black; an overridden
+     // forecast is dark green. Circles sit at three heights so they never overlap.
+     {
+       const marks=_marks;
+       for(let mi=0;mi<marks.length;mi++){
+         const m=marks[mi];
+         const xn=X(near(m.v)), yTop=Y(m.h);
+         const orange=(m.ring===ORANGE);
+         const deg=(((Math.round(m.v)%360)+360)%360);
+         // put the bearing on the side with more room, so it never runs off the edge
+         const side=(xn>L+PW*0.6)?-1:1, tx=xn+side*13, anch=side>0?"start":"end";
+         g+=`<line x1="${xn}" y1="${yTop}" x2="${xn}" y2="${T+PH}" stroke="${m.ring}" stroke-width="${orange?2.6:2}" opacity="${orange?1:0.85}"/>`;
+         g+=`<circle cx="${xn}" cy="${yTop}" r="9" fill="${m.ring}" stroke="#fff" stroke-width="1.5"/>`;
+         g+=`<text x="${xn}" y="${yTop+3.5}" font-size="11" font-weight="800" text-anchor="middle" fill="${m.fg}">${m.ltr}</text>`;
+         g+=`<text x="${tx}" y="${yTop+3.5}" font-size="11" font-weight="800" text-anchor="${anch}" fill="${m.ring}" stroke="#fff" stroke-width="2.6" paint-order="stroke">${String(deg).padStart(3,"0")}\u00B0${m.suf||""}</text>`;
+       }
+     }
      g+=`</svg>`;
      gEl.innerHTML=g;
    }}
@@ -1297,18 +1451,96 @@ function updateWindTab(){
 // ---------- Race timer (DBSC 5,4,1) ----------
 let RT={src:"auto", autoOn:true, myStart:null, armSec:300, offset:0, silent:false, timer:null, lastWhole:null, ac:null, wl:null};
 // DBSC 2026 keelboat start sequences (warning-signal times). Class order gives the 5-min grid.
+// The 2026 DBSC programme, enough of it to work out when your next race actually is.
+// Saturdays alternate: on the weeks listed the Blue fleet (B31.7, Cr2, Cr4&5) starts at
+// the West Pier hut, otherwise it starts from the committee vessel.
+const PROG={
+  season:{tue:["2026-04-28","2026-08-25"], thu:["2026-04-23","2026-08-27"], sat:["2026-04-25","2026-09-26"]},
+  noRace:["2026-06-06","2026-06-13","2026-06-27","2026-07-04"],        // waterfront club regattas
+  satBlueHut:["2026-04-25","2026-05-02","2026-05-09","2026-05-16","2026-05-23",
+              "2026-08-01","2026-08-08","2026-08-15","2026-08-22"]
+};
 const RTSEQ={
   tue:{w1:[18,50], groups:[["c0","c1","c2","c45","b317"],["sb20"],["c3"],["ship"]]},  // Tuesday: grouped combined starts, West Pier Hut Ch 68
   thu:{w1:[18,35], groups:[["c0"],["c1"],["b317"],["c2"],["c3"],["c45"]]},            // Thursday Blue, committee vessel Ch 74
-  sat:{w1:[13,30], groups:[["c0"],["c1"],["b317"],["c2"],["c45"],["c3"]]}             // Saturday (except Green), first gun 13:30
+  sat:{w1:[13,30], groups:[["c0"],["c1"],["b317"],["c2"],["c45"],["c3"]]},           // Saturday committee vessel, first warning 13:30
+  sathut:{w1:[14,0], groups:[["c0"],["c1"],["b317"],["c2"],["c45"],["c3"]]}          // Saturday West Pier hut, first warning 14:00
 };
 const RTCLASS={j122:{code:"c0",name:"Cruisers 0"}, j109:{code:"c1",name:"Cruisers 1"}, etap28i:{code:"c45",name:"Cruisers 4 & 5"}};
-function rtDay(){ const c=state&&state.card; if(c==="tuehut")return "tue"; if(c==="thublue")return "thu"; return "sat"; }
+// Race time has three sources, the same idea as the wind:
+//   default - the programme: your next race, its card, and your class's gun
+//   user    - you typed a date or a time
+//   timer   - the gun the race timer is actually counting to, which wins while it runs
+const TIME={user:null, src:"default"};
+function defaultRace(){ return nextRace(Date.now()); }
+function raceDayMs(){                                  // the DAY the timer should anchor to
+  if(TIME.src==="user"&&TIME.user!=null)return TIME.user;
+  const n=defaultRace(); return n?n.ms:Date.now();
+}
+function usedGun(){
+  if(TIME.src==="timer"){ const t=(typeof rtTarget==="function")?rtTarget():null; if(t!=null)return t; }
+  if(TIME.src==="user"&&TIME.user!=null)return TIME.user;
+  const n=defaultRace(); return n?n.ms:Date.now();
+}
+function timeSrc(){                                    // what is actually driving it now
+  if(TIME.src==="timer"&&(typeof rtTarget==="function")&&rtTarget()!=null)return "timer";
+  if(TIME.src==="user"&&TIME.user!=null)return "user";
+  return "default";
+}
+// ---------- when is my next race? ----------
+const ymd=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+function inSeason(day,s){ const w=PROG.season[day]; return w && s>=w[0] && s<=w[1]; }
+// Which card applies on a given Saturday, for the class you sail.
+function satCard(s,code){
+  if(code==="c0"||code==="c1")return "satcv";            // these always start from a committee vessel
+  return PROG.satBlueHut.indexOf(s)>=0 ? "sathut" : "satcv";
+}
+// The gun for your class on a given card, on a given date.
+function gunOn(dateObj,card,code){
+  const day = card==="tuehut"?"tue" : card==="thublue"?"thu" : card==="sathut"?"sathut" : "sat";
+  const seq=RTSEQ[day]; if(!seq)return null;
+  let idx=seq.groups.findIndex(g=>g.indexOf(code)>=0); if(idx<0)idx=0;
+  const d=new Date(dateObj.getTime()); d.setHours(seq.w1[0],seq.w1[1],0,0);
+  return d.getTime()+idx*300000+300000;                  // first warning, my warning, my gun
+}
+// Choosing a card by hand means choosing that day: jump to the next one that fits.
+function nextCardGun(card,fromMs){
+  const code=(RTCLASS[state&&state.boat]||RTCLASS.etap28i).code;
+  const want = card==="tuehut"?2 : card==="thublue"?4 : 6;
+  const t0=(fromMs||Date.now())-2*3600000;
+  for(let i=0;i<14;i++){
+    const d=new Date((fromMs||Date.now())+i*86400000);
+    if(d.getDay()!==want)continue;
+    const g=gunOn(d,card,code);
+    if(g!=null&&g>t0)return g;
+  }
+  return null;
+}
+// Walk forward from a moment to the next scheduled race for this boat. A race already
+// under way still counts for a couple of hours, so the app does not jump to next week
+// the moment the gun goes.
+function nextRace(fromMs){
+  const code=(RTCLASS[state&&state.boat]||RTCLASS.etap28i).code;
+  const t0=(fromMs||Date.now())-2*3600000;
+  for(let i=0;i<200;i++){
+    const d=new Date((fromMs||Date.now())+i*86400000);
+    const s=ymd(d), dow=d.getDay();
+    let card=null;
+    if(dow===2&&inSeason("tue",s))card="tuehut";
+    else if(dow===4&&inSeason("thu",s))card="thublue";
+    else if(dow===6&&inSeason("sat",s)&&PROG.noRace.indexOf(s)<0)card=satCard(s,code);
+    if(!card)continue;
+    const g=gunOn(d,card,code);
+    if(g!=null&&g>t0)return {ms:g,card,date:s};
+  }
+  return null;
+}
+function rtDay(){ const c=state&&state.card; if(c==="tuehut")return "tue"; if(c==="thublue")return "thu"; if(c==="sathut")return "sathut"; return "sat"; }
 function rtSeq(){
   const day=rtDay(), seq=RTSEQ[day];
   const cl=RTCLASS[state&&state.boat]||RTCLASS.etap28i;
   let idx=seq.groups.findIndex(g=>g.indexOf(cl.code)>=0); if(idx<0)idx=0;
-  const d=new Date(); d.setHours(seq.w1[0],seq.w1[1],0,0);           // W1 anchored to today, off the phone clock
+  const d=new Date(raceDayMs()); d.setHours(seq.w1[0],seq.w1[1],0,0); // W1 anchored to the race day, off the phone clock
   const W1=d.getTime(), warn=W1+idx*300000, gun=warn+300000;        // my warning, my start (gun)
   return {day,cl,idx,before:idx,W1,warn,gun};
 }
@@ -1319,6 +1551,18 @@ function gpsNextMark(){
   // the first not-yet-passed mark of the current course = pts[1] (first rounding after the start)
   try{ const r=compute(state.card,+$("wdir").value||0,+$("wspd").value||10,+$("wgst").value||15,state.letter,state.num);
     return {line:r.pts[0], mark:r.pts[1]||null, markNo:2}; }catch(e){ return null; }
+}
+// Before the gun: target is the start line. Once the timer has actually reached zero
+// (racing), target switches to the next mark. Same target drives both the Next tiles
+// and the Dest tiles, per the sailor's own definition: Dest = "the start, then the next mark".
+function garminStarted(){
+  try{ const tgt=(typeof rtTarget==="function")?rtTarget():null; return tgt!=null&&Date.now()>=tgt; }catch(e){ return false; }
+}
+function garminTargetInfo(){
+  const ctx=gpsNextMark(); if(!ctx)return null;
+  if(garminStarted()&&ctx.mark) return {pos:ctx.mark.pos, label:"Mark "+ctx.markNo, name:ctx.mark.name||""};
+  if(ctx.line) return {pos:ctx.line.pos, label:"Start line", name:ctx.line.lbl||""};
+  return null;
 }
 const POSVIEW={z:1,cx:POSW/2,cy:POSH/2,follow:true};
 function posApply(){
@@ -1427,10 +1671,11 @@ function gpsRender(pos){
   h+=`<div style="font-size:11px;color:#7C93A4;margin-top:6px">Fix \u00B1${acc!=null?acc+" m":"?"} \u00B7 updated ${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>`;
   out.innerHTML=h;
   posUpdate(pos);
+  try{garminRender(pos);}catch(e){}
   const _t=Date.now();                       // keep the leg diagram's dot current, at most every 3 s
   if(!GPS.lastDraw||_t-GPS.lastDraw>3000){ GPS.lastDraw=_t; try{render();}catch(e){} }
 }
-function gpsSay(t){ const st=$("gpsStatus"); if(st)st.innerHTML=t; }
+function gpsSay(t){ const st=$("gpsStatus"); if(st)st.innerHTML=t; const gt=$("garminStatus"); if(gt)gt.innerHTML=t; }
 function gpsErr(e){
   if(e&&e.code===1){
     const standalone = (window.navigator.standalone===true) || (window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches);
@@ -1463,6 +1708,62 @@ function gpsToggle(){
   if(GPS.watch!=null){ navigator.geolocation.clearWatch(GPS.watch); GPS.watch=null; gpsSay("Stopped. Tap to resume."); }
   else gpsStart();
 }
+// ---------- GPS Display tab: Garmin-style speed/distance tiles + bearing compass ----------
+function garminCompassBuild(){
+  const svg=$("garminCompass"); if(!svg||svg.dataset.built)return;
+  svg.dataset.built="1";
+  const cx=150,cy=150,R=130;
+  let s="";
+  s+=`<circle cx="${cx}" cy="${cy}" r="${R+8}" fill="#fff" stroke="#12283A" stroke-width="4"/>`;
+  s+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="#fff" stroke="#B7C2CC" stroke-width="1.5"/>`;
+  // tick marks every 10 degrees, longer every 30
+  for(let d=0;d<360;d+=10){
+    const a=rad(d), major=d%30===0;
+    const r1=major?R-16:R-9, r2=R;
+    const x1=cx+r1*Math.sin(a), y1=cy-r1*Math.cos(a), x2=cx+r2*Math.sin(a), y2=cy-r2*Math.cos(a);
+    s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#8A97A3" stroke-width="${major?2:1}"/>`;
+  }
+  const LBL=[["N",0],["NE",45],["E",90],["SE",135],["S",180],["SW",225],["W",270],["NW",315]];
+  LBL.forEach(([t,d])=>{
+    const a=rad(d), r=R-30, x=cx+r*Math.sin(a), y=cy-r*Math.cos(a)+6;
+    s+=`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${t.length>1?15:19}" font-weight="800" text-anchor="middle" fill="#12283A">${t}</text>`;
+  });
+  s+=`<circle cx="${cx}" cy="${cy}" r="5" fill="#12283A"/>`;
+  // pointer group, rotated per-fix; a filled triangle from centre out to the ring
+  s+=`<g id="garminPtr" transform="rotate(0 ${cx} ${cy})">
+      <polygon points="${cx-13},${cy} ${cx+13},${cy} ${cx},${cy-R+18}" fill="#B4232F" stroke="#fff" stroke-width="2"/>
+      <polygon points="${cx-13},${cy} ${cx+13},${cy} ${cx},${cy+34}" fill="#7A1620"/>
+    </g>`;
+  svg.innerHTML=s;
+}
+function garminFmtClock(ms){
+  const d=new Date(ms);
+  return d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+}
+function garminRender(pos){
+  garminCompassBuild();
+  const sp=$("gSpeed"),ds=$("gDist"),et=$("gEta"),tm=$("gTime"),dl=$("gDistLabel"),el=$("gEtaLabel"),tl=$("gTimeLabel"),ptr=$("garminPtr");
+  if(!sp)return;
+  const me=[pos.coords.latitude,pos.coords.longitude];
+  const sog=pos.coords.speed!=null&&isFinite(pos.coords.speed)?pos.coords.speed*1.94384:null; // m/s -> kt
+  sp.innerHTML = sog!=null ? `${sog.toFixed(1)}<span class="garmin-unit">kt</span>` : `&ndash;<span class="garmin-unit">kt</span>`;
+  const tgt=garminTargetInfo();
+  const started=garminStarted();
+  if(dl)dl.textContent="Dist to "+(started?"Next":"Start");
+  if(tl)tl.textContent="Time to "+(started?"Next":"Start");
+  if(el)el.textContent="ETA at "+(started?"Next":"Start");
+  if(!tgt){ if(ds)ds.textContent="\u2013"; if(et)et.textContent="\u2013"; if(tm)tm.textContent="\u2013"; return; }
+  const bd=brgDist(me,tgt.pos);
+  const nm=bd.dist, m=nm*1852;
+  if(ds)ds.textContent = nm<0.2 ? `${Math.round(m)} m` : `${nm.toFixed(2)} NM`;
+  if(sog&&sog>0.3){
+    const minTo=nm/sog*60;
+    if(tm)tm.textContent = minTo<60 ? `${Math.max(1,Math.round(minTo))} min` : `${Math.floor(minTo/60)}h${String(Math.round(minTo%60)).padStart(2,"0")}`;
+    if(et)et.textContent = garminFmtClock(Date.now()+minTo*60000);
+  } else { if(tm)tm.textContent="\u2013"; if(et)et.textContent="\u2013"; }
+  if(ptr)ptr.setAttribute("transform",`rotate(${bd.brg.toFixed(1)} 150 150)`);
+}
+function garminInit(){ const b=$("garminBtn"); if(b)b.onclick=gpsToggle; garminCompassBuild(); }
 function rtBeep(freq,dur,vol){
   try{ if(!RT.ac)RT.ac=new (window.AudioContext||window.webkitAudioContext)();
     const o=RT.ac.createOscillator(),g=RT.ac.createGain();
@@ -1515,8 +1816,26 @@ function rtTarget(){
   if(RT.src==="manual")return RT.myStart;
   return null;                                     // armed: nothing counting
 }
+// While the timer counts, it is the truth: the tide, the forecast window and the leg
+// times all work to the gun you are actually sailing to.
+let _lastPaintedTimerGun=null;
+function rtClaimTime(){
+  const was=TIME.src;
+  if(rtTarget()!=null)TIME.src="timer"; else if(TIME.src==="timer")TIME.src=(TIME.user!=null?"user":"default");
+  if(TIME.src==="timer"){
+    const g=rtTarget();                              // nudge/sync/auto-resync move this without changing src
+    if(TIME.src!==was || g!==_lastPaintedTimerGun){
+      _lastPaintedTimerGun=g;
+      if(typeof render==="function")render();
+    }
+  } else if(TIME.src!==was){
+    _lastPaintedTimerGun=null;
+    if(typeof render==="function")render();           // paint rdate/rtime the moment the timer gives up control
+  }
+}
 function rtTick(){
   const big=$("rtBig"),lab=$("rtLabel"); if(!big)return;
+  rtClaimTime();
   if(RT.src==="armed"){ big.textContent=rtFmt(RT.armSec); big.style.color="#fff"; if(lab)lab.textContent="Ready \u00B7 Start for manual, Auto to join the live sequence"; return; }
   const tgt=rtTarget(); if(tgt==null)return;
   const tRem=(tgt-Date.now())/1000;
@@ -1557,7 +1876,7 @@ function rtWhereInfo(){                              // committee vessel vs hut 
 }
 function rtInfo(){
   const el=$("rtInfo"); if(!el)return;
-  const s=rtSeq(), dayName={tue:"Tuesday",thu:"Thursday",sat:"Saturday"}[s.day];
+  const s=rtSeq(), dayName={tue:"Tuesday",thu:"Thursday",sat:"Saturday",sathut:"Saturday"}[s.day];
   const clk=ms=>{const d=new Date(ms);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");};
   const w=rtWhereInfo();
   const off=RT.offset?(" \u00B7 offset "+(RT.offset>0?"+":"")+Math.round(RT.offset/1000)+"s"):"";
@@ -1626,7 +1945,10 @@ function buildPickers(){
   $("boatbtns").onclick=e=>{if(e.target.dataset.b){setBoat(e.target.dataset.b);render();RT.lastWhole=null;rtInfo();}};
   $("cardbtns").innerHTML=Object.keys(CARDS).map(k=>`<button class="pick" data-c="${k}">${CARDS[k].btn}</button>`).join("");
   $("cardbtns").onclick=e=>{if(e.target.dataset.c){state.card=e.target.dataset.c;state.num=Math.min(state.num,(CARDS[state.card].courses[state.letter]||[]).length||8);buildNums();
-    $("rtime").value=(state.card==="thublue"||state.card==="tuehut")?"19:00":"14:00";render();RT.lastWhole=null;rtInfo();}};
+    TIME.cardChosen=true;                        // you picked the card, so the programme stops moving it
+    {const g=nextCardGun(state.card,Date.now());
+     if(g!=null){TIME.user=g; TIME.src="user";}}  // date and time follow that card's own day and sequence
+    render();RT.lastWhole=null;rtInfo();}};
   $("letters").innerHTML=WINDLTR.map(([l])=>`<button class="pick" data-l="${l}">${l}</button>`).join("");
   function buildNums(){
     const nmax=(CARDS[state.card].courses[state.letter]||[]).length||8;
@@ -1638,8 +1960,14 @@ function buildPickers(){
     if(id==="wsMean")window.wsMeanDirty=true;
     if(id==="wsLo"||id==="wsHi")window.wsBandDirty=true;
     updateWindTab();});});
-  const nb=$("nmeaBtn"); if(nb)nb.onclick=nmeaToggle;
-  {const fb=$("trFetch"); if(fb)fb.onclick=trendFetch;
+  const nb=$("nmeaBtn"); if(nb)nb.onclick=()=>{
+    if(NMEA.sock&&(WIND.observed!==null||WIND.manual!==null)) windResume();
+    else nmeaToggle();
+  };
+  {const fb=$("trFetch"); if(fb)fb.onclick=()=>{
+     if(WIND.forecast!==null&&(WIND.observed!==null||WIND.manual!==null)) fcResume();
+     else trendFetch();
+   };
    const rb=$("trRate"); if(rb){rb.onchange=trendManual; rb.oninput=null;}
    const mf=$("trManual"); if(mf)mf.onclick=getForecastManual;
    const pg=$("trPasteGo"); if(pg)pg.onclick=trendPasteGo;
@@ -1656,17 +1984,22 @@ function buildPickers(){
   const gb=$("gpsBtn"); if(gb)gb.onclick=gpsToggle;
   posMapInit();
   mapInit();
+  garminInit();
   startLoad();
-  {const el=$("startCtl"); if(el)el.addEventListener("click",startClick);}
+  {const el=$("startCtl"); if(el)el.addEventListener("click",startClick);
+   const lv=$("legview"); if(lv)lv.addEventListener("click",startTap);}
   // Wind sliders: one under the leg diagram, one under the course chart. Both drive the
   // app's wind, so whichever you reach for, everything re-renders together.
   document.querySelectorAll("input.wslide").forEach(sl=>{
     let last=0;
     const rd=()=>{
-      const d=String(((Math.round(+sl.value))%360+360)%360);
-      $("wdir").value=d; $("wsMean").value=d;      // slider moves the mean; From/To stay fixed
-      window.lastBandW=+d;                          // sliding never re-centres the band
-      document.querySelectorAll(".wslideLbl").forEach(l=>l.textContent=d.padStart(3,"0")+"\u00B0");
+      const d=((Math.round(+sl.value))%360+360)%360;
+      WIND.manual=null;                              // sliding clears a manual override
+      setUsed(d,"observed");                         // slider is the observed wind, and takes over used
+      $("wsMean").value=String(d);                   // moves the mean; From/To stay fixed
+      window.lastBandW=d;                            // sliding never re-centres the band
+      const t=String(d).padStart(3,"0")+"\u00B0";
+      document.querySelectorAll(".wslideLbl").forEach(l=>l.textContent=t);
       document.querySelectorAll("input.wslide").forEach(o=>{ if(o!==sl)o.value=sl.value; });
     };
     sl.addEventListener("input",()=>{rd();const now=Date.now();if(now-last>140){last=now;window.holdBand=true;render();window.holdBand=false;}});
@@ -1674,12 +2007,14 @@ function buildPickers(){
   });
   syncWindTab();
   $("letters").onclick=e=>{if(e.target.dataset.l){
-    state.letter=e.target.dataset.l;
+    state.letter=e.target.dataset.l;                    // the course to sail, changed only here
     state.num=Math.min(state.num,(CARDS[state.card].courses[state.letter]||[]).length||8);buildNums();
     const wl=WINDLTR.find(([l])=>l===state.letter);
-    if(wl)$("wdir").value=String(Math.round(wl[1]));   // selecting a course letter sets the wind to it
+    if(wl){ WIND.expected=wl[1]; WIND.chosen=true;       // a course has now been chosen
+            if(WIND.forecast===null&&WIND.observed===null&&WIND.manual===null) setUsed(wl[1],"expected"); }
     render();}};
-  $("nums").onclick=e=>{if(e.target.dataset.n){state.num=+e.target.dataset.n;render();}};
+  $("nums").onclick=e=>{if(e.target.dataset.n){ if(!WIND.chosen)return;   // pick a letter first
+    state.num=+e.target.dataset.n;WIND.numChosen=true;render();}};
 }
 function chipHTML(code){
   const cols=CHIP[code]||["#8aa"];
@@ -1690,29 +2025,112 @@ function render(){
   try{let lo2=+($("wsLo").value||0), hi2=+($("wsHi").value||0);
       if(hi2<=lo2)hi2+=360;                        // band may cross north
       document.querySelectorAll("input.wslide").forEach(sl=>{
-        sl.min=String(lo2); sl.max=String(hi2);
+        sl.min=String(lo2+1); sl.max=String(hi2-1);
         if(document.activeElement!==sl){
-          let v=+($("wdir").value||0);
+          let v=usedWind();
           while(v<lo2)v+=360;
           v=Math.max(lo2,Math.min(hi2,v));
           sl.value=String(v);
         }
       });
-      const dtxt=String(+($("wdir").value||0)).padStart(3,"0")+"\u00B0";
+      const dtxt=String(Math.round(usedWind())).padStart(3,"0")+"\u00B0";
       document.querySelectorAll(".wslideLbl").forEach(l=>l.textContent=dtxt);}catch(e){}
-  const wdir=+$("wdir").value||0, wspd=+$("wspd").value||1, wgst=Math.max(+$("wgst").value||wspd,wspd);
-  const sug=suggestLetter(wdir);
-  $("sugTxt").textContent=`(wind ${wdir}\u00B0 \u2192 suggests ${sug})`;
+  const wdir=usedWind(), wspd=usedSpd()||1, wgst=Math.max(usedGst(),wspd);
+  try{windAvail();}catch(e){}                  // Forecast/Connect labels follow the wind model
+  const wd=$("wdir");
+  if(wd&&document.activeElement!==wd)wd.value=String(Math.round(wdir));   // show used, unless you are typing
+  // Colour encodes what controls the used wind, so precedence is readable at a glance:
+  //   expected default (000, untouched) : black on white
+  //   expected via a course letter      : white on black
+  //   forecast or slider                : white on orange
+  //   manual entry                      : dark ink on orange
+  if(wd){
+    const s=WIND.src;
+    let bg="#FBFDFE", fg="var(--ink)";
+    if(s==="manual"){ bg="var(--start)"; fg="#12283A"; }
+    else if(s==="forecast"||s==="observed"){ bg="var(--start)"; fg="#fff"; }
+    else if(WIND.chosen){ bg="var(--ink)"; fg="#fff"; }   // expected, chosen by a course letter
+    wd.style.background=bg; wd.style.color=fg;
+    wd.style.borderColor=(bg==="#FBFDFE")?"var(--rule)":bg;
+  }
+  // Race date and Start time follow the same colour language as the wind boxes:
+  //   white  the programme picked it, nothing overriding
+  //   orange the race timer is counting to it
+  //   ink on orange  you typed it
+  {const g=usedGun(), src=timeSrc();
+   if(src==="default"&&!TIME.cardChosen){        // let the programme choose the card too
+     const n=defaultRace();
+     if(n&&n.card&&n.card!==state.card){
+       state.card=n.card;
+       state.num=Math.min(state.num,(CARDS[state.card].courses[state.letter]||[]).length||8);
+       try{buildNums();}catch(e){}
+     }
+   }
+   const d=new Date(g), p2=n=>String(n).padStart(2,"0");
+   const rd=$("rdate"), rt=$("rtime");
+   const ds=d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
+   const ts=p2(d.getHours())+":"+p2(d.getMinutes());
+   const paintT=(el,val)=>{ if(!el)return;
+     if(document.activeElement!==el)el.value=val;
+     let bg="#FBFDFE", fg="var(--ink)";
+     if(src==="user"){ bg="var(--start)"; fg="#12283A"; }
+     else if(src==="timer"){ bg="var(--start)"; fg="#fff"; }
+     el.style.background=bg; el.style.color=fg;
+     el.style.borderColor=(bg==="#FBFDFE")?"var(--rule)":bg;
+   };
+   paintT(rd,ds); paintT(rt,ts);
+  }
+  // Wind kt and Gusts kt use the same code: white while nothing has set them, orange
+  // once the forecast or instruments do, dark ink on orange when you typed the figure.
+  {const paint=(el,src,val)=>{
+     if(!el)return;
+     if(document.activeElement!==el)el.value=String(val);
+     let bg="#FBFDFE", fg="var(--ink)";
+     if(src==="manual"){ bg="var(--start)"; fg="#12283A"; }
+     else if(src==="forecast"){ bg="var(--start)"; fg="#fff"; }
+     el.style.background=bg; el.style.color=fg;
+     el.style.borderColor=(bg==="#FBFDFE")?"var(--rule)":bg;
+   };
+   paint($("wspd"),WSPD.src,Math.round(usedSpd()*10)/10);
+   paint($("wgst"),WGST.src,Math.round(usedGst()));
+  }
+  const atWind=suggestLetter(wdir);            // the letter nearest the USED wind
+  const showOrange=(WIND.src!=="expected");    // orange only once forecast/observed drives used
+  $("sugTxt").textContent = showOrange
+    ? `(wind ${Math.round(wdir)}\u00B0 \u2192 ${atWind})`
+    : `(course set to expected wind)`;
   document.querySelectorAll("#letters .pick").forEach(b=>{
-    b.classList.toggle("on",b.dataset.l===state.letter);
-    b.classList.toggle("sug",b.dataset.l===sug&&sug!==state.letter);});
-  document.querySelectorAll("#nums .pick").forEach(b=>b.classList.toggle("on",+b.dataset.n===state.num));
+    b.classList.toggle("on",WIND.chosen&&b.dataset.l===state.letter);   // black: the course you sail, once chosen
+    b.classList.toggle("sug",showOrange&&b.dataset.l===atWind);  // orange: where the used wind is
+  });
+  document.querySelectorAll("#nums .pick").forEach(b=>{
+    b.classList.toggle("on",WIND.numChosen&&+b.dataset.n===state.num);
+    b.style.opacity=WIND.chosen?"":"0.4";                 // dimmed until a course letter is chosen
+    b.style.cursor=WIND.chosen?"":"default";
+  });
   document.querySelectorAll("#cardbtns .pick").forEach(b=>b.classList.toggle("on",b.dataset.c===state.card));
   document.querySelectorAll("#boatbtns .pick").forEach(b=>b.classList.toggle("on",b.dataset.b===state.boat));
   $("eyebrow").textContent=`Dublin Bay SC \u00B7 ${CARDS[state.card].title} \u00B7 VHF ${CARDS[state.card].vhf}`;
-  const r=compute(state.card,wdir,wspd,wgst,state.letter,state.num);
-  CURROUTE=r;                                  // the tide map draws the same course
-  renderTide();                                // sets TIDECTX, which the table below reads
+  const haveCourse=WIND.chosen&&WIND.numChosen;
+  const r=haveCourse?compute(state.card,wdir,wspd,wgst,state.letter,state.num):null;
+  CURROUTE=r;                                  // null until a course is chosen; views draw empty
+  renderTide();                                // stream field still works with no course
+  if(!haveCourse){
+    $("courseName").textContent="\u2013";
+    $("courseSummary").innerHTML=`choose a course letter and number above`;
+    $("legTable").innerHTML=`<tr><td style="padding:14px;color:#7C93A4;text-align:center">Choose a course to see the legs.</td></tr>`;
+    $("totDist").textContent=$("totSail").textContent=$("totTime").textContent=$("totHoist").textContent="\u2013";
+    if(state.leg>=0)drawStart(r,wdir,wspd); else if(state.leg<0)drawStart(r,wdir,wspd);
+    drawMap(null,wdir);
+    document.querySelectorAll("#letters .pick").forEach(b=>{
+      b.classList.toggle("on",WIND.chosen&&b.dataset.l===state.letter);
+      const atWind=suggestLetter(wdir), showOrange=(WIND.src!=="expected");
+      b.classList.toggle("sug",showOrange&&b.dataset.l===atWind);});
+    document.querySelectorAll("#nums .pick").forEach(b=>{
+      b.classList.toggle("on",false); b.style.opacity=WIND.chosen?"":"0.4"; b.style.cursor=WIND.chosen?"":"default";});
+    try{updateWindTab();}catch(e){}
+    return;
+  }
   $("courseName").textContent=state.letter+state.num;
   $("courseSummary").innerHTML=`${r.legs.length} legs \u00B7 card wind ${WINDLTR.find(x=>x[0]===state.letter)[1]}\u00B0 \u00B7 your wind ${wdir}\u00B0/${wspd}kt`;
   let html=`<tr><th>#</th><th>From</th><th>Co<br>NM</th><th>Leg</th><th>TWA<br>AW</th><th>Sail</th><th>Set<br>Drift</th><th>To</th></tr>`;
@@ -1755,7 +2173,7 @@ function render(){
     :`Start assumed ${MLADJ.toFixed(1)} NM downwind of mark 1.`;
   drawMap(r,wdir);
   if(state.leg>=r.legs.length||state.leg<-1)state.leg=0;
-  $("legbtns").innerHTML=`<button class="pick${state.leg===-1?" on":""}" data-leg="-1">S</button>`+
+  $("legbtns").innerHTML=`<button class="pick${state.leg===-1?" on":""}" data-leg="-1" style="padding:0 12px">Start</button>`+
     r.legs.map((L,i)=>`<button class="pick${i===state.leg?" on":""}" data-leg="${i}">${i+1}</button>`).join("");
   $("legbtns").onclick=e=>{if(e.target.dataset.leg!==undefined){state.leg=+e.target.dataset.leg;render();}};
   $("orientBtn").textContent=state.northUp?"North-up":"Course-up";
@@ -1852,6 +2270,7 @@ function makeZoom(cfg){
     if(bo)bo.onclick=()=>zoom(1/1.6);
     let drag=null;                                     // drag to pan once zoomed in
     host.addEventListener("pointerdown",e=>{ if(V.z<=1)return;
+      if(e.target.closest("button"))return;             // let the zoom buttons themselves click, don't hijack as a pan
       drag={x:e.clientX,y:e.clientY,cx:V.cx,cy:V.cy};
       e.preventDefault();                              // else a downward drag becomes a page scroll
       try{host.setPointerCapture(e.pointerId);}catch(err){} },{passive:false});
@@ -1906,6 +2325,7 @@ function drawMap(r,wdir){
   s+=`<circle cx="${wx}" cy="${wy}" r="46" fill="#fff" opacity=".75"/>`;
   s+=`<line x1="${wx+wl*Math.sin(a)}" y1="${wy-wl*Math.cos(a)}" x2="${wx-wl*Math.sin(a)}" y2="${wy+wl*Math.cos(a)}" stroke="#12283A" stroke-width="5" marker-end="url(#ah)"/>`;
   s+=`<text x="${wx}" y="${wy+62}" font-size="15" text-anchor="middle" fill="#12283A" font-weight="700">${wdir}\u00B0</text>`;
+  if(r&&r.pts){
   // track
   s+=courseTrack(px,r.pts);
   // number every point 1-based: start (CV/hut) = 1, marks 2,3,... matching table & leg analysis
@@ -1956,6 +2376,7 @@ function drawMap(r,wdir){
   const sq=px(r.pts[0].pos);
   s+=`<rect x="${sq[0]-8}" y="${sq[1]-8}" width="16" height="16" fill="#FF6A13" stroke="#fff" stroke-width="2" transform="rotate(45 ${sq[0]} ${sq[1]})"/>`;
   s+=`<text x="${sq[0]+13}" y="${sq[1]+5}" font-size="14" font-weight="800" fill="#FF6A13" stroke="#fff" stroke-width="3" paint-order="stroke">${r.pts[0].lbl}</text>`;
+  }
   svg.innerHTML=s;
   mapApply();                                  // the chart is rebuilt each render: restore zoom, pan and label sizes
 }
@@ -2003,8 +2424,19 @@ function endPos(rec,outBrg){                    // outBrg: bearing pointing away
   if(!rec.d)return p;
   return offsetPos(p, rec.side==="in"?outBrg:norm(outBrg+180), rec.d/M_PER_NM);
 }
+const DEFLINE=150;                              // metres, the assumed line's length
 function startLine(){
-  if(!START.cv||!START.pin)return null;
+  if(!START.cv||!START.pin){
+    // Nothing pinged yet, so fall back to the card's own assumption: square to the wind,
+    // centred half a mile downwind of mark 1. Good enough to plan against, and it means
+    // the panel says something useful before you have been anywhere near the line.
+    const r=CURROUTE; if(!r||!r.pts||!r.pts[0]||!r.pts[0].pos)return null;
+    const c=r.pts[0].pos, w=+($("wdir").value||0);
+    const brg=norm(w-90);                       // CV->PIN, leaving the wind on starboard
+    const half=(DEFLINE/2)/M_PER_NM;
+    return {cv:offsetPos(c,norm(brg+180),half), pin:offsetPos(c,brg,half),
+            brg, len:DEFLINE, up:norm(brg+90), assumed:true};
+  }
   let A=[START.cv.lat,START.cv.lon], B=[START.pin.lat,START.pin.lon];
   for(let k=0;k<2;k++){
     const br=brgDist(A,B).brg;                  // CV -> PIN
@@ -2013,9 +2445,10 @@ function startLine(){
   }
   const bd=brgDist(A,B);
   if(!(bd.dist>0))return null;
+  // assumed:false below - this line was measured
   // The CV is laid so that passing it to starboard leaves you facing down the line with
   // the wind on your starboard side, so the course side is 90 deg to starboard of CV->PIN.
-  return {cv:A,pin:B,brg:bd.brg,len:bd.dist*M_PER_NM,up:norm(bd.brg+90)};
+  return {cv:A,pin:B,brg:bd.brg,len:bd.dist*M_PER_NM,up:norm(bd.brg+90),assumed:false};
 }
 function metresEN(from,to){                     // east/north metres between two fixes
   const latm=rad((from[0]+to[0])/2);
@@ -2074,12 +2507,13 @@ function drawStart(r,wdir,wspd){
   const svg=$("legview"); if(!svg)return;
   const W=360,H=430, INK="#12283A", ORANGE="#FF6A13", GREEN="#007A33", RED="#C8102E";
   const L=startLine();
-  const me=GPS.last?[GPS.last.coords.latitude,GPS.last.coords.longitude]:null;
-  const acc=GPS.last&&GPS.last.coords.accuracy!=null?GPS.last.coords.accuracy:null;
+  const live=!!GPS.last;                        // a real fix always beats a finger
+  const me=live?[GPS.last.coords.latitude,GPS.last.coords.longitude]:(START.me||null);
+  const acc=live&&GPS.last.coords.accuracy!=null?GPS.last.coords.accuracy:null;
   let s=`<rect x="0" y="0" width="${W}" height="${H}" fill="#F2F7FA"/>`;
   if(!L&&!me){
     s+=`<text x="${W/2}" y="${H/2-10}" font-size="14" font-weight="700" text-anchor="middle" fill="#48627A">Start line not set</text>`;
-    s+=`<text x="${W/2}" y="${H/2+12}" font-size="12" text-anchor="middle" fill="#7C93A4">Turn on GPS, then ping each end.</text>`;
+    s+=`<text x="${W/2}" y="${H/2+12}" font-size="12" text-anchor="middle" fill="#7C93A4">Pick a course first, then ping each end.</text>`;
     svg.innerHTML=s; return;
   }
   // ---- projection: metres, rotated so the chosen "up" bearing is screen-up ----
@@ -2093,9 +2527,13 @@ function drawStart(r,wdir,wspd){
   let miny=Math.min(...pts.map(p=>p[1])), maxy=Math.max(...pts.map(p=>p[1]));
   const padm=Math.max(40,(maxx-minx)*0.25,(maxy-miny)*0.25);
   minx-=padm; maxx+=padm; miny-=padm; maxy+=padm;
+  const MINSPAN=420;                            // metres: keep water below the line to tap in
+  if(maxx-minx<MINSPAN){const c=(minx+maxx)/2;minx=c-MINSPAN/2;maxx=c+MINSPAN/2;}
+  if(maxy-miny<MINSPAN){const c=(miny+maxy)/2;miny=c-MINSPAN/2;maxy=c+MINSPAN/2;}
   const sc=Math.min((W-56)/Math.max(maxx-minx,1),(H-96)/Math.max(maxy-miny,1));
   const cx0=(minx+maxx)/2, cy0=(miny+maxy)/2;
   const F=p=>{const q=rot(EN(p));return [W/2+(q[0]-cx0)*sc, H/2+16+(q[1]-cy0)*sc];};
+  START.proj={ref,cu,su,cx0,cy0,sc,W,H};        // kept so a tap can be read back as a position
   // ---- wind arrow, same slot as every other leg ----
   const wa=rad(wdir-up), wx=46, wy=54, wl=17;
   s+=`<circle cx="${wx}" cy="${wy}" r="26" fill="#fff" opacity=".8"/>`;
@@ -2114,9 +2552,17 @@ function drawStart(r,wdir,wspd){
     s+=svgFlag(b[0],b[1],1,tgt==="pin"?ORANGE:"#7C93A4");
     s+=`<text x="${a[0].toFixed(1)}" y="${(a[1]+22).toFixed(1)}" font-size="11" font-weight="800" text-anchor="middle" fill="${INK}" stroke="#fff" stroke-width="3" paint-order="stroke">CV</text>`;
     s+=`<text x="${b[0].toFixed(1)}" y="${(b[1]+22).toFixed(1)}" font-size="11" font-weight="800" text-anchor="middle" fill="${INK}" stroke="#fff" stroke-width="3" paint-order="stroke">PIN</text>`;
-    if(bias&&Math.abs(bias.deg)>=1)
+    if(L.assumed) sub=`assumed line \u00B7 square to the wind \u00B7 ping the ends for the real one`;
+    else if(bias&&Math.abs(bias.deg)>=1)
       sub=`line ${Math.abs(bias.deg).toFixed(0)}\u00B0 ${bias.end==="pin"?"pin":"CV"}-favoured \u00B7 ${Math.abs(bias.gain).toFixed(0)} m`;
     else sub=`line square \u00B7 ${Math.round(L.len)} m long`;
+    if(L.assumed){                                 // draw it dashed so it never looks measured
+      s+=`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="#F2F7FA" stroke-width="3.2" stroke-dasharray="7 6" stroke-linecap="round"/>`;
+    }
+    if(r&&r.pts&&r.pts[1]&&r.pts[1].pos){          // where the beat goes
+      const m1=brgDist([(L.cv[0]+L.pin[0])/2,(L.cv[1]+L.pin[1])/2],r.pts[1].pos);
+      s+=`<text x="${W/2}" y="46" font-size="11" font-weight="700" text-anchor="middle" fill="#48627A">mark 1 \u00B7 ${String(Math.round(m1.brg)).padStart(3,"0")}\u00B0 \u00B7 ${m1.dist.toFixed(2)} NM</text>`;
+    }
     // ---- the run-in ----
     if(me){
       const q=F(me);
@@ -2131,7 +2577,10 @@ function drawStart(r,wdir,wspd){
       const t2=F(tgtPos);
       s+=`<line x1="${q[0].toFixed(1)}" y1="${q[1].toFixed(1)}" x2="${t2[0].toFixed(1)}" y2="${t2[1].toFixed(1)}" stroke="${ORANGE}" stroke-width="2" stroke-dasharray="5 4" opacity=".9"/>`;
       if(acc!=null)s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${Math.max(3,acc*sc).toFixed(1)}" fill="${ORANGE}" opacity=".14"/>`;
-      s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="6" fill="${ORANGE}" stroke="#fff" stroke-width="2"/>`;
+      s+= live
+        ? `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="6" fill="${ORANGE}" stroke="#fff" stroke-width="2"/>`
+        : `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="7" fill="#fff" stroke="${ORANGE}" stroke-width="3" stroke-dasharray="3.5 3"/>`;
+      if(!live)s+=`<text x="8" y="${H-42}" font-size="11" text-anchor="start" fill="${ORANGE}">where you think you are \u00B7 tap to move</text>`;
       const dtxt = dl>0 ? `${Math.round(dl)} m OVER` : `${Math.round(-dl)} m to line`;
       s+=`<text x="8" y="${H-26}" font-size="11" text-anchor="start" fill="#48627A">${dtxt} \u00B7 ${tt.lay?"laying "+tgt.toUpperCase():"needs a tack"}</text>`;
       if(toGun!==null){
@@ -2176,8 +2625,9 @@ function startCtl(){
       `<div style="flex:0.7">${B("cancel","Cancel")}</div></div>`+
       `<div style="font-size:11px;color:#7C93A4;margin-top:6px">Metres. Inside means you were between the two ends, outside means past this end.</div>`;
   } else if(!live){
-    h=`<div class="inrow">${`<div style="flex:1">`+B("gps","Use my location")+`</div>`}</div>`+
-      `<div style="font-size:11px;color:#7C93A4;margin-top:6px">The line is built from your position, so GPS has to be on.</div>`;
+    h=`<div class="inrow"><div style="flex:1">`+B("gps","Use my location")+`</div>`+
+      (START.me?`<div style="flex:0.7">`+B("clearme","Clear")+`</div>`:``)+`</div>`+
+      `<div style="font-size:11px;color:#7C93A4;margin-top:6px">Showing an assumed line, square to the wind, half a mile downwind of mark 1. Turn on GPS to ping the real ends and to time the run-in.</div>`;
   } else if(!START.cv||!START.pin){
     h=`<div class="inrow">`+
       `<div style="flex:1">${B("pcv",START.cv?"CV \u2713 redo":"Ping CV")}</div>`+
@@ -2191,6 +2641,19 @@ function startCtl(){
       `<div style="flex:0.6">${B("redo","Line \u2713")}</div></div>`;
   }
   el.innerHTML=h;
+}
+// Tap the start diagram to say where you think you are. Useful at the pontoon with no
+// GPS, and useful afloat too: put a finger where you expect to be at two minutes and
+// read the burn. A real fix always wins, so this can never override the boat's position.
+function startTap(ev){
+  if(state.leg>=0||GPS.last)return;
+  const P=START.proj, svg=$("legview"); if(!P||!svg)return;
+  const rc=svg.getBoundingClientRect(); if(!rc.width||!rc.height)return;
+  const x=(ev.clientX-rc.left)*P.W/rc.width, y=(ev.clientY-rc.top)*P.H/rc.height;
+  const X=(x-P.W/2)/P.sc+P.cx0, Y=(y-(P.H/2+16))/P.sc+P.cy0;
+  const e=X*P.cu-Y*P.su, n=-X*P.su-Y*P.cu;      // undo the rotation
+  START.me=[P.ref[0]+n/(60*M_PER_NM), P.ref[1]+e/(60*M_PER_NM*Math.cos(rad(P.ref[0])))];
+  render();
 }
 function startClick(ev){
   const b=ev.target.closest?ev.target.closest("[data-s]"):null; if(!b)return;
@@ -2213,6 +2676,7 @@ function startClick(ev){
   }
   else if(k==="tcv"||k==="tpin"){ START.target=k==="tcv"?"cv":"pin"; startSave(); }
   else if(k==="redo"){ START.cv=null; START.pin=null; START.target=null; startSave(); }
+  else if(k==="clearme"){ START.me=null; }
   render();
 }
 
@@ -2575,11 +3039,44 @@ function drawLeg(r,idx,wdir,wspd){
 
 // iOS date and time pickers do not always fire "input" while the wheel is spinning,
 // so listen for "change" as well. render() is idempotent, so a double call is free.
-["wdir","wspd","wgst","rdate","rtime"].forEach(id=>{
-  const el=$(id); if(!el)return;
-  el.addEventListener("input",render); el.addEventListener("change",render);
-});
-(function(){const n=new Date();$("rdate").value=n.toISOString().slice(0,10);})();
+{ // Race date and Start time: typing either one is a manual override of the programme.
+  const rd=$("rdate"), rt=$("rtime");
+  const apply=()=>{
+    const ds=(rd&&rd.value)||"", ts=(rt&&rt.value)||"";
+    if(!ds||!ts)return;
+    const p=ds.split("-").map(Number), q=ts.split(":").map(Number);
+    const d=new Date(p[0],p[1]-1,p[2],q[0]||0,q[1]||0,0,0);
+    if(isFinite(d.getTime())){ TIME.user=d.getTime(); TIME.src="user"; }
+    render();
+  };
+  [rd,rt].forEach(el=>{ if(!el)return;
+    el.addEventListener("change",apply);
+    el.addEventListener("keydown",e=>{ if(e.key==="Enter"){apply();el.blur();} });
+  });
+}
+{ // Wind kt and Gusts kt: typing is a manual override, and it survives a re-render.
+  const sp=$("wspd"), gs=$("wgst");
+  if(sp){ const go=()=>{ const v=sp.value.trim(); if(v==="")return; setUsedSpd(+v,"manual"); render(); };
+          sp.addEventListener("change",go);
+          sp.addEventListener("keydown",e=>{ if(e.key==="Enter"){go();sp.blur();} }); }
+  if(gs){ const go=()=>{ const v=gs.value.trim(); if(v==="")return; setUsedGst(+v,"manual"); render(); };
+          gs.addEventListener("change",go);
+          gs.addEventListener("keydown",e=>{ if(e.key==="Enter"){go();gs.blur();} }); }
+}
+{ // Wind degT box: typing a bearing is a manual override, the top of the precedence stack.
+  const wd=$("wdir");
+  if(wd){
+    const apply=()=>{ const v=wd.value.trim(); if(v==="")return;
+      WIND.manual=norm(+v||0); WIND.src="manual"; render(); };
+    wd.addEventListener("change",apply);
+    wd.addEventListener("keydown",e=>{ if(e.key==="Enter"){apply();wd.blur();} });
+  }
+}
+(function(){ const n=defaultRace(); const d=new Date(n?n.ms:Date.now());
+  const p2=x=>String(x).padStart(2,"0");
+  $("rdate").value=d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
+  $("rtime").value=p2(d.getHours())+":"+p2(d.getMinutes());
+  if(n&&n.card)state.card=n.card; })();
 buildPickers();render();
 </script>
 <script>
