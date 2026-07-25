@@ -275,30 +275,50 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
     <div id="gpsStatus" style="font-size:11.5px;color:#7C93A4;margin-top:8px">Tap to allow location. Needs a clear sky view; a few metres accuracy. Best used on the water.</div>
     <div id="gpsOut" style="margin-top:10px"></div>
     <div id="posWrap" style="position:relative;margin-top:10px"><svg id="posMap" viewBox="0 0 865 869" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;border:1px solid var(--rule);border-radius:12px;background:#dfeaf0"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="posIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="posOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="posZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px">1x</div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px">
+      <div id="trackStats" style="font-size:11.5px;color:#7C93A4;line-height:1.5"></div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="pick" id="trackDlBtn" disabled style="padding:8px 12px;font-size:12px;white-space:nowrap;opacity:.4">Download CSV</button>
+        <button class="pick" id="trackClearBtn" style="padding:8px 12px;font-size:12px;white-space:nowrap">Clear track</button>
+      </div>
+    </div>
   </div>
-  <div style="font-size:11px;color:#7C93A4;margin-top:8px">Distance and bearing are great-circle from your fix to the committee-boat end of the line and to the next mark of the selected course. Speed and course over the ground come from GPS movement, so they read true only when you are moving. Not for navigation.</div>
+  <div style="font-size:11px;color:#7C93A4;margin-top:8px">Distance and bearing are great-circle from your fix to the committee-boat end of the line and to the next mark of the selected course. Speed and course over the ground come from GPS movement, so they read true only when you are moving. The orange line is your track sailed since you last cleared it, recorded from live fixes at least 3 m or 5 s apart, kept in memory only; Download CSV exports each point's time, position, SOG, COG and the wind the app was using at that moment. Not for navigation.</div>
 </details>
 
 <details class="notes" id="garmintab" style="background:#3A4552;border:1px solid #2A323C"><summary style="color:#fff">GPS Display</summary>
-  <button class="pick" id="garminBtn" style="background:#0E7C94;color:#fff;border:none;padding:12px 14px;font-size:14px;font-weight:800;width:100%">Use my location</button>
-  <div id="garminStatus" style="font-size:11.5px;color:#C9D3DC;margin-top:8px">Tap to allow location. Needs a clear sky view; best used on the water.</div>
-
   <div class="garmin-frame">
+    <div class="garmin-tile">
+      <div class="garmin-label">Course</div>
+      <div class="garmin-value" id="gCourse">&ndash;</div>
+    </div>
     <div class="garmin-tile">
       <div class="garmin-label">Speed</div>
       <div class="garmin-value" id="gSpeed">&ndash;<span class="garmin-unit">kt</span></div>
+    </div>
+    <div class="garmin-tile">
+      <div class="garmin-label" id="gBrgLabel">Bearing to Next</div>
+      <div class="garmin-value" id="gBrg">&ndash;</div>
     </div>
     <div class="garmin-tile">
       <div class="garmin-label" id="gDistLabel">Dist to Next</div>
       <div class="garmin-value" id="gDist">&ndash;</div>
     </div>
     <div class="garmin-tile">
-      <div class="garmin-label" id="gEtaLabel">ETA at Dest</div>
-      <div class="garmin-value" id="gEta">&ndash;</div>
+      <div class="garmin-label">VMG</div>
+      <div class="garmin-value" id="gVmg">&ndash;<span class="garmin-unit">kt</span></div>
+    </div>
+    <div class="garmin-tile">
+      <div class="garmin-label">VMC</div>
+      <div class="garmin-value" id="gVmc">&ndash;<span class="garmin-unit">kt</span></div>
     </div>
     <div class="garmin-tile">
       <div class="garmin-label" id="gTimeLabel">Time to Next</div>
       <div class="garmin-value" id="gTime">&ndash;</div>
+    </div>
+    <div class="garmin-tile">
+      <div class="garmin-label" id="gEtaLabel">ETA at Next</div>
+      <div class="garmin-value" id="gEta">&ndash;</div>
     </div>
   </div>
 
@@ -1546,6 +1566,7 @@ function rtSeq(){
 }
 // ---------- GPS: distance & bearing to line and next mark ----------
 let GPS={watch:null, last:null};
+let TRACK=[];                                // {lat,lon,t} points sailed, drawn on the GPS tab chart
 function gpsCompass(b){const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];return dirs[Math.round(norm(b)/22.5)%16];}
 function gpsNextMark(){
   // the first not-yet-passed mark of the current course = pts[1] (first rounding after the start)
@@ -1590,6 +1611,7 @@ function posScale(){                                   // keep marks, labels and
   }
   const d=$("posDot"); if(d){d.setAttribute("r",(7*k).toFixed(2)); d.setAttribute("stroke-width",(2.5*k).toFixed(2));}
   const cg=$("posCog"); if(cg)cg.setAttribute("stroke-width",(3*k).toFixed(2));
+  const tk=$("posTrack"); if(tk)tk.setAttribute("stroke-width",(3*k).toFixed(2));
 }
 function posCentreOnFix(){
   if(!GPS.last)return false;
@@ -1611,11 +1633,13 @@ function posMapInit(){
     s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#000" stroke="#fff" stroke-width="0.8"/>`;
     s+=`<text data-bx="${x.toFixed(1)}" data-by="${y.toFixed(1)}" x="${(x+5).toFixed(1)}" y="${(y+4).toFixed(1)}" font-size="12" font-weight="800" fill="#12283A" stroke="#fff" stroke-width="2.5" paint-order="stroke">${k}</text>`;
   }
-  s+=`</g><g id="posDotG" style="display:none"><circle id="posAcc" cx="0" cy="0" r="0" fill="#0E7C94" opacity=".15"/><line id="posCog" x1="0" y1="0" x2="0" y2="0" stroke="#12283A" stroke-width="3"/><circle id="posDot" cx="0" cy="0" r="7" fill="#0E7C94" stroke="#fff" stroke-width="2.5"/></g>`;
+  s+=`</g><polyline id="posTrack" points="" fill="none" stroke="#FF6A13" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/><g id="posDotG" style="display:none"><circle id="posAcc" cx="0" cy="0" r="0" fill="#0E7C94" opacity=".15"/><line id="posCog" x1="0" y1="0" x2="0" y2="0" stroke="#12283A" stroke-width="3"/><circle id="posDot" cx="0" cy="0" r="7" fill="#0E7C94" stroke="#fff" stroke-width="2.5"/></g>`;
   svg.innerHTML=s; window.posBuilt=true;
-  const bi=$("posIn"), bo=$("posOut");
+  const bi=$("posIn"), bo=$("posOut"), tc=$("trackClearBtn"), td=$("trackDlBtn");
   if(bi)bi.onclick=()=>posZoom(1.6);
   if(bo)bo.onclick=()=>posZoom(1/1.6);
+  if(tc)tc.onclick=trackClear;
+  if(td)td.onclick=trackDownloadCSV;
   let drag=null;                                        // drag to pan once zoomed in
   svg.addEventListener("pointerdown",e=>{ if(POSVIEW.z<=1)return; drag={x:e.clientX,y:e.clientY,cx:POSVIEW.cx,cy:POSVIEW.cy};
     POSVIEW.follow=false; e.preventDefault();          // else a downward drag becomes a page scroll
@@ -1642,7 +1666,60 @@ function posUpdate(pos){
     cl.setAttribute("x1",x);cl.setAttribute("y1",y);cl.setAttribute("x2",x+L*Math.sin(th));cl.setAttribute("y2",y-L*Math.cos(th));cl.style.display="";
   } else cl.style.display="none";
   g.style.display="";
+  trackAdd(pos);
   if(POSVIEW.z>1&&POSVIEW.follow){POSVIEW.cx=x;POSVIEW.cy=y;posApply();}else posScale();
+}
+// ---------- track sailed: recorded from live fixes, drawn on the GPS tab chart ----------
+// Each point keeps the instantaneous COG/SOG from the GPS fix, plus the wind the app was
+// using at that moment, so the exported log carries what you'd need to check boat speed
+// against TWA/TWS afterwards. It does not compute a full polar: see the Notes tab.
+function trackAdd(pos){
+  const lat=pos.coords.latitude, lon=pos.coords.longitude, acc=pos.coords.accuracy;
+  if(acc!=null&&acc>50)return;                          // skip poor fixes so the track doesn't jump
+  const last=TRACK[TRACK.length-1], now=Date.now();
+  if(last){
+    const nm=brgDist([last.lat,last.lon],[lat,lon]).dist;
+    if(nm*1852<3 && now-last.t<5000)return;              // moved <3 m and <5 s since last point: skip
+  }
+  const cog=pos.coords.heading!=null&&isFinite(pos.coords.heading)?pos.coords.heading:null;
+  const sog=pos.coords.speed!=null&&isFinite(pos.coords.speed)?pos.coords.speed*1.94384:null; // m/s -> kt
+  let twd=null,tws=null,twa=null;
+  try{ twd=usedWind(); tws=usedSpd(); if(cog!=null)twa=angdiff(twd,cog); }catch(e){}
+  TRACK.push({lat,lon,t:now,cog,sog,twd,tws,twa});
+  trackRedraw();
+}
+function trackRedraw(){
+  const tk=$("posTrack"); if(!tk)return;
+  tk.setAttribute("points", TRACK.map(pt=>{const q=ll2pos(pt.lat,pt.lon); return q[0].toFixed(1)+","+q[1].toFixed(1);}).join(" "));
+  const st=$("trackStats"); if(!st)return;
+  const dl=$("trackDlBtn"); if(dl){ dl.disabled=TRACK.length<1; dl.style.opacity=TRACK.length<1?"0.4":"1"; dl.style.cursor=TRACK.length<1?"default":"pointer"; }
+  if(TRACK.length<2){ st.textContent=TRACK.length?"Track: 1 point recorded":""; return; }
+  let nm=0; for(let i=1;i<TRACK.length;i++)nm+=brgDist([TRACK[i-1].lat,TRACK[i-1].lon],[TRACK[i].lat,TRACK[i].lon]).dist;
+  const mins=(TRACK[TRACK.length-1].t-TRACK[0].t)/60000;
+  const head=`Track: ${TRACK.length} points \u00B7 ${nm.toFixed(2)} NM sailed \u00B7 ${mins<1?"<1":Math.round(mins)} min`;
+  if(mins<1){ st.textContent=head; return; }              // too little elapsed time: CMG/SMG would be noise
+  // course/speed made good over the whole recorded session: the net line from first to last fix,
+  // not the wiggly path sailed, which is the traditional meaning of CMG/SMG
+  const first=TRACK[0], lastPt=TRACK[TRACK.length-1];
+  const net=brgDist([first.lat,first.lon],[lastPt.lat,lastPt.lon]);
+  const smg=net.dist/(mins/60);
+  st.innerHTML=`${head}<br>CMG ${String(Math.round(net.brg)).padStart(3,"0")}\u00B0 \u00B7 SMG ${smg.toFixed(1)} kt (net line, start to now)`;
+}
+function trackClear(){ TRACK=[]; trackRedraw(); }
+function trackDownloadCSV(){
+  if(!TRACK.length)return;
+  const p2=n=>n==null?"":n.toFixed(1);
+  let csv="time,lat,lon,sog_kt,cog_deg,twd_deg,tws_kt,twa_deg\n";
+  TRACK.forEach(pt=>{
+    csv+=`${new Date(pt.t).toISOString()},${pt.lat.toFixed(6)},${pt.lon.toFixed(6)},${p2(pt.sog)},${p2(pt.cog)},${p2(pt.twd)},${p2(pt.tws)},${p2(pt.twa)}\n`;
+  });
+  const blob=new Blob([csv],{type:"text/csv"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  const stamp=new Date(TRACK[0].t); const p=n=>String(n).padStart(2,"0");
+  a.href=url; a.download=`track_${stamp.getFullYear()}${p(stamp.getMonth()+1)}${p(stamp.getDate())}_${p(stamp.getHours())}${p(stamp.getMinutes())}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 function gpsRender(pos){
   const out=$("gpsOut"); if(!out)return;
@@ -1724,16 +1801,17 @@ function garminCompassBuild(){
     s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#8A97A3" stroke-width="${major?2:1}"/>`;
   }
   const LBL=[["N",0],["NE",45],["E",90],["SE",135],["S",180],["SW",225],["W",270],["NW",315]];
-  LBL.forEach(([t,d])=>{
-    const a=rad(d), r=R-30, x=cx+r*Math.sin(a), y=cy-r*Math.cos(a)+6;
-    s+=`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${t.length>1?15:19}" font-weight="800" text-anchor="middle" fill="#12283A">${t}</text>`;
-  });
   s+=`<circle cx="${cx}" cy="${cy}" r="5" fill="#12283A"/>`;
   // pointer group, rotated per-fix; a filled triangle from centre out to the ring
   s+=`<g id="garminPtr" transform="rotate(0 ${cx} ${cy})">
       <polygon points="${cx-13},${cy} ${cx+13},${cy} ${cx},${cy-R+18}" fill="#B4232F" stroke="#fff" stroke-width="2"/>
       <polygon points="${cx-13},${cy} ${cx+13},${cy} ${cx},${cy+34}" fill="#7A1620"/>
     </g>`;
+  // labels last so they always stay legible on top of the needle, whatever it's pointing at
+  LBL.forEach(([t,d])=>{
+    const a=rad(d), r=R-30, x=cx+r*Math.sin(a), y=cy-r*Math.cos(a)+6;
+    s+=`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${t.length>1?15:19}" font-weight="800" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="3" paint-order="stroke">${t}</text>`;
+  });
   svg.innerHTML=s;
 }
 function garminFmtClock(ms){
@@ -1742,24 +1820,45 @@ function garminFmtClock(ms){
 }
 function garminRender(pos){
   garminCompassBuild();
-  const sp=$("gSpeed"),ds=$("gDist"),et=$("gEta"),tm=$("gTime"),dl=$("gDistLabel"),el=$("gEtaLabel"),tl=$("gTimeLabel"),ptr=$("garminPtr");
+  const co=$("gCourse"),sp=$("gSpeed"),br=$("gBrg"),ds=$("gDist"),vg=$("gVmg"),vc=$("gVmc"),et=$("gEta"),tm=$("gTime"),
+        bl=$("gBrgLabel"),dl=$("gDistLabel"),el=$("gEtaLabel"),tl=$("gTimeLabel"),ptr=$("garminPtr");
   if(!sp)return;
   const me=[pos.coords.latitude,pos.coords.longitude];
+  const cog=pos.coords.heading!=null&&isFinite(pos.coords.heading)?pos.coords.heading:null;
   const sog=pos.coords.speed!=null&&isFinite(pos.coords.speed)?pos.coords.speed*1.94384:null; // m/s -> kt
+  if(co)co.textContent = cog!=null ? String(Math.round(cog)).padStart(3,"0")+"\u00B0" : "\u2013";
   sp.innerHTML = sog!=null ? `${sog.toFixed(1)}<span class="garmin-unit">kt</span>` : `&ndash;<span class="garmin-unit">kt</span>`;
+  // VMG: speed made good along the wind axis (signed, negative when running/reaching away from it)
+  if(vg){
+    let twd=null; try{twd=usedWind();}catch(e){}
+    if(cog!=null&&sog!=null&&twd!=null){
+      const vmg=sog*Math.cos(rad(angdiff(twd,cog)));
+      vg.innerHTML=`${vmg>=0?"":"\u2212"}${Math.abs(vmg).toFixed(1)}<span class="garmin-unit">kt</span>`;
+    } else vg.innerHTML=`&ndash;<span class="garmin-unit">kt</span>`;
+  }
   const tgt=garminTargetInfo();
   const started=garminStarted();
+  if(bl)bl.textContent="Bearing to "+(started?"Next":"Start");
   if(dl)dl.textContent="Dist to "+(started?"Next":"Start");
   if(tl)tl.textContent="Time to "+(started?"Next":"Start");
   if(el)el.textContent="ETA at "+(started?"Next":"Start");
-  if(!tgt){ if(ds)ds.textContent="\u2013"; if(et)et.textContent="\u2013"; if(tm)tm.textContent="\u2013"; return; }
+  if(!tgt){ if(br)br.textContent="\u2013"; if(ds)ds.textContent="\u2013"; if(vc)vc.innerHTML=`&ndash;<span class="garmin-unit">kt</span>`; if(et)et.textContent="\u2013"; if(tm)tm.textContent="\u2013"; return; }
   const bd=brgDist(me,tgt.pos);
   const nm=bd.dist, m=nm*1852;
+  if(br)br.textContent = String(Math.round(bd.brg)).padStart(3,"0")+"\u00B0";
   if(ds)ds.textContent = nm<0.2 ? `${Math.round(m)} m` : `${nm.toFixed(2)} NM`;
+  // VMC: speed made good on course toward the target (signed, negative if heading >90 deg off the direct line)
+  if(vc){
+    if(cog!=null&&sog!=null){
+      const vmc=sog*Math.cos(rad(angdiff(cog,bd.brg)));
+      vc.innerHTML=`${vmc>=0?"":"\u2212"}${Math.abs(vmc).toFixed(1)}<span class="garmin-unit">kt</span>`;
+    } else vc.innerHTML=`&ndash;<span class="garmin-unit">kt</span>`;
+  }
   if(sog&&sog>0.3){
-    const minTo=nm/sog*60;
-    if(tm)tm.textContent = minTo<60 ? `${Math.max(1,Math.round(minTo))} min` : `${Math.floor(minTo/60)}h${String(Math.round(minTo%60)).padStart(2,"0")}`;
-    if(et)et.textContent = garminFmtClock(Date.now()+minTo*60000);
+    const totalSec=Math.round(nm/sog*3600);
+    const mm=Math.floor(totalSec/60), ss=totalSec%60;
+    if(tm)tm.textContent = `${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
+    if(et)et.textContent = garminFmtClock(Date.now()+totalSec*1000);
   } else { if(tm)tm.textContent="\u2013"; if(et)et.textContent="\u2013"; }
   if(ptr)ptr.setAttribute("transform",`rotate(${bd.brg.toFixed(1)} 150 150)`);
 }
