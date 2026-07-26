@@ -54,11 +54,12 @@ label{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase
 .inrow input[type=text],.inrow button.pick{height:var(--ctlh);box-sizing:border-box}
 .inrow button.pick{min-height:0}
 .inrow>div{min-width:0}
-input[type=date],input[type=time]{font-size:19px;padding:12px 4px;text-align:center;-webkit-appearance:none;appearance:none}
+input[type=date],input[type=time]{text-align:center;-webkit-appearance:none;appearance:none}
 .inrow>div{flex:1}
 input[type=number],input[type=date],input[type=time]{width:100%;font-size:24px;font-weight:700;padding:10px 8px;border:1.5px solid var(--rule);box-sizing:border-box;min-width:0;
   border-radius:10px;background:#FBFDFE;color:var(--ink);text-align:center;
   font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+input[type=date],input[type=time]{font-size:17px;padding:10px 2px}
 /* a field the app is filling in for you: tinted, and the value shown at full strength */
 input.autoval{background:#E4F2F6;border-color:#9CCFDA}
 input.autoval::placeholder{color:#0E7C94;opacity:1;font-weight:700}
@@ -126,9 +127,10 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
 </style>
 </head>
 <body>
-<header>
+<header style="position:relative">
   <div class="eyebrow" id="eyebrow">Dublin Bay SC</div>
   <h1>CourseCalc <small>2026 card v1.1</small></h1>
+  <button id="goBtn" aria-label="Start location and get forecast" style="position:absolute;top:12px;right:14px;width:60px;height:60px;border-radius:50%;border:2.5px solid #12283A;background:#fff;color:#12283A;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.18)">GO</button>
 </header>
 
 <details class="notes" id="setuptab" open style="background:#F2C230;border:1px solid #C89B1F"><summary style="color:#12283A">Setup</summary>
@@ -139,8 +141,9 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
     <div class="cardbtns" id="cardbtns"></div>
   </div>
   <div class="inrow" style="margin-bottom:12px">
-    <div style="flex:1.4"><label>Race date</label><input id="rdate" type="date"></div>
-    <div><label>Start time</label><input id="rtime" type="time" value="19:00"></div>
+    <div style="flex:1.15"><label>Race date</label><input id="rdate" type="date"></div>
+    <div style="flex:0.95"><label>Start time</label><input id="rtime" type="time" value="19:00"></div>
+    <div style="flex:0 0 58px"><label>&nbsp;</label><button id="rdtNowBtn" class="pick" style="width:100%;padding:0;font-weight:800;font-size:13px" title="Set race date and time to now">NOW</button></div>
   </div>
   <div class="inrow">
     <div><label>Wind &deg;T</label><input id="wdir" type="number" inputmode="numeric" value="0" min="0" max="359" title="the wind the app is using; type to override"></div>
@@ -196,6 +199,10 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
     <div id="rtBig" class="mono" style="font-size:clamp(76px,25vw,108px);font-weight:800;line-height:1;letter-spacing:.01em">5:00</div>
     <div id="rtLabel" style="font-size:13px;color:#C9DFEC;margin-top:6px;min-height:18px">Ready</div>
   </div>
+  <div id="startWrap" style="margin-top:10px;border-top:1px solid rgba(255,255,255,.25);padding-top:10px">
+    <svg id="startView" viewBox="0 0 360 430" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;border-radius:12px;background:#F2F7FA"></svg>
+    <div id="startCtl" style="display:none;margin-top:8px"></div>
+  </div>
   <div style="display:flex;gap:8px;justify-content:center;margin:12px 0 8px">
     <button class="rtbtn" id="rtAuto" style="flex:1;padding:13px 8px;font-size:15px">Auto</button>
     <button class="rtbtn" id="rtReset" style="flex:1;padding:13px 8px;font-size:15px">Reset</button>
@@ -234,6 +241,14 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
     <label style="white-space:nowrap;margin:0">Wind <span class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
     <input class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
   </div>
+  <div id="miniLegWrap" style="margin-top:12px;border-top:1px solid var(--rule);padding-top:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div id="miniLegHead" style="font-size:12.5px;font-weight:800;color:#12283A"></div>
+      <div style="font-size:10.5px;color:#7C93A4">swipe ← →</div>
+    </div>
+    <svg id="miniLegSvg" viewBox="0 0 360 250" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;margin-top:6px;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA;touch-action:pan-y"></svg>
+    <div class="tot leginfo" id="miniLegInfo"></div>
+  </div>
 </details>
 
 <details class="notes" id="tabletab"><summary>Course Table</summary>
@@ -248,8 +263,11 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
 </details>
 
 <details class="notes" id="diagramtab"><summary>Course Analysis</summary>
-  <div class="legbtns" id="legbtns"></div>
-  <div style="margin-top:2px;margin-bottom:-4px;display:flex;justify-content:space-between;align-items:center">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div id="legHead" style="font-size:12.5px;font-weight:800;color:#12283A"></div>
+    <div style="font-size:10.5px;color:#7C93A4">swipe ← →</div>
+  </div>
+  <div style="margin-top:6px;margin-bottom:-4px;display:flex;justify-content:space-between;align-items:center">
     <div id="viewbtns" style="display:flex;gap:6px">
       <button class="pick" data-vm="tide" style="padding:8px 10px;font-size:13px">Tide</button>
       <button class="pick" data-vm="wind" style="padding:8px 10px;font-size:13px">Wind</button>
@@ -257,8 +275,7 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
     </div>
     <button class="pick" id="orientBtn" style="min-width:110px">Course-up</button>
   </div>
-  <svg id="legview" viewBox="0 0 360 430" preserveAspectRatio="xMidYMid meet" style="margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA"></svg>
-  <div id="startCtl" style="display:none;margin-top:8px"></div>
+  <svg id="legview" viewBox="0 0 360 430" preserveAspectRatio="xMidYMid meet" style="margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA;touch-action:pan-y"></svg>
   <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
     <label style="white-space:nowrap;margin:0">Wind <span id="wslideLbl" class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
     <input id="wslide" class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
@@ -875,7 +892,10 @@ function sidePref(L,effOff,range){
     // Persistent layer: a trend does not revert, so it accumulates with time on the leg.
     dPers=TR?TR.rate*L.time:0;                     // degrees of persistent shift during this leg
     dEff=dOsc+dPers;
-    const lever=0.35*L.dist, sB=(L.pos==="Beat"?1:-1);  // beats toward the shift, runs away
+    // Verified numerically (exact two-board simulation, veer/back/angle-wrap, both point of
+    // sail): a veer favours the geographic right side on a beat AND a run, no reversal. This
+    // gain is geographic (sgn=+1 side, matching tidePlus above), so no beat/run sign flip.
+    const lever=0.35*L.dist;
     // integrate over the fitted wind distribution: expected gain and P(this side wins)
     const lgB=logGamma(SH.a)+logGamma(SH.b)-logGamma(SH.a+SH.b);
     let wsum=0, gsum=0, psum=0;
@@ -883,7 +903,7 @@ function sidePref(L,effOff,range){
       const u=(i+0.5)/33, psi=SH.lo+(SH.hi-SH.lo)*u;
       const w=Math.exp((SH.a-1)*Math.log(u)+(SH.b-1)*Math.log(1-u)-lgB);
       const dpsi=(((psi-wnowD+540)%360)-180)*rf+dPers;
-      const g=sB*(lever*Math.sin(rad(dpsi))/v)*60;
+      const g=(lever*Math.sin(rad(dpsi))/v)*60;
       wsum+=w; gsum+=w*g; psum+=w*((tidePlus+g)>0?1:0);
     }
     shiftPlus=gsum/wsum; pWin=psum/wsum;           // pWin: probability the sgn=+1 side is the right call
@@ -927,7 +947,10 @@ function arrivalInfo(r,idx,wdir,wspd){
       sgn=sidePref(prev,TIDECTX.off+el,TIDECTX.range).pref;
     }
     const cleanStbd=side==="S";                       // rounding hand names the clean gybe
-    const stbdArr=(sgn!==null)?(sgn===1):cleanStbd;   // else: closing gybe of the tide route
+    // sgn is geographic (right=+1) from sidePref; on a run the closing/arrival tack for the
+    // right-hand side is PORT, not starboard (the run mapping is the mirror of the beat one
+    // used in the branch above), so this flips sgn===1 to sgn===-1 versus that branch.
+    const stbdArr=(sgn!==null)?(sgn===-1):cleanStbd;   // else: closing gybe of the tide route
     const conflict=stbdArr!==cleanStbd;               // wrong gybe for the rounding: gybe before the mark
     const atStbd=conflict?!stbdArr:stbdArr;
     return {side:stbdArr?"starboard":"port", preTack:false, preGybe:conflict,
@@ -939,7 +962,7 @@ function arrivalInfo(r,idx,wdir,wspd){
 
 // ---------- UI ----------
 const $=id=>document.getElementById(id);
-let state={card:"thublue",letter:"A",num:1,leg:0,northUp:true,boat:"etap28i",viewMode:"both"};
+let state={card:"thublue",letter:"A",num:1,leg:0,northUp:true,boat:"etap28i",viewMode:"both",chartLeg:0};
 // Four winds. "used" is what the whole app calculates from; it always equals one of the
 // other three, whichever was set last under these rules:
 //   expected  - a course letter button. Claims "used" ONLY until the first Forecast press.
@@ -1752,7 +1775,7 @@ function gpsRender(pos){
   const _t=Date.now();                       // keep the leg diagram's dot current, at most every 3 s
   if(!GPS.lastDraw||_t-GPS.lastDraw>3000){ GPS.lastDraw=_t; try{render();}catch(e){} }
 }
-function gpsSay(t){ const st=$("gpsStatus"); if(st)st.innerHTML=t; const gt=$("garminStatus"); if(gt)gt.innerHTML=t; }
+function gpsSay(t){ const st=$("gpsStatus"); if(st)st.innerHTML=t; const gt=$("garminStatus"); if(gt)gt.innerHTML=t; goBtnPaint(); }
 function gpsErr(e){
   if(e&&e.code===1){
     const standalone = (window.navigator.standalone===true) || (window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches);
@@ -1784,6 +1807,7 @@ function gpsStart(){
 function gpsToggle(){
   if(GPS.watch!=null){ navigator.geolocation.clearWatch(GPS.watch); GPS.watch=null; gpsSay("Stopped. Tap to resume."); }
   else gpsStart();
+  goBtnPaint();
 }
 // ---------- GPS Display tab: Garmin-style speed/distance tiles + bearing compass ----------
 function garminCompassBuild(){
@@ -1863,6 +1887,31 @@ function garminRender(pos){
   if(ptr)ptr.setAttribute("transform",`rotate(${bd.brg.toFixed(1)} 150 150)`);
 }
 function garminInit(){ const b=$("garminBtn"); if(b)b.onclick=gpsToggle; garminCompassBuild(); }
+// Header GO button: a real on/off toggle for location. ON starts location tracking (which is
+// what feeds the GPS tab's track recording) and fetches the forecast. OFF stops location,
+// which stops new track points being recorded. Its look always reflects the true GPS.watch
+// state, whichever control (this button or the GPS tab's own) actually changed it.
+function goBtnPaint(){
+  const b=$("goBtn"); if(!b)return;
+  const on=GPS.watch!=null;
+  b.style.background=on?"#0E7C94":"#F2C230";
+  b.style.color=on?"#fff":"#12283A";
+  b.style.borderColor=on?"#0E7C94":"#C89B1F";
+  b.style.boxShadow=on?"0 0 0 5px rgba(14,124,148,.28), 0 2px 5px rgba(0,0,0,.18)":"0 2px 5px rgba(0,0,0,.18)";
+  b.textContent=on?"ON":"GO";
+}
+function goBtnInit(){
+  const b=$("goBtn"); if(!b)return;
+  b.onclick=()=>{
+    const turningOn=GPS.watch==null;
+    gpsToggle();
+    if(turningOn){
+      try{ if(WIND.forecast!==null&&(WIND.observed!==null||WIND.manual!==null))fcResume(); else trendFetch(); }catch(e){}
+    }
+    goBtnPaint();
+  };
+  goBtnPaint();
+}
 function rtBeep(freq,dur,vol){
   try{ if(!RT.ac)RT.ac=new (window.AudioContext||window.webkitAudioContext)();
     const o=RT.ac.createOscillator(),g=RT.ac.createGain();
@@ -2084,9 +2133,12 @@ function buildPickers(){
   posMapInit();
   mapInit();
   garminInit();
+  goBtnInit();
+  miniLegSwipeInit();
+  legSwipeInit();
   startLoad();
   {const el=$("startCtl"); if(el)el.addEventListener("click",startClick);
-   const lv=$("legview"); if(lv)lv.addEventListener("click",startTap);}
+   const lv=$("startView"); if(lv)lv.addEventListener("click",startTap);}
   // Wind sliders: one under the leg diagram, one under the course chart. Both drive the
   // app's wind, so whichever you reach for, everything re-renders together.
   document.querySelectorAll("input.wslide").forEach(sl=>{
@@ -2219,8 +2271,10 @@ function render(){
     $("courseSummary").innerHTML=`choose a course letter and number above`;
     $("legTable").innerHTML=`<tr><td style="padding:14px;color:#7C93A4;text-align:center">Choose a course to see the legs.</td></tr>`;
     $("totDist").textContent=$("totSail").textContent=$("totTime").textContent=$("totHoist").textContent="\u2013";
-    if(state.leg>=0)drawStart(r,wdir,wspd); else if(state.leg<0)drawStart(r,wdir,wspd);
+    drawStart(r,wdir,wspd);
+    try{startCtl();}catch(e){}
     drawMap(null,wdir);
+    try{miniLegRender();}catch(e){}
     document.querySelectorAll("#letters .pick").forEach(b=>{
       b.classList.toggle("on",WIND.chosen&&b.dataset.l===state.letter);
       const atWind=suggestLetter(wdir), showOrange=(WIND.src!=="expected");
@@ -2271,15 +2325,17 @@ function render(){
     ?"Start is a transit above the West Pier hut; finish between the hut corner and the orange limit mark."
     :`Start assumed ${MLADJ.toFixed(1)} NM downwind of mark 1.`;
   drawMap(r,wdir);
-  if(state.leg>=r.legs.length||state.leg<-1)state.leg=0;
-  $("legbtns").innerHTML=`<button class="pick${state.leg===-1?" on":""}" data-leg="-1" style="padding:0 12px">Start</button>`+
-    r.legs.map((L,i)=>`<button class="pick${i===state.leg?" on":""}" data-leg="${i}">${i+1}</button>`).join("");
-  $("legbtns").onclick=e=>{if(e.target.dataset.leg!==undefined){state.leg=+e.target.dataset.leg;render();}};
+  try{miniLegRender();}catch(e){}
+  if(state.leg>=r.legs.length||state.leg<0)state.leg=0;
+  const legHeadEl=$("legHead");
+  if(legHeadEl){const L=r.legs[state.leg];
+    legHeadEl.textContent=`Leg ${state.leg+1} of ${r.legs.length} \u00B7 ${(L.from.name||L.from.lbl||"start")} \u2192 ${(L.to.name||L.to.lbl||"finish")}`;}
   $("orientBtn").textContent=state.northUp?"North-up":"Course-up";
   $("orientBtn").onclick=()=>{state.northUp=!state.northUp;render();};
   $("viewbtns").onclick=e=>{if(e.target.dataset.vm){state.viewMode=e.target.dataset.vm;render();}};
   document.querySelectorAll("#viewbtns .pick").forEach(b=>b.classList.toggle("on",b.dataset.vm===state.viewMode));
-  if(state.leg<0)drawStart(r,wdir,wspd); else drawLeg(r,state.leg,wdir,wspd);
+  drawLeg(r,state.leg,wdir,wspd);
+  drawStart(r,wdir,wspd);
   startCtl();
 }
 let CURROUTE=null;
@@ -2603,7 +2659,7 @@ function fmtSec(s){
   return (n>=60? Math.floor(n/60)+":"+String(n%60).padStart(2,"0") : n+"s");
 }
 function drawStart(r,wdir,wspd){
-  const svg=$("legview"); if(!svg)return;
+  const svg=$("startView"); if(!svg)return;
   const W=360,H=430, INK="#12283A", ORANGE="#FF6A13", GREEN="#007A33", RED="#C8102E";
   const L=startLine();
   const live=!!GPS.last;                        // a real fix always beats a finger
@@ -2707,7 +2763,6 @@ function drawStart(r,wdir,wspd){
 // ---------- the controls: only what is useful right now is on screen ----------
 function startCtl(){
   const el=$("startCtl"); if(!el)return;
-  if(state.leg>=0){ el.style.display="none"; el.innerHTML=""; return; }
   el.style.display="block";
   const B=(id,txt,st)=>`<button class="pick" data-s="${id}" style="flex:1;${st||""}">${txt}</button>`;
   const live=!!GPS.last, L=startLine();
@@ -2745,8 +2800,8 @@ function startCtl(){
 // GPS, and useful afloat too: put a finger where you expect to be at two minutes and
 // read the burn. A real fix always wins, so this can never override the boat's position.
 function startTap(ev){
-  if(state.leg>=0||GPS.last)return;
-  const P=START.proj, svg=$("legview"); if(!P||!svg)return;
+  if(GPS.last)return;
+  const P=START.proj, svg=$("startView"); if(!P||!svg)return;
   const rc=svg.getBoundingClientRect(); if(!rc.width||!rc.height)return;
   const x=(ev.clientX-rc.left)*P.W/rc.width, y=(ev.clientY-rc.top)*P.H/rc.height;
   const X=(x-P.W/2)/P.sc+P.cx0, Y=(y-(P.H/2+16))/P.sc+P.cy0;
@@ -2783,8 +2838,8 @@ function drawLeg(r,idx,wdir,wspd){
   const L=r.legs[idx];
   const elapsed=r.legs.slice(0,idx).reduce((s,x)=>s+x.time,0);
   const svg=$("legview"); const W=360,H=430,cx=W/2;
-  const BAND=104;                                  // reserved top/bottom band for roses & N
-  const yB=H-BAND,yT=BAND;                       // from at bottom, to at top
+  const bandH=Math.round(W*0.25);   // reserved top band for wind/N/tide, 25% of the diagram width
+  const yB=H-20,yT=bandH+20;        // main diagram: from just below the band to near the bottom
   const co=L.co;
   const up=state.northUp?0:co;               // course-up: leg vertical; north-up: N vertical
   const fr=a=>a-up;                          // heading -> frame angle from up
@@ -2811,7 +2866,7 @@ function drawLeg(r,idx,wdir,wspd){
       }
     }
   }
-  const windC=[46,52], tideC=[W-46,H-52];        // fixed rose slots
+  // wind/N/tide now live in the reserved top band (bandH), not fixed corner slots
   const rotS=rad(state.northUp?co:0);
   const pts0=[[0,0],[0,D],...corners.map(c=>[c[1],c[2]])];
   let exX=0.01,exY=0.01;
@@ -2820,7 +2875,7 @@ function drawLeg(r,idx,wdir,wspd){
     const ry=-nx*Math.sin(rotS)+(ny-D/2)*Math.cos(rotS);
     exX=Math.max(exX,Math.abs(rx)); exY=Math.max(exY,Math.abs(ry));
   }
-  let scale=Math.min((H/2-64)/exY,(cx-30)/exX);                  // generous fit into the band
+  let scale=Math.min(((yB-yT)/2-20)/exY,(cx-30)/exX);             // generous fit below the band
   {const bp=sc=>[[0,0],[0,D]].map(([nx,ny])=>{const rx=nx*Math.cos(rotS)+(ny-D/2)*Math.sin(rotS),ry=-nx*Math.sin(rotS)+(ny-D/2)*Math.cos(rotS);return[cx+rx*sc,H/2-ry*sc];});
    let stub=null;
    if(idx>0){                                       // approach stub sticks 96px out of the from-mark
@@ -2829,9 +2884,9 @@ function drawLeg(r,idx,wdir,wspd){
    }
    for(let g=0;g<14;g++){
      const pts=bp(scale);
-     let bad=pts.some(b=>[windC,tideC].some(rc=>Math.hypot(b[0]-rc[0],b[1]-rc[1])<98));
+     let bad=pts.some(b=>b[1]<bandH+20);
      if(stub){const sx=pts[0][0]+stub[0], sy=pts[0][1]+stub[1];
-       if(sx<12||sx>W-12||sy<26||sy>H-26)bad=true;}
+       if(sx<12||sx>W-12||sy<bandH+20||sy>H-26)bad=true;}
      if(!bad)break; scale*=0.94;
    }}
   const rot=rad(state.northUp?co:0);         // leg-frame -> display-frame rotation
@@ -2842,14 +2897,17 @@ function drawLeg(r,idx,wdir,wspd){
     return [cx+rx*scale, cy0-ry*scale];
   };
   let s="";
+  s+=`<line x1="0" y1="${bandH}" x2="${W}" y2="${bandH}" stroke="#D8E0E6" stroke-width="1"/>`;
   // rhumb
   const [ax0,ay0]=F(0,0),[bx0,by0]=F(0,D);
   s+=`<line x1="${ax0}" y1="${ay0}" x2="${bx0}" y2="${by0}" stroke="#48627A" stroke-width="2" stroke-dasharray="7 5"/>`;
   s+=arrowAt(ax0,ay0,bx0,by0,0.30,"#48627A")+arrowAt(ax0,ay0,bx0,by0,0.30+14/Math.hypot(bx0-ax0,by0-ay0),"#48627A");
-  const [mlx,mly]=F(0,0.60*D);
   let angT=Math.atan2(by0-ay0,bx0-ax0)*180/Math.PI;
   if(angT>90||angT<-90)angT+=180;                    // keep the text upright
-  // reach legs: corrected course to steer from the full tide triangle
+  // reach legs: corrected course to steer from the full tide triangle, combined with the plain
+  // rhumb course/distance into ONE stacked box (steer on top) so there's a single enclosure,
+  // not two separate tags competing for space along the line
+  let steerTh=null;
   if(target===null&&stL&&!stL.slack){
     let th=co;
     for(let it=0;it<3;it++){
@@ -2857,22 +2915,35 @@ function drawLeg(r,idx,wdir,wspd){
       const x=stL.kt*Math.sin(rad(stL.dir-co))/Vb;
       if(Math.abs(x)<=1)th=norm(co-Math.asin(x)*180/Math.PI); else {th=null;break;}
     }
-    if(th!==null&&Math.abs(((th-co+540)%360)-180)>=1){
-      const [rx,ry]=F(0,0.40*D);
-      const tc=((((wdir-th+540)%360)-180)>0)?"#007A33":"#C8102E";
-      s+=`<g transform="rotate(${angT.toFixed(1)} ${rx} ${ry})">`+
-         `<rect x="${rx-27}" y="${ry-13}" width="54" height="24" rx="4" fill="#fff" opacity="0.95" stroke="${tc}" stroke-width="1.4"/>`+
-         `<text x="${rx}" y="${ry+4.5}" font-size="13.5" font-weight="800" text-anchor="middle" fill="${tc}" class="mono">${String(Math.round(th)).padStart(3,"0")}\u00B0</text>`+
-         `</g>`;
-    }
+    if(th!==null&&Math.abs(((th-co+540)%360)-180)>=1)steerTh=th;
   }
-  s+=`<text x="${mlx}" y="${mly-6}" font-size="12.5" font-weight="700" text-anchor="middle" fill="#48627A" stroke="#F2F7FA" stroke-width="3.5" paint-order="stroke" class="mono" transform="rotate(${angT.toFixed(1)} ${mlx} ${mly})">${Math.round(co).toString().padStart(3,"0")}\u00B0 x ${L.dist.toFixed(1)}'</text>`;
-  // wind arrow in leg frame (blowing direction)
-  const th=rad(fr(wdir+180));
-  const ax=windC[0],ay=windC[1],al=22;
-  s+=`<circle cx="${ax}" cy="${ay}" r="33" fill="#fff" opacity=".85"/>`;
-  s+=`<line x1="${ax-al*Math.sin(th)}" y1="${ay+al*Math.cos(th)}" x2="${ax+al*Math.sin(th)}" y2="${ay-al*Math.cos(th)}" stroke="#12283A" stroke-width="4" marker-end="url(#lah)"/>`;
-  s+=`<text x="${ax}" y="${ay+47}" font-size="11.5" font-weight="700" text-anchor="middle" fill="#12283A">wind ${wdir}\u00B0</text>`;
+  const [mlx,mly]=F(0,0.5*D);
+  const rhumbTxt=`${Math.round(co).toString().padStart(3,"0")}\u00B0 x ${L.dist.toFixed(1)}'`;
+  // never let the box touch either mark: cap its size to the actual clear space between them
+  const markR=26, markGap=10;
+  const legScreenLen=Math.hypot(bx0-ax0,by0-ay0);
+  const clearSpan=Math.max(30,legScreenLen-2*(markR+markGap));
+  if(steerTh!==null){
+    const tc=((((wdir-steerTh+540)%360)-180)>0)?"#007A33":"#C8102E";
+    const boxScale=Math.min(1,clearSpan/118);
+    const bw=118*boxScale, bh=54*boxScale, f1=16*boxScale, f2=12.5*boxScale;
+    s+=`<rect x="${mlx-bw/2}" y="${mly-bh/2}" width="${bw}" height="${bh}" rx="${7*boxScale}" fill="#fff" opacity="0.97" stroke="${tc}" stroke-width="2"/>`+
+       `<text x="${mlx}" y="${mly-3*boxScale}" font-size="${f1}" font-weight="800" text-anchor="middle" fill="${tc}" class="mono">${String(Math.round(steerTh)).padStart(3,"0")}\u00B0</text>`+
+       `<text x="${mlx}" y="${mly+17*boxScale}" font-size="${f2}" font-weight="700" text-anchor="middle" fill="#48627A" class="mono">${rhumbTxt}</text>`;
+  } else {
+    const boxScale=Math.min(1,clearSpan/110);
+    const bw=110*boxScale, bh=30*boxScale, f1=13.5*boxScale;
+    s+=`<rect x="${mlx-bw/2}" y="${mly-bh/2}" width="${bw}" height="${bh}" rx="${6*boxScale}" fill="#fff" opacity="0.97" stroke="#48627A" stroke-width="2"/>`+
+       `<text x="${mlx}" y="${mly+5*boxScale}" font-size="${f1}" font-weight="700" text-anchor="middle" fill="#48627A" class="mono">${rhumbTxt}</text>`;
+  }
+  // wind icon in the reserved band: unified shape/size with N and tide, blue, label above, number below
+  const windDegFrame=fr(wdir+180);
+  const wIconX=0.10*W, wIconY=0.51*bandH, wR=23;
+  s+=`<text x="${wIconX}" y="${wIconY-33}" font-size="11" font-weight="800" fill="#12283A" text-anchor="middle">Wind</text>`;
+  s+=`<circle cx="${wIconX}" cy="${wIconY}" r="${wR}" fill="#FBEEB0"/>`;
+  s+=`<g transform="translate(${wIconX} ${wIconY}) rotate(${windDegFrame})">`+
+     `<polygon points="0,-14 8,9 0,3 -8,9" fill="#0074D9"/></g>`;
+  s+=`<text x="${wIconX}" y="${wIconY+40}" font-size="12" font-weight="800" fill="#12283A" text-anchor="middle">${wdir}\u00B0</text>`;
   // tidal stream arrow (leg frame), from atlas
   let pref=null, prefGain=0, prefPct=0, sideTxt="", verdictHTML="";
   if(TIDECTX){
@@ -2910,16 +2981,16 @@ function drawLeg(r,idx,wdir,wspd){
       pref=sp.pref; prefGain=sp.netMin; prefPct=sp.pct;
       const sideName=sp.pref===1?"right":"left";
       const z=s=>s.slack?"slack":fmtStream(s);
-      const lines=[`<div class="whyhead">Net \u2212${sp.netMin.toFixed(1)}m to the ${sideName} side</div>`];
+      const lines=[`<div class="whyhead">Net \u2212${sp.netMin.toFixed(1)} min to the ${sideName} side</div>`];
       const comps=[];
-      if(Math.abs(sp.tideMin)>=0.2)comps.push(`tide \u2212${Math.abs(sp.tideMin).toFixed(1)}m ${sp.tideMin>0?"right":"left"}`);
-      if(Math.abs(sp.shiftMin)>=0.2)comps.push(`shift \u2212${Math.abs(sp.shiftMin).toFixed(1)}m (expect ${Math.abs(sp.dEff).toFixed(0)}\u00B0 ${sp.dEff>0?"veer":"back"})`);
+      if(Math.abs(sp.tideMin)>=0.2)comps.push(`tide \u2212${Math.abs(sp.tideMin).toFixed(1)} min ${sp.tideMin>0?"right":"left"}`);
+      if(Math.abs(sp.shiftMin)>=0.2)comps.push(`shift \u2212${Math.abs(sp.shiftMin).toFixed(1)} min (expect ${Math.abs(sp.dEff).toFixed(0)}\u00B0 ${sp.dEff>0?"veer":"back"})`);
       if(Math.abs(sp.dPers)>=1)comps.push(`trend ${Math.abs(sp.dPers).toFixed(0)}\u00B0 ${sp.dPers>0?"veer":"back"} this leg`);
       if(comps.length)lines.push(`<div>${comps.join(" \u00B7 ")}</div>`);
       lines.push(`<div>streams: right ${z(sp.sPlus)} \u00B7 left ${z(sp.sMinus)}</div>`);
       sideTxt=lines.join("");
     } else if(Math.abs(sp.shiftMin)>=0.2||Math.abs(sp.tideMin)>=0.2){
-      sideTxt=`<div>No clear side (net ${sp.netMin.toFixed(1)}m): tide and shift roughly cancel</div>`;
+      sideTxt=`<div>No clear side (net ${sp.netMin.toFixed(1)} min): tide and shift roughly cancel</div>`;
     }
     if((L.pos==="Beat"||L.pos==="Run")&&window.SHIFT&&state.viewMode!=="tide"){
       const thr=Math.max(3,Math.round(0.7*window.SHIFT.sd));
@@ -2930,33 +3001,40 @@ function drawLeg(r,idx,wdir,wspd){
         sideTxt+=`<div>Oscillating: ${L.pos==="Beat"?`tack on headers \u2265${thr}\u00B0`:`gybe on lifts \u2265${thr}\u00B0`}</div>`;
       }
     }
+    const tIconX=0.90*W, tIconY=0.51*bandH, tR=23;
+    s+=`<text x="${tIconX}" y="${tIconY-33}" font-size="11" font-weight="800" fill="#7B2D8E" text-anchor="middle">Tide</text>`;
+    s+=`<circle cx="${tIconX}" cy="${tIconY}" r="${tR}" fill="#FBEEB0"/>`;
     if(!st.slack){
-      const tth=rad(fr(st.dir));                       // stream sets TOWARD st.dir (course-up frame)
-      const tx=tideC[0],tyc=tideC[1];
-      s+=`<circle cx="${tx}" cy="${tyc}" r="33" fill="#fff" opacity=".55"/>`;
-      const L=Math.min(58,44+st.kt*10), half=L/2;      // block arrow, matches chart & tides map
-      const ux=Math.sin(tth), uy=-Math.cos(tth), nx=-uy, ny=ux;
-      const shaftW=L*0.15, headW=L*0.30, headL=L*0.34;
-      const P=(a2,c2)=>`${(tx+ux*(a2-half)+nx*c2).toFixed(1)},${(tyc+uy*(a2-half)+ny*c2).toFixed(1)}`;
-      s+=`<polygon points="${[P(0,shaftW),P(L-headL,shaftW),P(L-headL,headW),P(L,0),P(L-headL,-headW),P(L-headL,-shaftW),P(0,-shaftW)].join(" ")}" fill="${TIDECOL}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>`;
-      s+=`<text x="${tx}" y="${tyc-44}" font-size="11.5" font-weight="700" text-anchor="middle" fill="${TIDECOL}" stroke="#fff" stroke-width="3" paint-order="stroke">Tide ${fmtStream(st)}</text>`;
+      const tideDegFrame=fr(st.dir);                    // stream sets TOWARD st.dir (course-up frame)
+      s+=`<g transform="translate(${tIconX} ${tIconY}) rotate(${tideDegFrame})">`+
+         `<polygon points="0,-14 8,9 0,3 -8,9" fill="#A020D0"/></g>`;
+      s+=`<text x="${tIconX}" y="${tIconY+40}" font-size="12" font-weight="800" fill="#7B2D8E" text-anchor="middle">${fmtStream(st)}</text>`;
     } else {
-      s+=`<text x="${tideC[0]}" y="${tideC[1]-44}" font-size="12" font-weight="700" text-anchor="middle" fill="#0E7C94">tide slack</text>`;
+      s+=`<text x="${tIconX}" y="${tIconY+40}" font-size="12" font-weight="800" fill="#7B2D8E" text-anchor="middle">slack</text>`;
     }
     if(stL){
       const ck=clockAt(elapsed);
       s+=`<text x="${W-8}" y="${H-10}" font-size="11" text-anchor="end" fill="#0E7C94">tide at ${ck?ck+" ":""}(HW${effOff>=0?"+":"\u2212"}${Math.abs(effOff).toFixed(1)})</text>`;
     }
   }
-  // tacking / gybing routes (corners precomputed for the fit)
+  // tacking / gybing routes (corners precomputed for the fit). Every 2-board route tacks or
+  // gybes at its own corner, so the two segments are always opposite tacks -- colour each
+  // segment by its own actual tack rather than the route as a whole, and hatch the second
+  // segment so the manoeuvre point reads clearly.
+  const windPref=(pref!==null)?((L.pos==="Run")?-pref:pref):null;   // corners' sgn is wind-relative
+  const tackCol0=h=>((((wdir-h+540)%360)-180)>0)?"#007A33":"#C8102E"; // stbd green, port red
   for(const [sgn,nx,ny] of corners){
     const [px1,py1]=F(nx,ny);
-    const col=sgn===1?"#C8102E":"#007A33";
-    const em=pref!==null&&pref===sgn;
-    const dim=pref!==null&&pref!==sgn;
-    s+=`<path d="M ${F(0,0)[0]},${F(0,0)[1]} L ${px1},${py1} L ${F(0,D)[0]},${F(0,D)[1]}" fill="none" stroke="${col}" stroke-width="${em?4:2.5}" opacity="${em?0.95:dim?0.25:0.55}"/>`;
+    const em=windPref!==null&&windPref===sgn;
+    const dim=windPref!==null&&windPref!==sgn;
+    const wid=em?5:2, opa=em?0.95:dim?0.15:0.5;
+    const h1seg=norm(wdir+sgn*target), h2seg=norm(wdir-sgn*target);
+    const c1=tackCol0(h1seg), c2=tackCol0(h2seg);
+    const [fa,fb]=F(0,0), [ta,tb]=F(0,D);
+    s+=`<line x1="${fa}" y1="${fb}" x2="${px1}" y2="${py1}" stroke="${c1}" stroke-width="${wid}" opacity="${opa}" stroke-linecap="round"/>`;
+    s+=`<line x1="${px1}" y1="${py1}" x2="${ta}" y2="${tb}" stroke="${c2}" stroke-width="${wid}" opacity="${opa}" stroke-linecap="round" stroke-dasharray="${wid*2.4} ${wid*1.7}"/>`;
+    const col=c1;
     if(em){
-      const [fa,fb]=F(0,0), [ta,tb]=F(0,D);
       for(const [x1,y1,x2,y2] of [[fa,fb,px1,py1],[px1,py1,ta,tb]]){
         const seg=Math.hypot(x2-x1,y2-y1)||1;
         s+=arrowAt(x1,y1,x2,y2,0.55,col)+arrowAt(x1,y1,x2,y2,0.55+12/seg,col);
@@ -3010,31 +3088,43 @@ function drawLeg(r,idx,wdir,wspd){
     const atCol=man?(arrCol===G?R:G):arrCol;          // tack carried into the rounding
     if(man){
       const mx3=(sx+hx)/2,my3=(sy+hy)/2;
-      s+=`<line x1="${sx}" y1="${sy}" x2="${mx3}" y2="${my3}" stroke="${arrCol}" stroke-width="2.5" stroke-dasharray="3 4" opacity=".9"/>`;
-      s+=`<line x1="${mx3}" y1="${my3}" x2="${hx}" y2="${hy}" stroke="${atCol}" stroke-width="2.5" stroke-dasharray="3 4" marker-end="url(${atCol===G?"#gah":"#rah"})" opacity=".9"/>`;
+      s+=`<line x1="${sx}" y1="${sy}" x2="${mx3}" y2="${my3}" stroke="${arrCol}" stroke-width="4" stroke-linecap="round"/>`;
+      s+=`<line x1="${mx3}" y1="${my3}" x2="${hx}" y2="${hy}" stroke="${atCol}" stroke-width="4" stroke-linecap="round"/>`;
+      s+=arrowAt(sx,sy,mx3,my3,0.15,arrCol,11);
     } else {
-      s+=`<line x1="${sx}" y1="${sy}" x2="${hx}" y2="${hy}" stroke="${arrCol}" stroke-width="2.5" stroke-dasharray="3 4" marker-end="url(${arrCol===G?"#gah":"#rah"})" opacity=".9"/>`;
+      s+=`<line x1="${sx}" y1="${sy}" x2="${hx}" y2="${hy}" stroke="${arrCol}" stroke-width="4" stroke-linecap="round"/>`;
+      s+=arrowAt(sx,sy,hx,hy,0.15,arrCol,11);
     }
     const pm=prev.from.m||prev.from.lbl||"CV";
     s+=`<text x="${sx-11*tvx}" y="${sy-11*tvy+4}" font-size="11" font-weight="700" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="3" paint-order="stroke">fm ${pm}</text>`;
   }
-  // "N" on the periphery, due north of the start-of-leg position (chart is course-up)
-  {
-    const na=rad(fr(0));
-    const dx=Math.sin(na), dy=-Math.cos(na);      // screen direction of true north
-    const m=16, ts=[];
-    if(dx>1e-9)ts.push((W-m-cx)/dx); if(dx<-1e-9)ts.push((m-cx)/dx);
-    const [nfx,nfy]=F(0,0);
-    ts.length=0;
-    if(dx>1e-9)ts.push((W-m-nfx)/dx); if(dx<-1e-9)ts.push((m-nfx)/dx);
-    if(dy>1e-9)ts.push((H-m-nfy)/dy); if(dy<-1e-9)ts.push((m-nfy)/dy);
-    const t=Math.min(...ts.filter(v=>v>0));
-    let nx0=nfx+t*dx, ny0=Math.max(28,Math.min(H-12,nfy+t*dy));
-    for(const rc of [windC,tideC]){
-      if(Math.hypot(nx0-rc[0],ny0-rc[1])<64){nx0=nx0+(nx0<W/2?76:-76);}
+  // departure line: the FIRST board of the NEXT leg, shown at this leg's END mark -- the
+  // counterpart to the arrival line above, same treatment (solid, bigger arrow, no number)
+  if(idx+1<r.legs.length&&L.to.side&&L.to.side!=="F"){
+    let aiN=null; try{ aiN=arrivalInfo(r,idx+1,wdir,wspd); }catch(e){ aiN=null; }
+    if(aiN){
+      const thpN=rad(fr(aiN.heading));
+      const tvxN=Math.sin(thpN), tvyN=-Math.cos(thpN);
+      const pxN=tvyN, pyN=-tvxN;
+      const sdN=L.to.side==="P"?1:L.to.side==="S"?-1:0;
+      const oxN=-sdN*pxN*13, oyN=-sdN*pyN*13;
+      const [tbx,tby]=F(0,D);
+      const hxN=tbx+oxN+tvxN*20, hyN=tby+oyN+tvyN*20;   // head: just past the buoy, heading out
+      const sxN=tbx+oxN+tvxN*68, syN=tby+oyN+tvyN*68;   // far end: the departure direction
+      const depCol=aiN.side==="starboard"?"#007A33":"#C8102E";
+      s+=`<line x1="${hxN}" y1="${hyN}" x2="${sxN}" y2="${syN}" stroke="${depCol}" stroke-width="4" stroke-linecap="round"/>`;
+      s+=arrowAt(hxN,hyN,sxN,syN,0.85,depCol,11);
     }
-    if(ny0>H-46&&Math.abs(nx0-cx)<85)nx0=cx+(dx<=0?-95:95);   // dodge the from-buoy label
-    s+=`<text x="${nx0}" y="${ny0+5}" font-size="17" font-weight="800" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="4" paint-order="stroke">N</text>`;
+  }
+  // N: fixed in the centre of the reserved band, needle rotates to point at true north
+  // (fr(0) gives the exact frame angle: 0 in North-up mode, the course angle in Course-up mode)
+  {
+    const nDegFrame=fr(0);
+    const nIconX=0.50*W, nIconY=0.51*bandH, nR=23;
+    s+=`<text x="${nIconX}" y="${nIconY-33}" font-size="11" font-weight="800" fill="#12283A" text-anchor="middle">N</text>`;
+    s+=`<circle cx="${nIconX}" cy="${nIconY}" r="${nR}" fill="#FBEEB0"/>`;
+    s+=`<g transform="translate(${nIconX} ${nIconY}) rotate(${nDegFrame})">`+
+       `<polygon points="0,-14 8,9 0,3 -8,9" fill="#fff" stroke="#000" stroke-width="1.5"/></g>`;
   }
   s+=`<defs><marker id="lah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#12283A"/></marker><marker id="tah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#0E7C94"/></marker><marker id="rah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C8102E"/></marker><marker id="gah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#007A33"/></marker></defs>`;
   // buoys last, on top
@@ -3067,7 +3157,9 @@ function drawLeg(r,idx,wdir,wspd){
     const atStbd=(((wdir-Hi+540)%360)-180)>0;               // tack carried through the rounding
     let Ho=null, open=false;
     if(target!==null){
-      if(pref!==null)Ho=norm(wdir+pref*target);
+      // pref is geographic (right=+1); on a run the right-hand board is wdir-target, not
+      // wdir+target (the mirror of a beat), so the sign needs flipping before use here.
+      if(pref!==null){ const windPref=(L.pos==="Run")?-pref:pref; Ho=norm(wdir+windPref*target); }
       else{open=true;Ho=norm(wdir+(atStbd?-1:1)*target);}   // first option: the same-side board
     } else Ho=co;
     const turn=L.from.side==="P"?-1:1;                       // mark to port -> turn left
@@ -3127,13 +3219,418 @@ function drawLeg(r,idx,wdir,wspd){
         <td>Route</td><td>1st leg</td><td></td><td>2nd leg</td><td></td></tr>
       ${rows}</table></div>`;
   }
+  let adviceHTML="";
+  try{ adviceHTML=renderAdviceHTML(computeLegAdvice(r,idx,wdir,wspd)); }catch(e){}
   $("leginfo").innerHTML=verdictHTML+(roundTxt?`<div class="roundline">${roundTxt}</div>`:"")+(sideTxt?`<div class="why">${sideTxt}</div>`:"")+routesHTML+`
     <div>Leg<br><b>${L.pos.replace(" ","&nbsp;")}</b></div>
     <div>TWA / AW<br><b class="mono">${Math.round(L.twa)}\u00B0 ${L.tack}${Math.round(L.awa)}\u00B0</b></div>
     <div>Sail<br><b>${gustDiff?L.sail+"\u2192<br>"+L.gsail:L.sail}</b></div>
     <div class="row2">Dist (course)<br><b class="mono">${dPref.toFixed(1)}'${splitTxt}</b></div>
     <div class="row2">Tgt VMG<br><b class="mono">${L.smg.toFixed(1)}kt</b></div>
-    <div class="row2">Est<br><b class="mono">${Math.round(estMin)} min${estSplit}</b></div>`;
+    <div class="row2">Est<br><b class="mono">${Math.round(estMin)} min${estSplit}</b></div>${adviceHTML}`;
+}
+
+// ---------- Course Chart mini leg panel: leg shape, course to steer, tactical numbers, one side ----------
+// A lighter, single-side companion to drawLeg/leginfo above: no wind/tide rose overlays, no
+// route comparison table, just the one board this leg's tide/shift call (or, when that call is
+// too close, the clean side that avoids a tack/gybe right before the next mark) recommends.
+function miniCourseLabel(x,y,h,col){
+  return `<g><rect x="${(x-17).toFixed(1)}" y="${(y-9).toFixed(1)}" width="34" height="16" rx="3" fill="#fff" opacity="0.95" stroke="${col}" stroke-width="1"/><text x="${x.toFixed(1)}" y="${(y+3.3).toFixed(1)}" font-size="9.5" font-weight="800" text-anchor="middle" fill="${col}" class="mono">${String(Math.round(norm(h))).padStart(3,"0")}\u00B0</text></g>`;
+}
+function miniBuoySVG(x,y,pt,above){
+  const lx=Math.max(40,Math.min(320,x));
+  let s="";
+  const ring=pt.side==="P"?"#C8102E":pt.side==="S"?"#007A33":"#FF6A13";
+  if(!pt.m){
+    s+=`<rect x="${(x-6).toFixed(1)}" y="${(y-6).toFixed(1)}" width="12" height="12" fill="#FF6A13" stroke="#fff" stroke-width="1.5" transform="rotate(45 ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
+    s+=`<text x="${lx.toFixed(1)}" y="${(y+(above?-11:19)).toFixed(1)}" font-size="9" font-weight="800" text-anchor="middle" fill="#FF6A13">${pt.lbl==="Fin"?"Finish":(pt.lbl||"CV")+" start"}</text>`;
+    return s;
+  }
+  const cols=(CHIP[MARKS[pt.m][3]]||["#8aa"]);
+  const bw=13,bh=20,seg=bh/cols.length;
+  s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="15" fill="none" stroke="${ring}" stroke-width="2.2"/>`;
+  cols.forEach((c,i)=>{s+=`<rect x="${(x-bw/2).toFixed(1)}" y="${(y-bh/2+i*seg).toFixed(1)}" width="${bw}" height="${seg.toFixed(1)}" fill="${c}" stroke="#123" stroke-width="0.4"/>`;});
+  const lbl=`${pt.side==="F"?"Hut finish":pt.name}${pt.side==="P"?" (P)":pt.side==="S"?" (S)":""}`;
+  s+=`<text x="${lx.toFixed(1)}" y="${(y+(above?-19:25)).toFixed(1)}" font-size="9" font-weight="800" text-anchor="middle" fill="${ring}">${lbl}</text>`;
+  return s;
+}
+// ---------- Shared tactical advice block: numeric breakdown + structured advice sentence ----------
+// Single source of truth for both Course Analysis (leginfo) and the Course Chart mini panel
+// (miniLegInfo), so a fix here fixes both, rather than needing the same change made twice.
+function computeLegAdvice(r,idx,wdir,wspd){
+  if(idx<=0||idx>=r.legs.length)return null;
+  const L=r.legs[idx];
+  if(!L.from.side||L.from.side==="F")return null;      // nothing to round into this leg
+  let ai; try{ ai=arrivalInfo(r,idx,wdir,wspd); }catch(e){ return null; }
+  const arrivalTack=ai.side;                            // "starboard" / "port"
+  const roundHand=L.from.side==="S"?"starboard":"port";
+  const markSideRight=L.from.side==="S";                // leave to starboard = mark was on your right
+  const windSideRight=arrivalTack==="starboard";         // arrive on starboard = wind on your right
+  const manoeuvre1=(markSideRight===windSideRight)?"harden up":"bear away";
+
+  const co=L.co, D=L.dist;
+  const upT=interp(P_TWS,P_UP.twa,wspd), dnT=interp(P_TWS,P_DN.twa,wspd);
+  let target=null; if(L.pos==="Beat")target=upT; else if(L.pos==="Run")target=dnT;
+
+  const el=r.legs.slice(0,idx).reduce((s,x)=>s+x.time,0);
+  const effOff=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off+el:null;
+  let stL=effOff!==null?streamAtPos(legMid(L),effOff,TIDECTX.range):null;
+  if(state.viewMode==="wind")stL=null;
+
+  const sp=(typeof TIDECTX!=="undefined"&&TIDECTX)?sidePref(L,effOff,TIDECTX.range):{pref:null,tideMin:0,shiftMin:0,netPlus:0,pWin:null};
+
+  const corners=[];
+  if(target!==null){
+    const Vb=interp(P_TWS,(L.pos==="Beat"?P_UP:P_DN).vel,wspd);
+    const Tv=stL&&!stL.slack?[stL.kt*Math.sin(rad(stL.dir-co)),stL.kt*Math.cos(rad(stL.dir-co))]:[0,0];
+    const frL=a=>a-co;
+    for(const sgn of [1,-1]){
+      const h1=frL(wdir+sgn*target), h2=frL(wdir-sgn*target);
+      const g1=[Vb*Math.sin(rad(h1))+Tv[0],Vb*Math.cos(rad(h1))+Tv[1]];
+      const g2=[Vb*Math.sin(rad(h2))+Tv[0],Vb*Math.cos(rad(h2))+Tv[1]];
+      const den=g1[0]*g2[1]-g1[1]*g2[0];
+      if(Math.abs(den)>1e-6){
+        const tt=(0*g2[1]-D*g2[0])/den, ss=(D*g1[0])/den;
+        if(tt>0&&ss>0&&tt*Vb<10*D)corners.push([sgn,tt*g1[0],tt*g1[1],tt+ss,tt]);
+      }
+    }
+  }
+
+  // pick a side: confident tide/shift call if there is one, else the clean (no forced pre-mark
+  // manoeuvre) side from arrivalInfo on the NEXT rounding -- same fallback used everywhere else
+  let wantSgn=null, geoSide=null, tieBreak=null;
+  if(target!==null){
+    if(sp.pref!==null){
+      geoSide=sp.pref===1?"right":"left";
+      wantSgn=(L.pos==="Run")?-sp.pref:sp.pref;           // geographic -> wind-relative, run mirrors beat
+    } else {
+      let ai2=null;
+      if(idx+1<r.legs.length){ try{ ai2=arrivalInfo(r,idx+1,wdir,wspd); }catch(e){ ai2=null; } }
+      if(ai2){
+        wantSgn=(ai2.side==="starboard")?-1:1;
+        geoSide=(L.pos==="Run")?(wantSgn===1?"left":"right"):(wantSgn===1?"right":"left");
+        tieBreak=(ai2.preTack||ai2.preGybe)?"Shown side still needs a manoeuvre near the next mark"
+                                            :"Clean side \u2014 no tack/gybe before the next mark";
+      } else { wantSgn=1; geoSide=(L.pos==="Run")?"left":"right"; tieBreak="No clear side"; }
+    }
+  }
+  const pc=(target!==null)?(corners.find(c=>c[0]===wantSgn)||corners[0]||null):null;
+
+  let Ho=null;
+  if(target!==null&&wantSgn!==null)Ho=norm(wdir+wantSgn*target);
+  else if(target===null)Ho=co;
+
+  // does reaching Ho from the arrival heading Hi need to cross the wind (tack) or the downwind
+  // axis (gybe), sweeping the way the rounding hand dictates?
+  let manoeuvre2verb="carry on";
+  if(target!==null&&Ho!==null){
+    const Hi=ai.heading, turn=L.from.side==="P"?-1:1;
+    const da=a=>(((a-Hi)*turn+3)%360+360)%360;
+    const sweep=da(Ho), dW=da(wdir), dL2=da(norm(wdir+180));
+    const crossW=dW<=sweep+3, crossL=dL2<=sweep+3;
+    if(crossW&&(!crossL||dW<=dL2))manoeuvre2verb="tack";
+    else if(crossL)manoeuvre2verb="gybe";
+    else manoeuvre2verb="stay";
+  }
+
+  // apparent wind for the first board (TWA = target, by construction of a VMG-optimal board);
+  // for a reach there's no separate board, so reuse the leg's own already-computed AWA/tack
+  let awaDeg=null, awaSide=null;
+  if(target!==null&&Ho!==null){
+    const Vb1=interp(P_TWS,(L.pos==="Beat"?P_UP:P_DN).vel,wspd);
+    const awx=wspd*Math.sin(rad(target)), awy=wspd*Math.cos(rad(target))+Vb1;
+    awaDeg=norm(Math.atan2(awx,awy)*180/Math.PI); if(awaDeg>180)awaDeg=360-awaDeg;
+    const sgnA=((wdir-Ho+540)%360)-180;
+    awaSide=sgnA>0?"S":"P";
+  } else if(target===null){
+    awaDeg=L.awa; awaSide=L.tack==="\u00B1"?"S":L.tack;
+  }
+
+  let totalDist=L.sailed, totalTimeMin=L.time*60, firstPct=null, firstTimeMin=null,
+      tackAngle=null, tideOffsetDeg=null, tideOffsetSide=null;
+  if(target!==null&&pc){
+    totalDist=Math.hypot(pc[1],pc[2])+Math.hypot(pc[1],D-pc[2]);
+    if(pc[3])totalTimeMin=pc[3]*60;
+    if(pc[4]!=null&&pc[3]){ firstTimeMin=pc[4]*60; firstPct=Math.round(pc[4]/pc[3]*100); }
+    // a tack turns through the bow (dead upwind), a gybe through the stern (dead downwind);
+    // target is measured from dead upwind, so a gybe needs the complementary angle
+    tackAngle=Math.round(L.pos==="Run"?2*(180-target):2*target);
+    // true bearing from the corner to the mark, vs the fixed (tide-uncorrected) closing heading:
+    // the gap is how far the mark actually sits off the bow at the tack/gybe point
+    const trueBrgLeg=norm(co+Math.atan2(0-pc[1],D-pc[2])*180/Math.PI);
+    const h2fixed=norm(wdir-wantSgn*target);
+    const diff=((trueBrgLeg-h2fixed+540)%360)-180;
+    tideOffsetDeg=Math.round(Math.abs(diff));
+    tideOffsetSide=diff>0?"S":"P";
+  }
+
+  return {markName:L.from.name||L.from.lbl||"start", arrivalTack, roundHand, manoeuvre1,
+    geoSide, manoeuvre2verb, tieBreak, Ho, awaDeg, awaSide, totalDist, totalTimeMin,
+    firstPct, firstTimeMin, tackAngle, legIsRun:L.pos==="Run", tideOffsetDeg, tideOffsetSide, sail:L.sail,
+    tideMin:sp.tideMin, shiftMin:sp.shiftMin, netMin:sp.netPlus, pWin:sp.pWin, pref:sp.pref};
+}
+function renderAdviceHTML(a){
+  if(!a)return "";
+  const fmtSigned=v=>`${v>=0?"+":"\u2212"}${Math.abs(v).toFixed(1)} min`;
+  const sideOf=v=>v>=0?"right":"left";
+  const tideLine=Math.abs(a.tideMin)<0.05?`Tide &nbsp;\u00B10.0 min (negligible)`
+    :`Tide &nbsp;${fmtSigned(a.tideMin)} ${sideOf(a.tideMin)}`;
+  let shiftLine;
+  if(a.shiftMin==null||Math.abs(a.shiftMin)<0.05)shiftLine=`Shift &nbsp;\u00B10.0 min (no clear signal)`;
+  else{
+    const pwTxt=a.pWin!=null?` \u00B7 ${Math.round((a.shiftMin>=0?a.pWin:1-a.pWin)*100)}% win`:"";
+    shiftLine=`Shift &nbsp;${fmtSigned(a.shiftMin)} ${sideOf(a.shiftMin)}${pwTxt}`;
+  }
+  const netConf=a.netMin==null?"":a.pref!==null?(Math.abs(a.netMin)>=1?"confident":"lean"):"no clear side";
+  const netLine=a.netMin!=null?`Net &nbsp;${fmtSigned(a.netMin)} ${sideOf(a.netMin)}${netConf?` (${netConf})`:""}`:"";
+  const tieLine=a.tieBreak?`Tie-break: ${a.tieBreak}`:"";
+  const breakdown=`<div class="span" style="font-size:11px;line-height:1.7;color:#12283A;background:#EEF4F8;border-radius:8px;padding:6px 9px;margin-top:2px">`+
+    `${tideLine}<br>${shiftLine}<br>${netLine}${tieLine?`<br>${tieLine}`:""}</div>`;
+
+  const sideWord=a.geoSide==="right"?"Right":a.geoSide==="left"?"Left":"";
+  const stayOrGo=a.manoeuvre2verb==="stay"?`stay ${sideWord}`
+    :a.manoeuvre2verb==="tack"?`tack and go ${sideWord}`
+    :a.manoeuvre2verb==="gybe"?`gybe and go ${sideWord}`
+    :"carry on";
+  const HoTxt=a.Ho!=null?String(Math.round(a.Ho)).padStart(3,"0")+"\u00B0":"\u2013";
+  const awaTxt=a.awaDeg!=null?`, AWA ${Math.round(a.awaDeg)}\u00B0 ${a.awaSide}`:"";
+
+  let tailTxt="";
+  if(a.firstPct!=null){
+    const gybeOrTack=a.legIsRun?"Gybe":"Tacking";
+    const verb2=a.legIsRun?"gybe":"tack";
+    tailTxt=` Total ${a.totalDist.toFixed(1)} NM, est ${Math.round(a.totalTimeMin)} min \u2014 `+
+      `first leg ${a.firstPct}% (${Math.round(a.firstTimeMin)} min) then ${verb2} \u2014 `+
+      `${gybeOrTack} angle ${a.tackAngle}\u00B0, mark expected ~${a.tideOffsetDeg}\u00B0 off the `+
+      `${a.tideOffsetSide==="S"?"starboard":"port"} bow due to tide.`;
+  }
+  const sentence=`<div class="span" style="margin-top:6px;font-size:12.5px;line-height:1.55;color:#12283A">`+
+    `Arrive ${a.markName} on ${a.arrivalTack.charAt(0).toUpperCase()+a.arrivalTack.slice(1)}, `+
+    `leave the mark to ${a.roundHand.charAt(0).toUpperCase()+a.roundHand.slice(1)}, ${a.manoeuvre1}, `+
+    `${stayOrGo}. Steer ${HoTxt}${awaTxt}.${tailTxt}${a.sail?` Sail ${a.sail}.`:""}</div>`;
+  return breakdown+sentence;
+}
+function drawMiniLeg(r,idx,wdir,wspd){
+  const svg=$("miniLegSvg"), infoEl=$("miniLegInfo"), headEl=$("miniLegHead");
+  if(!svg||!infoEl)return;
+  const L=r.legs[idx];
+  const elapsed=r.legs.slice(0,idx).reduce((s,x)=>s+x.time,0);
+  const W=360,H=250,cx=W/2,cy0=H/2,co=L.co,D=L.dist,mid=D/2;
+  const upT=interp(P_TWS,P_UP.twa,wspd), dnT=interp(P_TWS,P_DN.twa,wspd);
+  let target=null; if(L.pos==="Beat")target=upT; else if(L.pos==="Run")target=dnT;
+  const effOff=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off+elapsed:null;
+  let stL=effOff!==null?streamAtPos(legMid(L),effOff,TIDECTX.range):null;
+  if(state.viewMode==="wind")stL=null;
+  const frL=a=>a-co;
+  const corners=[];
+  if(target!==null){
+    const Vb=interp(P_TWS,(L.pos==="Beat"?P_UP:P_DN).vel,wspd);
+    const Tv=stL&&!stL.slack?[stL.kt*Math.sin(rad(stL.dir-co)),stL.kt*Math.cos(rad(stL.dir-co))]:[0,0];
+    for(const sgn of [1,-1]){
+      const h1=frL(wdir+sgn*target), h2=frL(wdir-sgn*target);
+      const g1=[Vb*Math.sin(rad(h1))+Tv[0],Vb*Math.cos(rad(h1))+Tv[1]];
+      const g2=[Vb*Math.sin(rad(h2))+Tv[0],Vb*Math.cos(rad(h2))+Tv[1]];
+      const den=g1[0]*g2[1]-g1[1]*g2[0];
+      if(Math.abs(den)>1e-6){
+        const tt=(0*g2[1]-D*g2[0])/den, ss=(D*g1[0])/den;
+        if(tt>0&&ss>0&&tt*Vb<10*D)corners.push([sgn,tt*g1[0],tt*g1[1],tt+ss,tt]);
+      }
+    }
+  }
+  // pick ONE side: the tide/shift call if it's confident, else the clean side that avoids a
+  // manoeuvre right before the mark ending this leg (same fallback arrivalInfo already uses)
+  const sp=(typeof TIDECTX!=="undefined"&&TIDECTX)?sidePref(L,effOff,TIDECTX.range):{pref:null};
+  let wantSgn=null, geoSide=null, reason="";
+  if(target!==null){
+    if(sp.pref!==null){
+      // sp.pref is geographic (right=+1); the wind-relative board sign needed for heading math
+      // is the mirror of that on a run (right = wdir-target on a run, wdir+target on a beat).
+      geoSide=sp.pref===1?"right":"left";
+      wantSgn=(L.pos==="Run")?-sp.pref:sp.pref;
+      reason=`Favours ${geoSide} \u00B7 tide/shift edge (net ${sp.netMin.toFixed(1)} min)`;
+    } else {
+      let ai=null;
+      if(idx+1<r.legs.length){ try{ ai=arrivalInfo(r,idx+1,wdir,wspd); }catch(e){ ai=null; } }
+      if(ai){ wantSgn=(ai.side==="starboard")?-1:1;        // tack-based, already correct for any leg type
+        geoSide=(L.pos==="Run")?(wantSgn===1?"left":"right"):(wantSgn===1?"right":"left");
+        reason=(ai.preTack||ai.preGybe)?"No clear tide/shift edge \u2014 shown side still needs a manoeuvre near the mark"
+                                        :"No clear tide/shift edge \u2014 clean side, no tack/gybe before the mark"; }
+      else { wantSgn=1; geoSide=(L.pos==="Run")?"left":"right"; reason="No clear side"; }
+    }
+  }
+  const pc=corners.find(c=>c[0]===wantSgn)||corners[0]||null;
+  // north-up: the frame rotates by the leg's course so true north stays vertical on screen
+  const rot=rad(co), cR=Math.cos(rot), sR=Math.sin(rot);
+  const rotPt=(nx,ny)=>[nx*cR+(ny-mid)*sR, -nx*sR+(ny-mid)*cR];
+  const pts0=[[0,0],[0,D],...(pc?[[pc[1],pc[2]]]:[])];
+  let exX=0.01,exY=0.01;
+  for(const [nx,ny] of pts0){ const [rx,ry]=rotPt(nx,ny); exX=Math.max(exX,Math.abs(rx)); exY=Math.max(exY,Math.abs(ry)); }
+  const scaleV=Math.min((H/2-34)/exY,(W/2-40)/exX);
+  const F=(nx,ny)=>{ const [rx,ry]=rotPt(nx,ny); return [cx+rx*scaleV, cy0-ry*scaleV]; };
+  let s="";
+  const [ax0,ay0]=F(0,0),[bx0,by0]=F(0,D);
+  s+=`<line x1="${ax0.toFixed(1)}" y1="${ay0.toFixed(1)}" x2="${bx0.toFixed(1)}" y2="${by0.toFixed(1)}" stroke="#C7D3DB" stroke-width="1" stroke-dasharray="4 3"/>`;
+  let steerTxt="";
+  if(target!==null&&pc){
+    const [px1,py1]=F(pc[1],pc[2]);
+    const h1=wdir+wantSgn*target, h2=wdir-wantSgn*target;
+    const tackCol1=h=>((((wdir-h+540)%360)-180)>0)?"#007A33":"#C8102E";
+    const col1=tackCol1(h1), col2=tackCol1(h2);              // second board is always the opposite tack
+    s+=`<line x1="${ax0.toFixed(1)}" y1="${ay0.toFixed(1)}" x2="${px1.toFixed(1)}" y2="${py1.toFixed(1)}" stroke="${col1}" stroke-width="2" stroke-linecap="round"/>`;
+    s+=`<line x1="${px1.toFixed(1)}" y1="${py1.toFixed(1)}" x2="${bx0.toFixed(1)}" y2="${by0.toFixed(1)}" stroke="${col2}" stroke-width="2" stroke-linecap="round" stroke-dasharray="5 3.5"/>`;
+    for(const [x1,y1,x2,y2,ac] of [[ax0,ay0,px1,py1,col1],[px1,py1,bx0,by0,col2]]){
+      const seg=Math.hypot(x2-x1,y2-y1)||1;
+      s+=arrowAt(x1,y1,x2,y2,0.5,ac,4)+arrowAt(x1,y1,x2,y2,0.5+9/seg,ac,4);
+    }
+    s+=`<circle cx="${px1.toFixed(1)}" cy="${py1.toFixed(1)}" r="3" fill="${col1}" stroke="#fff" stroke-width="1.5"/>`;
+    s+=miniCourseLabel((ax0+px1)/2,(ay0+py1)/2,h1,col1);
+    s+=miniCourseLabel((px1+bx0)/2,(py1+by0)/2,h2,col2);
+    steerTxt=String(Math.round(norm(h1))).padStart(3,"0")+"\u00B0";
+  } else {
+    let th=co;
+    if(stL&&!stL.slack){
+      for(let it=0;it<3;it++){
+        const Vb=Math.max(2,polarSpeed(angdiff(wdir,th),wspd));
+        const x=stL.kt*Math.sin(rad(stL.dir-co))/Vb;
+        if(Math.abs(x)<=1)th=norm(co-Math.asin(x)*180/Math.PI); else {th=co;break;}
+      }
+    }
+    s+=`<line x1="${ax0.toFixed(1)}" y1="${ay0.toFixed(1)}" x2="${bx0.toFixed(1)}" y2="${by0.toFixed(1)}" stroke="#12283A" stroke-width="2"/>`+
+       arrowAt(ax0,ay0,bx0,by0,0.55,"#12283A",4)+arrowAt(ax0,ay0,bx0,by0,0.55+9/Math.hypot(bx0-ax0,by0-ay0),"#12283A",4);
+    s+=miniCourseLabel((ax0+bx0)/2,(ay0+by0)/2,th,"#12283A");
+    steerTxt=String(Math.round(norm(th))).padStart(3,"0")+"\u00B0";
+  }
+  // arrival line at L.from (how this leg is entered) and departure line at L.to (how the next
+  // leg is left), same tack-coloured/solid/arrow-at-far-end treatment as Course Analysis
+  if(idx>0){
+    let ai2=null; try{ ai2=arrivalInfo(r,idx,wdir,wspd); }catch(e){ ai2=null; }
+    if(ai2){
+      const hFrame=rad(frL(ai2.heading));
+      const tvx=Math.sin(hFrame), tvy=-Math.cos(hFrame);
+      const hx=ax0-tvx*14, hy=ay0-tvy*14, sx=ax0-tvx*46, sy=ay0-tvy*46;
+      const arrCol=ai2.side==="starboard"?"#007A33":"#C8102E";
+      s+=`<line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="${arrCol}" stroke-width="2.5" stroke-linecap="round"/>`;
+      s+=arrowAt(sx,sy,hx,hy,0.15,arrCol,7);
+    }
+  }
+  if(idx+1<r.legs.length&&L.to.side&&L.to.side!=="F"){
+    let aiN=null; try{ aiN=arrivalInfo(r,idx+1,wdir,wspd); }catch(e){ aiN=null; }
+    if(aiN){
+      const hFrame=rad(frL(aiN.heading));
+      const tvx=Math.sin(hFrame), tvy=-Math.cos(hFrame);
+      const hx=bx0+tvx*14, hy=by0+tvy*14, sx=bx0+tvx*46, sy=by0+tvy*46;
+      const depCol=aiN.side==="starboard"?"#007A33":"#C8102E";
+      s+=`<line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${sx.toFixed(1)}" y2="${sy.toFixed(1)}" stroke="${depCol}" stroke-width="2.5" stroke-linecap="round"/>`;
+      s+=arrowAt(hx,hy,sx,sy,0.85,depCol,7);
+    }
+  }
+  s+=miniBuoySVG(ax0,ay0,L.from,ay0<by0);
+  s+=miniBuoySVG(bx0,by0,L.to,by0<=ay0);
+  s+=`<text x="${(W-10).toFixed(1)}" y="16" font-size="10" font-weight="800" text-anchor="end" fill="#12283A">N\u2191</text>`;
+  svg.innerHTML=s;
+  if(headEl)headEl.textContent=`Leg ${idx+1} of ${r.legs.length} \u00B7 ${(L.from.name||L.from.lbl||"start")} \u2192 ${(L.to.name||L.to.lbl||"finish")}`;
+  let dPref=L.sailed, estMin=L.time*60;
+  if(target!==null&&pc){
+    dPref=Math.hypot(pc[1],pc[2])+Math.hypot(pc[1],D-pc[2]);
+    if(pc[3])estMin=pc[3]*60;
+  } else if(target===null){
+    let th=co, Vb=Math.max(polarSpeed(angdiff(wdir,co),wspd),0.5), along=0;
+    if(stL&&!stL.slack){
+      for(let it=0;it<3;it++){
+        Vb=Math.max(polarSpeed(angdiff(wdir,th),wspd),0.5);
+        const x=stL.kt*Math.sin(rad(stL.dir-co))/Vb;
+        if(Math.abs(x)<=1)th=norm(co-Math.asin(x)*180/Math.PI); else {th=co;break;}
+      }
+      along=stL.kt*Math.cos(rad(stL.dir-co));
+    }
+    const sog=Math.max(Vb*Math.cos(rad(th-co))+along,0.5);
+    estMin=D/sog*60;
+  }
+  const sideLine=target!==null
+    ?`<div class="span" style="font-weight:800;font-size:12px;color:#12283A">${geoSide==="right"?"RIGHT":"LEFT"} \u00B7 steer ${steerTxt} first</div><div class="span" style="font-size:10px;color:#5B6672">${reason}</div>`
+    :"";
+  let adviceHTML="";
+  try{ adviceHTML=renderAdviceHTML(computeLegAdvice(r,idx,wdir,wspd)); }catch(e){}
+  infoEl.innerHTML=sideLine+`
+    <div>Leg<br><b>${L.pos.replace(" ","&nbsp;")}</b></div>
+    <div>TWA / AW<br><b class="mono">${Math.round(L.twa)}\u00B0 ${L.tack}${Math.round(L.awa)}\u00B0</b></div>
+    <div>Sail<br><b>${L.sail}</b></div>
+    <div>Dist (course)<br><b class="mono">${dPref.toFixed(1)}'</b></div>
+    <div>Tgt VMG<br><b class="mono">${L.smg.toFixed(1)}kt</b></div>
+    <div>Est<br><b class="mono">${Math.round(estMin)} min</b></div>${adviceHTML}`;
+}
+function miniLegRender(){
+  const wrap=$("miniLegWrap"); if(!wrap)return;
+  const haveCourse=WIND.chosen&&WIND.numChosen;
+  let r=null;
+  if(haveCourse){ try{ r=compute(state.card,+$("wdir").value||0,+$("wspd").value||10,+$("wgst").value||15,state.letter,state.num); }catch(e){ r=null; } }
+  if(!r||!r.legs||!r.legs.length){
+    wrap.style.display="none";
+    return;
+  }
+  wrap.style.display="";
+  if(state.chartLeg>=r.legs.length||state.chartLeg<0)state.chartLeg=0;
+  try{ drawMiniLeg(r,state.chartLeg,+$("wdir").value||0,+$("wspd").value||10); }catch(e){}
+}
+function miniLegStep(dir){                        // dir: -1 previous leg, +1 next leg
+  let r=null;
+  if(WIND.chosen&&WIND.numChosen){ try{ r=compute(state.card,+$("wdir").value||0,+$("wspd").value||10,+$("wgst").value||15,state.letter,state.num); }catch(err){ r=null; } }
+  if(!r||!r.legs||!r.legs.length)return;
+  const n=r.legs.length;
+  state.chartLeg=dir>0?Math.min(n-1,state.chartLeg+1):Math.max(0,state.chartLeg-1);
+  miniLegRender();
+}
+function miniLegSwipeInit(){
+  const svg=$("miniLegSvg"); if(!svg||svg.dataset.swipeWired)return;
+  svg.dataset.swipeWired="1";
+  let sx=null, sy=null, active=false;
+  svg.addEventListener("pointerdown",e=>{ sx=e.clientX; sy=e.clientY; active=true; });
+  svg.addEventListener("pointerup",e=>{
+    if(!active||sx===null)return; active=false;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    sx=null;
+    if(Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.3)return;   // mostly-horizontal, at least 50px
+    miniLegStep(dx<0?1:-1);
+  });
+  svg.addEventListener("pointercancel",()=>{ active=false; sx=null; });
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;
+    const tab=$("charttab"); if(!tab||!tab.open)return;          // only while Course Chart is open
+    const ae=document.activeElement, tag=ae&&ae.tagName;
+    if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;   // don't hijack typing elsewhere
+    e.preventDefault();
+    miniLegStep(e.key==="ArrowRight"?1:-1);
+  });
+}
+function legStep(dir){                             // dir: -1 previous leg, +1 next leg (Course Analysis)
+  let r=null;
+  if(WIND.chosen&&WIND.numChosen){ try{ r=compute(state.card,+$("wdir").value||0,+$("wspd").value||10,+$("wgst").value||15,state.letter,state.num); }catch(err){ r=null; } }
+  if(!r||!r.legs||!r.legs.length)return;
+  const n=r.legs.length;
+  state.leg=dir>0?Math.min(n-1,state.leg+1):Math.max(0,state.leg-1);
+  render();
+}
+function legSwipeInit(){
+  const svg=$("legview"); if(!svg||svg.dataset.swipeWired)return;
+  svg.dataset.swipeWired="1";
+  let sx=null, sy=null, active=false;
+  svg.addEventListener("pointerdown",e=>{ sx=e.clientX; sy=e.clientY; active=true; });
+  svg.addEventListener("pointerup",e=>{
+    if(!active||sx===null)return; active=false;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    sx=null;
+    if(Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.3)return;   // mostly-horizontal, at least 50px
+    legStep(dx<0?1:-1);
+  });
+  svg.addEventListener("pointercancel",()=>{ active=false; sx=null; });
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;
+    const tab=$("diagramtab"); if(!tab||!tab.open)return;         // only while Course Analysis is open
+    const ae=document.activeElement, tag=ae&&ae.tagName;
+    if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;    // don't hijack typing elsewhere
+    e.preventDefault();
+    legStep(e.key==="ArrowRight"?1:-1);
+  });
 }
 
 // iOS date and time pickers do not always fire "input" while the wheel is spinning,
@@ -3152,6 +3649,13 @@ function drawLeg(r,idx,wdir,wspd){
     el.addEventListener("change",apply);
     el.addEventListener("keydown",e=>{ if(e.key==="Enter"){apply();el.blur();} });
   });
+  const nb=$("rdtNowBtn");
+  if(nb)nb.onclick=()=>{
+    const now=new Date(), p2=n=>String(n).padStart(2,"0");
+    if(rd)rd.value=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}`;
+    if(rt)rt.value=`${p2(now.getHours())}:${p2(now.getMinutes())}`;
+    apply();                                    // same user-override path as typing: TIME.src="user"
+  };
 }
 { // Wind kt and Gusts kt: typing is a manual override, and it survives a re-render.
   const sp=$("wspd"), gs=$("wgst");
