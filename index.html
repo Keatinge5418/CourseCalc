@@ -3022,6 +3022,27 @@ function drawLeg(r,idx,wdir,wspd){
   // segment by its own actual tack rather than the route as a whole, and hatch the second
   // segment so the manoeuvre point reads clearly.
   const windPref=(pref!==null)?((L.pos==="Run")?-pref:pref):null;   // corners' sgn is wind-relative
+  // badgeSgn: which single route gets heading badges. Pulled directly from computeLegAdvice's
+  // own Ho (the same "Steer XXX\u00B0" heading quoted in the advice sentence below), so the badge
+  // can never drift from what the advice text says -- the earlier duplicated-logic bug (the
+  // departure line extending the wrong leg) came from exactly this kind of second, hand-written
+  // copy of a decision that already had a single source of truth elsewhere.
+  let badgeSgn=null;
+  if(target!==null){
+    let adv0=null; try{ adv0=computeLegAdvice(r,idx,wdir,wspd); }catch(e){ adv0=null; }
+    if(adv0&&adv0.Ho!=null){
+      const d1=angdiff(norm(wdir+target),adv0.Ho), d2=angdiff(norm(wdir-target),adv0.Ho);
+      badgeSgn=d1<=d2?1:-1;
+    } else {
+      // leg 0 (the start): computeLegAdvice has no arrival concept here and no advice text is
+      // shown either, so fall back to the same clean-side tie-break it uses internally.
+      badgeSgn=windPref;
+      if(badgeSgn===null){
+        let ai2=null; if(idx+1<r.legs.length){ try{ ai2=arrivalInfo(r,idx+1,wdir,wspd); }catch(e){ ai2=null; } }
+        badgeSgn=ai2?((ai2.side==="starboard")?-1:1):1;
+      }
+    }
+  }
   const tackCol0=h=>((((wdir-h+540)%360)-180)>0)?"#007A33":"#C8102E"; // stbd green, port red
   for(const [sgn,nx,ny] of corners){
     const [px1,py1]=F(nx,ny);
@@ -3034,31 +3055,22 @@ function drawLeg(r,idx,wdir,wspd){
     s+=`<line x1="${fa}" y1="${fb}" x2="${px1}" y2="${py1}" stroke="${c1}" stroke-width="${wid}" opacity="${opa}" stroke-linecap="round"/>`;
     s+=`<line x1="${px1}" y1="${py1}" x2="${ta}" y2="${tb}" stroke="${c2}" stroke-width="${wid}" opacity="${opa}" stroke-linecap="round" stroke-dasharray="${wid*2.4} ${wid*1.7}"/>`;
     const col=c1;
+    if(sgn===badgeSgn){
+      // heading badges: shown once, on the single selected route (not every drawn route), so
+      // a leg with no active tide/shift signal still shows the boards to steer without
+      // doubling up when both candidate routes are on screen.
+      const [f0x,f0y]=F(0,0), [f1x,f1y]=F(0,D);
+      const mx=(f0x+px1)/2, my=(f0y+py1)/2, mx2=(px1+f1x)/2, my2=(py1+f1y)/2;
+      for(const [gx,gy,gh] of [[mx,my,h1seg],[mx2,my2,h2seg]]){
+        s+=courseLabel(gx,gy,gh,tackCol0(gh),1.5);
+      }
+    }
     if(em){
       for(const [x1,y1,x2,y2] of [[fa,fb,px1,py1],[px1,py1,ta,tb]]){
         const seg=Math.hypot(x2-x1,y2-y1)||1;
         s+=arrowAt(x1,y1,x2,y2,0.55,col)+arrowAt(x1,y1,x2,y2,0.55+12/seg,col);
       }
       s+=`<circle cx="${px1}" cy="${py1}" r="6" fill="${col}" stroke="#fff" stroke-width="2"/>`;
-      const [f0x,f0y]=F(0,0);
-      const mx=(f0x+px1)/2, my=(f0y+py1)/2;
-      let bAng=Math.atan2(py1-f0y,px1-f0x)*180/Math.PI;
-      if(bAng>90||bAng<-90)bAng+=180;
-      const cts=String(Math.round(norm(wdir+sgn*target))).padStart(3,"0");
-      const [f1x,f1y]=F(0,D);
-      const mx2=(px1+f1x)/2, my2=(py1+f1y)/2;
-      let bAng2=Math.atan2(f1y-py1,f1x-px1)*180/Math.PI;
-      if(bAng2>90||bAng2<-90)bAng2+=180;
-      const cts2=String(Math.round(norm(wdir-sgn*target))).padStart(3,"0");
-      const tackCol=h=>((((wdir-h+540)%360)-180)>0)?"#007A33":"#C8102E"; // stbd green, port red
-      const h1t=norm(wdir+sgn*target), h2t=norm(wdir-sgn*target);
-      for(const [gx,gy,ga,gc,gh] of [[mx,my,bAng,cts,h1t],[mx2,my2,bAng2,cts2,h2t]]){
-        const tc=tackCol(gh);
-        s+=`<g transform="rotate(${ga.toFixed(1)} ${gx} ${gy})">`+
-           `<rect x="${gx-25}" y="${gy-13}" width="50" height="24" rx="4" fill="#fff" opacity="0.95" stroke="${tc}" stroke-width="1.4"/>`+
-           `<text x="${gx}" y="${gy+4.5}" font-size="13.5" font-weight="800" text-anchor="middle" fill="${tc}" class="mono">${gc}\u00B0</text>`+
-           `</g>`;
-      }
       const outward=px1>=cx?1:-1;
       const fits=outward===1?(px1+14+92<W):(px1-14-92>0);
       const lx=fits?px1+outward*14:px1-outward*14;
@@ -3099,11 +3111,22 @@ function drawLeg(r,idx,wdir,wspd){
     s+=`<text x="${sx-11*tvx}" y="${sy-11*tvy+4}" font-size="11" font-weight="700" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="3" paint-order="stroke">fm ${pm}</text>`;
   }
   // departure line: the FIRST board of the NEXT leg, shown at this leg's END mark -- the
-  // counterpart to the arrival line above, same treatment (solid, bigger arrow, no number)
+  // counterpart to the arrival line above, same treatment (solid, bigger arrow, no number).
+  // Uses the next leg's own tide/shift-aware first heading (Ho from computeLegAdvice), not
+  // arrivalInfo(idx+1): that extends THIS leg's course, which has nothing to do with the
+  // next leg's actual bearing (a HUT->Boyd course does not tell you the Boyd->Merrion course).
   if(idx+1<r.legs.length&&L.to.side&&L.to.side!=="F"){
-    let aiN=null; try{ aiN=arrivalInfo(r,idx+1,wdir,wspd); }catch(e){ aiN=null; }
-    if(aiN){
-      const thpN=rad(fr(aiN.heading));
+    let depHeading=null, depSide=null;
+    let adv2=null; try{ adv2=computeLegAdvice(r,idx+1,wdir,wspd); }catch(e){ adv2=null; }
+    if(adv2&&adv2.Ho!=null){
+      depHeading=adv2.Ho;
+      const ad=((wdir-depHeading+540)%360)-180; depSide=ad>0?"starboard":"port";
+    } else {
+      let aiN=null; try{ aiN=arrivalInfo(r,idx+1,wdir,wspd); }catch(e){ aiN=null; }
+      if(aiN){ depHeading=aiN.heading; depSide=aiN.side; }
+    }
+    if(depHeading!=null){
+      const thpN=rad(fr(depHeading));
       const tvxN=Math.sin(thpN), tvyN=-Math.cos(thpN);
       const pxN=tvyN, pyN=-tvxN;
       const sdN=L.to.side==="P"?1:L.to.side==="S"?-1:0;
@@ -3111,7 +3134,7 @@ function drawLeg(r,idx,wdir,wspd){
       const [tbx,tby]=F(0,D);
       const hxN=tbx+oxN+tvxN*20, hyN=tby+oyN+tvyN*20;   // head: just past the buoy, heading out
       const sxN=tbx+oxN+tvxN*68, syN=tby+oyN+tvyN*68;   // far end: the departure direction
-      const depCol=aiN.side==="starboard"?"#007A33":"#C8102E";
+      const depCol=depSide==="starboard"?"#007A33":"#C8102E";
       s+=`<line x1="${hxN}" y1="${hyN}" x2="${sxN}" y2="${syN}" stroke="${depCol}" stroke-width="4" stroke-linecap="round"/>`;
       s+=arrowAt(hxN,hyN,sxN,syN,0.85,depCol,11);
     }
@@ -3234,8 +3257,13 @@ function drawLeg(r,idx,wdir,wspd){
 // A lighter, single-side companion to drawLeg/leginfo above: no wind/tide rose overlays, no
 // route comparison table, just the one board this leg's tide/shift call (or, when that call is
 // too close, the clean side that avoids a tack/gybe right before the next mark) recommends.
-function miniCourseLabel(x,y,h,col){
-  return `<g><rect x="${(x-17).toFixed(1)}" y="${(y-9).toFixed(1)}" width="34" height="16" rx="3" fill="#fff" opacity="0.95" stroke="${col}" stroke-width="1"/><text x="${x.toFixed(1)}" y="${(y+3.3).toFixed(1)}" font-size="9.5" font-weight="800" text-anchor="middle" fill="${col}" class="mono">${String(Math.round(norm(h))).padStart(3,"0")}\u00B0</text></g>`;
+// Single shared heading-badge helper for both the mini-chart and the Course Analysis leg
+// diagram: an unrotated box with the heading in degrees, tack/context-coloured. scale lets
+// each panel size it appropriately (mini-chart uses the default 1; Course Analysis uses a
+// larger scale to match its bigger canvas).
+function courseLabel(x,y,h,col,scale){
+  const s2=scale||1, w2=34*s2, h2=16*s2, fs=9.5*s2, ry=3*s2;
+  return `<g><rect x="${(x-w2/2).toFixed(1)}" y="${(y-h2/2).toFixed(1)}" width="${w2.toFixed(1)}" height="${h2.toFixed(1)}" rx="${ry.toFixed(1)}" fill="#fff" opacity="0.95" stroke="${col}" stroke-width="${(1*s2).toFixed(2)}"/><text x="${x.toFixed(1)}" y="${(y+3.3*s2).toFixed(1)}" font-size="${fs.toFixed(1)}" font-weight="800" text-anchor="middle" fill="${col}" class="mono">${String(Math.round(norm(h))).padStart(3,"0")}\u00B0</text></g>`;
 }
 function miniBuoySVG(x,y,pt,above){
   const lx=Math.max(40,Math.min(320,x));
@@ -3421,7 +3449,8 @@ function drawMiniLeg(r,idx,wdir,wspd){
   const effOff=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off+elapsed:null;
   let stL=effOff!==null?streamAtPos(legMid(L),effOff,TIDECTX.range):null;
   if(state.viewMode==="wind")stL=null;
-  const frL=a=>a-co;
+  const frL=a=>a-co;                         // raw leg frame (course-up) -- physics/board headings only
+  const up=state.northUp?0:co, fr=a=>a-up;   // screen-frame angle, same convention as drawLeg's fr()
   const corners=[];
   if(target!==null){
     const Vb=interp(P_TWS,(L.pos==="Beat"?P_UP:P_DN).vel,wspd);
@@ -3459,8 +3488,9 @@ function drawMiniLeg(r,idx,wdir,wspd){
     }
   }
   const pc=corners.find(c=>c[0]===wantSgn)||corners[0]||null;
-  // north-up: the frame rotates by the leg's course so true north stays vertical on screen
-  const rot=rad(co), cR=Math.cos(rot), sR=Math.sin(rot);
+  // orientation follows the same toggle as the Course Analysis leg diagram (state.northUp):
+  // north-up rotates by the leg's course so true north stays vertical; course-up applies no rotation
+  const rot=rad(state.northUp?co:0), cR=Math.cos(rot), sR=Math.sin(rot);
   const rotPt=(nx,ny)=>[nx*cR+(ny-mid)*sR, -nx*sR+(ny-mid)*cR];
   const pts0=[[0,0],[0,D],...(pc?[[pc[1],pc[2]]]:[])];
   let exX=0.01,exY=0.01;
@@ -3483,8 +3513,8 @@ function drawMiniLeg(r,idx,wdir,wspd){
       s+=arrowAt(x1,y1,x2,y2,0.5,ac,4)+arrowAt(x1,y1,x2,y2,0.5+9/seg,ac,4);
     }
     s+=`<circle cx="${px1.toFixed(1)}" cy="${py1.toFixed(1)}" r="3" fill="${col1}" stroke="#fff" stroke-width="1.5"/>`;
-    s+=miniCourseLabel((ax0+px1)/2,(ay0+py1)/2,h1,col1);
-    s+=miniCourseLabel((px1+bx0)/2,(py1+by0)/2,h2,col2);
+    s+=courseLabel((ax0+px1)/2,(ay0+py1)/2,h1,col1);
+    s+=courseLabel((px1+bx0)/2,(py1+by0)/2,h2,col2);
     steerTxt=String(Math.round(norm(h1))).padStart(3,"0")+"\u00B0";
   } else {
     let th=co;
@@ -3497,7 +3527,7 @@ function drawMiniLeg(r,idx,wdir,wspd){
     }
     s+=`<line x1="${ax0.toFixed(1)}" y1="${ay0.toFixed(1)}" x2="${bx0.toFixed(1)}" y2="${by0.toFixed(1)}" stroke="#12283A" stroke-width="2"/>`+
        arrowAt(ax0,ay0,bx0,by0,0.55,"#12283A",4)+arrowAt(ax0,ay0,bx0,by0,0.55+9/Math.hypot(bx0-ax0,by0-ay0),"#12283A",4);
-    s+=miniCourseLabel((ax0+bx0)/2,(ay0+by0)/2,th,"#12283A");
+    s+=courseLabel((ax0+bx0)/2,(ay0+by0)/2,th,"#12283A");
     steerTxt=String(Math.round(norm(th))).padStart(3,"0")+"\u00B0";
   }
   // arrival line at L.from (how this leg is entered) and departure line at L.to (how the next
@@ -3505,7 +3535,7 @@ function drawMiniLeg(r,idx,wdir,wspd){
   if(idx>0){
     let ai2=null; try{ ai2=arrivalInfo(r,idx,wdir,wspd); }catch(e){ ai2=null; }
     if(ai2){
-      const hFrame=rad(frL(ai2.heading));
+      const hFrame=rad(fr(ai2.heading));
       const tvx=Math.sin(hFrame), tvy=-Math.cos(hFrame);
       const hx=ax0-tvx*14, hy=ay0-tvy*14, sx=ax0-tvx*46, sy=ay0-tvy*46;
       const arrCol=ai2.side==="starboard"?"#007A33":"#C8102E";
@@ -3514,19 +3544,34 @@ function drawMiniLeg(r,idx,wdir,wspd){
     }
   }
   if(idx+1<r.legs.length&&L.to.side&&L.to.side!=="F"){
-    let aiN=null; try{ aiN=arrivalInfo(r,idx+1,wdir,wspd); }catch(e){ aiN=null; }
-    if(aiN){
-      const hFrame=rad(frL(aiN.heading));
+    let depHeading=null, depSide=null;
+    let adv2=null; try{ adv2=computeLegAdvice(r,idx+1,wdir,wspd); }catch(e){ adv2=null; }
+    if(adv2&&adv2.Ho!=null){
+      depHeading=adv2.Ho;
+      const ad=((wdir-depHeading+540)%360)-180; depSide=ad>0?"starboard":"port";
+    } else {
+      let aiN=null; try{ aiN=arrivalInfo(r,idx+1,wdir,wspd); }catch(e){ aiN=null; }
+      if(aiN){ depHeading=aiN.heading; depSide=aiN.side; }
+    }
+    if(depHeading!=null){
+      const hFrame=rad(fr(depHeading));
       const tvx=Math.sin(hFrame), tvy=-Math.cos(hFrame);
       const hx=bx0+tvx*14, hy=by0+tvy*14, sx=bx0+tvx*46, sy=by0+tvy*46;
-      const depCol=aiN.side==="starboard"?"#007A33":"#C8102E";
+      const depCol=depSide==="starboard"?"#007A33":"#C8102E";
       s+=`<line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${sx.toFixed(1)}" y2="${sy.toFixed(1)}" stroke="${depCol}" stroke-width="2.5" stroke-linecap="round"/>`;
       s+=arrowAt(hx,hy,sx,sy,0.85,depCol,7);
     }
   }
   s+=miniBuoySVG(ax0,ay0,L.from,ay0<by0);
   s+=miniBuoySVG(bx0,by0,L.to,by0<=ay0);
-  s+=`<text x="${(W-10).toFixed(1)}" y="16" font-size="10" font-weight="800" text-anchor="end" fill="#12283A">N\u2191</text>`;
+  {
+    // N indicator rotates with the frame, same convention as the Leg diagram's N needle:
+    // 0 rotation = points straight up = true north (north-up mode always shows this)
+    const nDeg=state.northUp?0:-co;
+    const nx=W-18, ny=17;
+    s+=`<text x="${(nx-6).toFixed(1)}" y="${(ny+3.5).toFixed(1)}" font-size="10" font-weight="800" text-anchor="end" fill="#12283A">N</text>`;
+    s+=`<g transform="translate(${nx.toFixed(1)} ${ny.toFixed(1)}) rotate(${nDeg.toFixed(1)})"><polygon points="0,-7 3.5,5 0,1.5 -3.5,5" fill="#12283A"/></g>`;
+  }
   svg.innerHTML=s;
   if(headEl)headEl.textContent=`Leg ${idx+1} of ${r.legs.length} \u00B7 ${(L.from.name||L.from.lbl||"start")} \u2192 ${(L.to.name||L.to.lbl||"finish")}`;
   let dPref=L.sailed, estMin=L.time*60;
@@ -3578,7 +3623,8 @@ function miniLegStep(dir){                        // dir: -1 previous leg, +1 ne
   if(!r||!r.legs||!r.legs.length)return;
   const n=r.legs.length;
   state.chartLeg=dir>0?Math.min(n-1,state.chartLeg+1):Math.max(0,state.chartLeg-1);
-  miniLegRender();
+  state.leg=state.chartLeg;                       // keep Course Analysis's leg index locked to this
+  render();                                        // render() already calls miniLegRender() internally
 }
 function miniLegSwipeInit(){
   const svg=$("miniLegSvg"); if(!svg||svg.dataset.swipeWired)return;
@@ -3608,6 +3654,7 @@ function legStep(dir){                             // dir: -1 previous leg, +1 n
   if(!r||!r.legs||!r.legs.length)return;
   const n=r.legs.length;
   state.leg=dir>0?Math.min(n-1,state.leg+1):Math.max(0,state.leg-1);
+  state.chartLeg=state.leg;                        // keep the mini-chart's leg index locked to this
   render();
 }
 function legSwipeInit(){
