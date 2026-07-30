@@ -286,6 +286,10 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
   <div class="tot leginfo" id="leginfo"></div>
 </details>
 
+<details class="notes legpanel" id="planTab"><summary>Course Plan</summary>
+  <div id="coursePlanBody"></div>
+</details>
+
 <details class="notes" id="gpstab" style="background:#D6ECF7;border:1px solid #A9D3E8"><summary>GPS</summary>
   <div id="gpsBody" style="font-size:13px;color:#333">
     <button class="pick" id="gpsBtn" style="background:#0E7C94;color:#fff;border:none;padding:12px 14px;font-size:14px;font-weight:800;width:100%">Use my location</button>
@@ -918,16 +922,43 @@ function sidePref(L,effOff,range){
   const pref=(netMin>=0.5&&active&&(L.pos==="Beat"||L.pos==="Run"))?(netPlus>0?1:-1):null;
   return {pref, tideMin:tidePlus, shiftMin:shiftPlus, dEff, dPers, dOsc, regime, netMin, netPlus, pWin, pct, sPlus, sMinus};
 }
+function firstBoardHeading(L,wdir,wspd){
+  // The sailable first-board heading for a Beat/Run leg with no "arrival" context (currently
+  // only the very start of the race, where there's no previous leg to round in from): this
+  // leg's own tide/shift preference if there's a genuine edge, else the clean-side tie-break
+  // via the mark's own rounding hand, else a flat default. Mirrors the same tie-break
+  // computeLegAdvice/drawLeg use everywhere else, so the start leg never falls back to the
+  // straight rhumb bearing, which is not sailable close-hauled or on a run.
+  const upT=interp(P_TWS,P_UP.twa,wspd), dnT=interp(P_TWS,P_DN.twa,wspd);
+  let target=null; if(L.pos==="Beat")target=upT; else if(L.pos==="Run")target=dnT;
+  if(target===null)return {target:null,sgn:null,heading:L.co};
+  let sgn=null;
+  if(typeof TIDECTX!=="undefined"&&TIDECTX){
+    let sp=null; try{ sp=sidePref(L,TIDECTX.off,TIDECTX.range); }catch(e){ sp=null; }
+    if(sp&&sp.pref!==null)sgn=(L.pos==="Run")?-sp.pref:sp.pref;
+  }
+  if(sgn===null){
+    const roundSide=L.to.side;
+    if(roundSide==="P"||roundSide==="S"){
+      const arriveStbd=(L.pos==="Beat")?(roundSide!=="S"):(roundSide==="S");
+      sgn=arriveStbd?1:-1;
+    } else sgn=1;
+  }
+  return {target,sgn,heading:norm(wdir+sgn*target)};
+}
 function arrivalInfo(r,idx,wdir,wspd){
-  // Arrival at a rounding: heading = extension of the previous leg's line through the mark.
-  // Unsailable extension (inside the close-hauled cone): arrive on the layline named by the
-  // rounding hand (mark to port -> starboard arrival). Wind dead astern: the rounding hand
-  // names the side (round to starboard -> arrive on starboard).
+  // Arrival at a rounding: which situation applies is fixed by the boat's actual point of sail
+  // on the leg just sailed (prev.pos), not by the geometric angle of that leg's course extended
+  // through the mark -- a Run's extension can coincidentally land inside "reach" angle
+  // territory without the arrival being a genuinely sailable straight continuation (you cannot
+  // glide straight from a run into a beat rounding; a manoeuvre onto a layline is required).
+  // Fixed rule: rounding to port while arriving upwind = starboard tack; rounding to port while
+  // arriving downwind = port tack (mirrored for a starboard-hand rounding).
   const prev=r.legs[idx-1], side=r.legs[idx].from.side;
   const ext=prev.co;
   const upT=interp(P_TWS,P_UP.twa,wspd), dnT=interp(P_TWS,P_DN.twa,wspd);
   const ti=angdiff(wdir,ext);
-  if(ti<upT-1){
+  if(prev.pos==="Beat"){
     // closing board of the previous leg's tide-preferred route; else the clean side (no pre-mark tack)
     let sgn=null;
     if(typeof TIDECTX!=="undefined"&&TIDECTX){
@@ -940,7 +971,7 @@ function arrivalInfo(r,idx,wdir,wspd){
     return {side:stbdArr?"starboard":"port", preTack:conflict,
             heading:norm(wdir+(atStbd?-1:1)*upT), ti:upT};
   }
-  if(ti>176){
+  if(prev.pos==="Run"){
     let sgn=null;
     if(typeof TIDECTX!=="undefined"&&TIDECTX){
       const el=r.legs.slice(0,idx-1).reduce((s,x)=>s+x.time,0);
@@ -956,6 +987,8 @@ function arrivalInfo(r,idx,wdir,wspd){
     return {side:stbdArr?"starboard":"port", preTack:false, preGybe:conflict,
             heading:norm(wdir+(atStbd?-1:1)*dnT), ti:dnT};
   }
+  // Reach on approach (prev leg is a genuine reach, not Beat/Run): the straight extension is
+  // a sailable arrival heading, so use it directly.
   const ad=((wdir-ext+540)%360)-180;
   return {side:ad>0?"starboard":"port", preTack:false, heading:ext, ti};
 }
@@ -2172,6 +2205,16 @@ function chipHTML(code){
   return `<span class="chip">${cols.map(c=>`<i style="background:${c}"></i>`).join("")}</span>`;
 }
 function render(){
+  // wdir must be resolved and pushed to the #wdir input BEFORE syncWindTab()/updateWindTab()
+  // run, since syncWindTab() seeds the wind-shift model by reading that input's live DOM value
+  // (so a manually-typed wind counts as an observation). Doing this after those calls meant the
+  // shift band was always seeded from the PREVIOUS wind, one render cycle stale, whenever the
+  // wind changed (e.g. picking a new course letter) -- confirmed: a course whose letter sets
+  // wind to 090 showed a shift-band centred near the OLD wind on the very next render, only
+  // correcting itself on the render after that.
+  const wdir=usedWind(), wspd=usedSpd()||1, wgst=Math.max(usedGst(),wspd);
+  const wd=$("wdir");
+  if(wd&&document.activeElement!==wd)wd.value=String(Math.round(wdir));   // show used, unless you are typing
   try{syncWindTab();updateWindTab();}catch(e){}
   try{let lo2=+($("wsLo").value||0), hi2=+($("wsHi").value||0);
       if(hi2<=lo2)hi2+=360;                        // band may cross north
@@ -2186,10 +2229,7 @@ function render(){
       });
       const dtxt=String(Math.round(usedWind())).padStart(3,"0")+"\u00B0";
       document.querySelectorAll(".wslideLbl").forEach(l=>l.textContent=dtxt);}catch(e){}
-  const wdir=usedWind(), wspd=usedSpd()||1, wgst=Math.max(usedGst(),wspd);
   try{windAvail();}catch(e){}                  // Forecast/Connect labels follow the wind model
-  const wd=$("wdir");
-  if(wd&&document.activeElement!==wd)wd.value=String(Math.round(wdir));   // show used, unless you are typing
   // Colour encodes what controls the used wind, so precedence is readable at a glance:
   //   expected default (000, untouched) : black on white
   //   expected via a course letter      : white on black
@@ -2275,6 +2315,7 @@ function render(){
     try{startCtl();}catch(e){}
     drawMap(null,wdir);
     try{miniLegRender();}catch(e){}
+    try{renderCoursePlan();}catch(e){}
     document.querySelectorAll("#letters .pick").forEach(b=>{
       b.classList.toggle("on",WIND.chosen&&b.dataset.l===state.letter);
       const atWind=suggestLetter(wdir), showOrange=(WIND.src!=="expected");
@@ -2326,6 +2367,7 @@ function render(){
     :`Start assumed ${MLADJ.toFixed(1)} NM downwind of mark 1.`;
   drawMap(r,wdir);
   try{miniLegRender();}catch(e){}
+  try{renderCoursePlan();}catch(e){}
   if(state.leg>=r.legs.length||state.leg<0)state.leg=0;
   const legHeadEl=$("legHead");
   if(legHeadEl){const L=r.legs[state.leg];
@@ -3035,12 +3077,10 @@ function drawLeg(r,idx,wdir,wspd){
       badgeSgn=d1<=d2?1:-1;
     } else {
       // leg 0 (the start): computeLegAdvice has no arrival concept here and no advice text is
-      // shown either, so fall back to the same clean-side tie-break it uses internally.
+      // shown either, so fall back to the same shared first-board helper used by the Course
+      // Plan tab's start-leg summary, rather than a separate copy of the same tie-break.
       badgeSgn=windPref;
-      if(badgeSgn===null){
-        let ai2=null; if(idx+1<r.legs.length){ try{ ai2=arrivalInfo(r,idx+1,wdir,wspd); }catch(e){ ai2=null; } }
-        badgeSgn=ai2?((ai2.side==="starboard")?-1:1):1;
-      }
+      if(badgeSgn===null)badgeSgn=firstBoardHeading(L,wdir,wspd).sgn;
     }
   }
   const tackCol0=h=>((((wdir-h+540)%360)-180)>0)?"#007A33":"#C8102E"; // stbd green, port red
@@ -3243,7 +3283,7 @@ function drawLeg(r,idx,wdir,wspd){
       ${rows}</table></div>`;
   }
   let adviceHTML="";
-  try{ adviceHTML=renderAdviceHTML(computeLegAdvice(r,idx,wdir,wspd)); }catch(e){}
+  try{ adviceHTML=renderAdviceHTML(computeLegAdvice(r,idx,wdir,wspd))+nextArrivalPreviewHTML(r,idx,wdir,wspd); }catch(e){}
   $("leginfo").innerHTML=verdictHTML+(roundTxt?`<div class="roundline">${roundTxt}</div>`:"")+(sideTxt?`<div class="why">${sideTxt}</div>`:"")+routesHTML+`
     <div>Leg<br><b>${L.pos.replace(" ","&nbsp;")}</b></div>
     <div>TWA / AW<br><b class="mono">${Math.round(L.twa)}\u00B0 ${L.tack}${Math.round(L.awa)}\u00B0</b></div>
@@ -3325,20 +3365,29 @@ function computeLegAdvice(r,idx,wdir,wspd){
   }
 
   // pick a side: confident tide/shift call if there is one, else the clean (no forced pre-mark
-  // manoeuvre) side from arrivalInfo on the NEXT rounding -- same fallback used everywhere else
+  // manoeuvre) tack from this leg's own point of sail and B's own rounding hand. This depends
+  // only on A->B and mark B, never on mark C or leg B->C: rounding to port while arriving
+  // upwind is always starboard tack, rounding to port while arriving downwind is always port
+  // tack (mirrored for a starboard-hand rounding) -- a fixed rule, not something the next leg
+  // could change. (Previously this reached across to leg idx+1 via arrivalInfo to read B's
+  // rounding hand indirectly; B's own to.side already has it directly, and since this branch
+  // only runs when A->B itself has no tide/shift preference, that indirect call was silently
+  // re-deriving the same "no preference" conclusion a second time.)
   let wantSgn=null, geoSide=null, tieBreak=null;
   if(target!==null){
     if(sp.pref!==null){
       geoSide=sp.pref===1?"right":"left";
       wantSgn=(L.pos==="Run")?-sp.pref:sp.pref;           // geographic -> wind-relative, run mirrors beat
     } else {
-      let ai2=null;
-      if(idx+1<r.legs.length){ try{ ai2=arrivalInfo(r,idx+1,wdir,wspd); }catch(e){ ai2=null; } }
-      if(ai2){
-        wantSgn=(ai2.side==="starboard")?-1:1;
+      const roundSide=L.to.side;                          // mark B's own rounding hand
+      if(roundSide==="P"||roundSide==="S"){
+        // h1=wdir+sgn*target sits on port when sgn=+1 and h2=wdir-sgn*target sits on starboard,
+        // so matching the SECOND board (the arrival at B) to the required tack needs sgn=+1 for
+        // a starboard arrival, -1 for a port arrival.
+        const arriveStbd=(L.pos==="Beat")?(roundSide!=="S"):(roundSide==="S");
+        wantSgn=arriveStbd?1:-1;
         geoSide=(L.pos==="Run")?(wantSgn===1?"left":"right"):(wantSgn===1?"right":"left");
-        tieBreak=(ai2.preTack||ai2.preGybe)?"Shown side still needs a manoeuvre near the next mark"
-                                            :"Clean side \u2014 no tack/gybe before the next mark";
+        tieBreak="Clean side \u2014 no tack/gybe before the mark";
       } else { wantSgn=1; geoSide=(L.pos==="Run")?"left":"right"; tieBreak="No clear side"; }
     }
   }
@@ -3349,16 +3398,30 @@ function computeLegAdvice(r,idx,wdir,wspd){
   else if(target===null)Ho=co;
 
   // does reaching Ho from the arrival heading Hi need to cross the wind (tack) or the downwind
-  // axis (gybe), sweeping the way the rounding hand dictates?
+  // axis (gybe)? This applies at any rounding, including a reach-to-reach mark where the
+  // arrival tack and the leg's own tack differ (e.g. Middle on a reach-to-reach course):
+  // previously this only ran for Beat/Run legs, so a required gybe right at such a mark was
+  // silently reported as "carry on". Uses the shorter arc between Hi and Ho, not a sweep
+  // direction assumed from the rounding hand: that assumption only holds when Hi comes from a
+  // genuine close-hauled/run layline (a Beat/Run arrival); for a reach arrival Hi is just a raw
+  // extended bearing with no such guarantee, and forcing a fixed direction could send the check
+  // the long way round the compass, past both axes, for a mark that's actually a plain harden-up
+  // with no manoeuvre at all -- verified against a broad sweep of real courses and winds.
   let manoeuvre2verb="carry on";
-  if(target!==null&&Ho!==null){
-    const Hi=ai.heading, turn=L.from.side==="P"?-1:1;
-    const da=a=>(((a-Hi)*turn+3)%360+360)%360;
-    const sweep=da(Ho), dW=da(wdir), dL2=da(norm(wdir+180));
-    const crossW=dW<=sweep+3, crossL=dL2<=sweep+3;
-    if(crossW&&(!crossL||dW<=dL2))manoeuvre2verb="tack";
-    else if(crossL)manoeuvre2verb="gybe";
-    else manoeuvre2verb="stay";
+  if(Ho!==null){
+    const Hi=ai.heading;
+    const shortDiff=(a,b)=>(((b-a+540)%360)-180);      // signed short-way angle from a to b
+    const dHo=shortDiff(Hi,Ho);
+    if(Math.abs(dHo)<1){ manoeuvre2verb="stay"; }
+    else{
+      const dW=shortDiff(Hi,wdir), dL=shortDiff(Hi,norm(wdir+180));
+      const within=d=>d===0||(Math.sign(d)===Math.sign(dHo)&&Math.abs(d)<=Math.abs(dHo)+1);
+      const crossW=within(dW), crossL=within(dL);
+      if(crossW&&!crossL)manoeuvre2verb="tack";
+      else if(crossL&&!crossW)manoeuvre2verb="gybe";
+      else if(crossW&&crossL)manoeuvre2verb=Math.abs(dW)<=Math.abs(dL)?"tack":"gybe"; // degenerate: nearer axis
+      else manoeuvre2verb="stay";
+    }
   }
 
   // apparent wind for the first board (TWA = target, by construction of a VMG-optimal board);
@@ -3397,6 +3460,17 @@ function computeLegAdvice(r,idx,wdir,wspd){
     firstPct, firstTimeMin, tackAngle, legIsRun:L.pos==="Run", tideOffsetDeg, tideOffsetSide, sail:L.sail,
     tideMin:sp.tideMin, shiftMin:sp.shiftMin, netMin:sp.netPlus, pWin:sp.pWin, pref:sp.pref};
 }
+function nextArrivalPreviewHTML(r,idx,wdir,wspd){
+  // The main advice sentence covers arriving at THIS leg's start mark. This adds a short
+  // preview of the mark at the OTHER end (the next rounding), so a swipe isn't needed just to
+  // see which tack/side you'll be arriving on there too.
+  if(idx+1>=r.legs.length)return "";
+  let adv=null; try{ adv=computeLegAdvice(r,idx+1,wdir,wspd); }catch(e){ adv=null; }
+  if(!adv)return "";
+  return `<div class="span" style="margin-top:4px;font-size:11.5px;line-height:1.5;color:#48627A;font-style:italic">`+
+    `Then arrive ${adv.markName} on ${adv.arrivalTack.charAt(0).toUpperCase()+adv.arrivalTack.slice(1)}, `+
+    `leave to ${adv.roundHand.charAt(0).toUpperCase()+adv.roundHand.slice(1)}, ${adv.manoeuvre1}.</div>`;
+}
 function renderAdviceHTML(a){
   if(!a)return "";
   const fmtSigned=v=>`${v>=0?"+":"\u2212"}${Math.abs(v).toFixed(1)} min`;
@@ -3416,10 +3490,12 @@ function renderAdviceHTML(a){
     `${tideLine}<br>${shiftLine}<br>${netLine}${tieLine?`<br>${tieLine}`:""}</div>`;
 
   const sideWord=a.geoSide==="right"?"Right":a.geoSide==="left"?"Left":"";
-  const stayOrGo=a.manoeuvre2verb==="stay"?`stay ${sideWord}`
-    :a.manoeuvre2verb==="tack"?`tack and go ${sideWord}`
-    :a.manoeuvre2verb==="gybe"?`gybe and go ${sideWord}`
-    :"carry on";
+  const stayOrGo=!sideWord
+    ? (a.manoeuvre2verb==="tack"?"tack at the mark":a.manoeuvre2verb==="gybe"?"gybe at the mark":"carry on")
+    : a.manoeuvre2verb==="stay"?`stay ${sideWord}`
+    : a.manoeuvre2verb==="tack"?`tack and go ${sideWord}`
+    : a.manoeuvre2verb==="gybe"?`gybe and go ${sideWord}`
+    : "carry on";
   const HoTxt=a.Ho!=null?String(Math.round(a.Ho)).padStart(3,"0")+"\u00B0":"\u2013";
   const awaTxt=a.awaDeg!=null?`, AWA ${Math.round(a.awaDeg)}\u00B0 ${a.awaSide}`:"";
 
@@ -3437,6 +3513,56 @@ function renderAdviceHTML(a){
     `leave the mark to ${a.roundHand.charAt(0).toUpperCase()+a.roundHand.slice(1)}, ${a.manoeuvre1}, `+
     `${stayOrGo}. Steer ${HoTxt}${awaTxt}.${tailTxt}${a.sail?` Sail ${a.sail}.`:""}</div>`;
   return breakdown+sentence;
+}
+function firstLegHTML(r,wdir,wspd){
+  // Leg 1 (the start): computeLegAdvice has no arrival concept here, so this is a bespoke,
+  // shorter summary. Uses the shared firstBoardHeading helper for the steer figure, since a
+  // Beat/Run leg can't actually be sailed at the straight rhumb bearing to the mark.
+  const L=r.legs[0];
+  const fb=firstBoardHeading(L,wdir,wspd);
+  const HoTxt=String(Math.round(fb.heading)).padStart(3,"0")+"\u00B0";
+  let edgeLine="";
+  if((L.pos==="Beat"||L.pos==="Run")&&typeof TIDECTX!=="undefined"&&TIDECTX){
+    let sp=null; try{ sp=sidePref(L,TIDECTX.off,TIDECTX.range); }catch(e){ sp=null; }
+    if(sp){
+      const fmtSigned=v=>`${v>=0?"+":"\u2212"}${Math.abs(v).toFixed(1)} min`;
+      const sideOf=v=>v>=0?"right":"left";
+      edgeLine=sp.pref!==null
+        ?`<div class="span" style="font-size:11px;color:#12283A;background:#EEF4F8;border-radius:8px;padding:6px 9px;margin-top:4px">Net ${fmtSigned(sp.netPlus)} ${sideOf(sp.netPlus)} \u2014 favour that side off the line.</div>`
+        :`<div class="span" style="font-size:11px;color:#12283A;background:#EEF4F8;border-radius:8px;padding:6px 9px;margin-top:4px">No clear tide/shift edge \u2014 sail the shifts.</div>`;
+    }
+  }
+  return `<div class="span" style="margin-top:6px;font-size:12.5px;line-height:1.55;color:#12283A">`+
+    `Off the line: ${L.pos.toLowerCase()}, steer ${HoTxt}, ${L.dist.toFixed(1)} NM.${L.sail?` Sail ${L.sail}.`:""}</div>${edgeLine}`;
+}
+function renderCoursePlan(){
+  const body=$("coursePlanBody"); if(!body)return;
+  const haveCourse=WIND.chosen&&WIND.numChosen;
+  let r=null;
+  const wdir=+$("wdir").value||0, wspd=+$("wspd").value||10, wgst=+$("wgst").value||15;
+  if(haveCourse){ try{ r=compute(state.card,wdir,wspd,wgst,state.letter,state.num); }catch(e){ r=null; } }
+  if(!r||!r.legs||!r.legs.length){
+    body.innerHTML=`<div style="padding:14px;color:#7C93A4;text-align:center">Choose a course to see the plan.</div>`;
+    return;
+  }
+  let html="";
+  r.legs.forEach((L,i)=>{
+    const fromTxt=L.from.name||L.from.lbl||"start", toTxt=L.to.side==="F"?(L.to.m==="O"?"Hut finish":"Finish"):(L.to.name||"finish");
+    const tackChip=L.tack==="P"?`<span class="rp">Port</span>`:L.tack==="S"?`<span class="rs">Stbd</span>`:"";
+    let bodyHTML="";
+    if(i===0){ bodyHTML=firstLegHTML(r,wdir,wspd); }
+    else { let adv=null; try{ adv=computeLegAdvice(r,i,wdir,wspd); }catch(e){ adv=null; }
+      bodyHTML=adv?renderAdviceHTML(adv):`<div style="font-size:12px;color:#7C93A4;margin-top:6px">No advice available for this leg.</div>`; }
+    html+=`<div style="background:#fff;border-radius:10px;padding:10px 12px;margin-bottom:10px;border:1px solid #EAD98A">`+
+      `<div style="display:flex;justify-content:space-between;align-items:baseline">`+
+      `<div style="font-weight:800;font-size:13.5px;color:#12283A">Leg ${i+1} \u00B7 ${fromTxt} \u2192 ${toTxt}</div>`+
+      `<div style="font-size:11px;color:#7C93A4">${L.pos}</div></div>`+
+      `<div style="font-size:11px;color:#48627A;margin-top:1px">${L.dist.toFixed(1)} NM \u00B7 co ${Math.round(L.co)}\u00B0 ${tackChip?"\u00B7 "+tackChip:""} ${L.sail?`\u00B7 <span class="sail">${L.sail}</span>`:""}</div>`+
+      bodyHTML+`</div>`;
+  });
+  const td=r.legs.reduce((s,L)=>s+L.dist,0), tt=r.legs.reduce((s,L)=>s+L.time,0);
+  html+=`<div style="font-size:11.5px;color:#7C93A4;text-align:center;padding-top:2px">${r.legs.length} legs \u00B7 ${td.toFixed(1)} NM \u00B7 est ${Math.round(tt*60)} min still-water</div>`;
+  body.innerHTML=html;
 }
 function drawMiniLeg(r,idx,wdir,wspd){
   const svg=$("miniLegSvg"), infoEl=$("miniLegInfo"), headEl=$("miniLegHead");
@@ -3478,13 +3604,15 @@ function drawMiniLeg(r,idx,wdir,wspd){
       wantSgn=(L.pos==="Run")?-sp.pref:sp.pref;
       reason=`Favours ${geoSide} \u00B7 tide/shift edge (net ${sp.netMin.toFixed(1)} min)`;
     } else {
-      let ai=null;
-      if(idx+1<r.legs.length){ try{ ai=arrivalInfo(r,idx+1,wdir,wspd); }catch(e){ ai=null; } }
-      if(ai){ wantSgn=(ai.side==="starboard")?-1:1;        // tack-based, already correct for any leg type
+      // Same fix as computeLegAdvice: use A->B's own point of sail and B's own rounding hand
+      // directly, no reference to leg idx+1 or mark C at all.
+      const roundSide=L.to.side;
+      if(roundSide==="P"||roundSide==="S"){
+        const arriveStbd=(L.pos==="Beat")?(roundSide!=="S"):(roundSide==="S");
+        wantSgn=arriveStbd?1:-1;
         geoSide=(L.pos==="Run")?(wantSgn===1?"left":"right"):(wantSgn===1?"right":"left");
-        reason=(ai.preTack||ai.preGybe)?"No clear tide/shift edge \u2014 shown side still needs a manoeuvre near the mark"
-                                        :"No clear tide/shift edge \u2014 clean side, no tack/gybe before the mark"; }
-      else { wantSgn=1; geoSide=(L.pos==="Run")?"left":"right"; reason="No clear side"; }
+        reason="No clear tide/shift edge \u2014 clean side, no tack/gybe before the mark";
+      } else { wantSgn=1; geoSide=(L.pos==="Run")?"left":"right"; reason="No clear side"; }
     }
   }
   const pc=corners.find(c=>c[0]===wantSgn)||corners[0]||null;
@@ -3595,7 +3723,7 @@ function drawMiniLeg(r,idx,wdir,wspd){
     ?`<div class="span" style="font-weight:800;font-size:12px;color:#12283A">${geoSide==="right"?"RIGHT":"LEFT"} \u00B7 steer ${steerTxt} first</div><div class="span" style="font-size:10px;color:#5B6672">${reason}</div>`
     :"";
   let adviceHTML="";
-  try{ adviceHTML=renderAdviceHTML(computeLegAdvice(r,idx,wdir,wspd)); }catch(e){}
+  try{ adviceHTML=renderAdviceHTML(computeLegAdvice(r,idx,wdir,wspd))+nextArrivalPreviewHTML(r,idx,wdir,wspd); }catch(e){}
   infoEl.innerHTML=sideLine+`
     <div>Leg<br><b>${L.pos.replace(" ","&nbsp;")}</b></div>
     <div>TWA / AW<br><b class="mono">${Math.round(L.twa)}\u00B0 ${L.tack}${Math.round(L.awa)}\u00B0</b></div>
