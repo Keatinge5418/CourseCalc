@@ -196,16 +196,16 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
 <details class="notes" id="timertab" style="background:#2A6285;color:#fff;border:1px solid #1C4E6D">
   <summary style="color:#fff">Race timer</summary>
   <div style="text-align:center;margin:8px 0 4px">
-    <div id="rtBig" class="mono" style="font-size:clamp(76px,25vw,108px);font-weight:800;line-height:1;letter-spacing:.01em">5:00</div>
-    <div id="rtLabel" style="font-size:13px;color:#C9DFEC;margin-top:6px;min-height:18px">Ready</div>
+    <div id="rtBig" class="mono" style="font-size:clamp(57px,18.75vw,81px);font-weight:800;line-height:1;letter-spacing:.01em">5:00</div>
+    <div id="rtLabel" style="font-size:10.5px;color:#C9DFEC;margin-top:6px;min-height:14px">Ready</div>
   </div>
   <div id="startWrap" style="margin-top:10px;border-top:1px solid rgba(255,255,255,.25);padding-top:10px">
-    <svg id="startView" viewBox="0 0 360 430" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;border-radius:12px;background:#F2F7FA"></svg>
+    <svg id="startView" viewBox="0 0 360 280" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;border-radius:12px;background:#F2F7FA"></svg>
     <div id="startCtl" style="display:none;margin-top:8px"></div>
   </div>
   <div style="display:flex;gap:8px;justify-content:center;margin:12px 0 8px">
     <button class="rtbtn" id="rtAuto" style="flex:1;padding:13px 8px;font-size:15px">Auto</button>
-    <button class="rtbtn" id="rtReset" style="flex:1;padding:13px 8px;font-size:15px">Reset</button>
+    <button class="rtbtn" id="rtSync" style="flex:1;padding:13px 8px;font-size:15px">Sync</button>
     <button class="rtbtn" id="rtStart" style="flex:1;padding:13px 8px;font-size:15px">Start</button>
   </div>
   <div style="display:flex;gap:8px;justify-content:center;margin:8px 0">
@@ -215,8 +215,9 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
     <button class="rtbtn" id="rtP5" style="flex:1;padding:12px 6px;font-size:16px">+5</button>
   </div>
   <div style="display:flex;gap:8px;justify-content:center;margin:8px 0 2px">
-    <button class="rtbtn" id="rtSync" style="flex:2;padding:14px 8px;font-size:16px">Sync</button>
-    <button class="rtbtn" id="rtSilent" style="flex:1;padding:14px 8px;font-size:15px">Sounds Off</button>
+    <button class="rtbtn" id="rtReset" style="flex:1;padding:13px 4px;font-size:14px">Reset</button>
+    <button class="rtbtn" id="rtGps" style="flex:1;padding:13px 4px;font-size:14px">Line</button>
+    <button class="rtbtn" id="rtSilent" style="flex:1;padding:13px 4px;font-size:14px">Sounds Off</button>
   </div>
   <div id="rtInfo" style="font-size:14px;color:#C9DFEC;line-height:1.55;margin-top:12px"></div>
 </details>
@@ -1625,9 +1626,11 @@ let GPS={watch:null, last:null};
 let TRACK=[];                                // {lat,lon,t} points sailed, drawn on the GPS tab chart
 function gpsCompass(b){const dirs=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];return dirs[Math.round(norm(b)/22.5)%16];}
 function gpsNextMark(){
-  // the first not-yet-passed mark of the current course = pts[1] (first rounding after the start)
+  // the mark ending the leg currently selected in Course Analysis (state.leg), so GPS tracks
+  // the same mark the sailor is looking at there, not always the first rounding after the start.
   try{ const r=compute(state.card,+$("wdir").value||0,+$("wspd").value||10,+$("wgst").value||15,state.letter,state.num);
-    return {line:r.pts[0], mark:r.pts[1]||null, markNo:2}; }catch(e){ return null; }
+    const idx=Math.max(0,Math.min(state.leg,r.legs.length-1));
+    return {line:r.pts[0], mark:r.pts[idx+1]||null, markNo:idx+2}; }catch(e){ return null; }
 }
 // Before the gun: target is the start line. Once the timer has actually reached zero
 // (racing), target switches to the next mark. Same target drives both the Next tiles
@@ -1655,6 +1658,16 @@ function posApply(){
   const lab=$("posZlab"); if(lab)lab.textContent=(Math.round(POSVIEW.z*10)/10)+"x";
   if(typeof posBtns==="function")posBtns();
 }
+function posUpdateTarget(){                            // highlight the mark GPS is currently targeting
+  const g=$("posTargetHi"); if(!g)return;
+  let ctx=null; try{ ctx=gpsNextMark(); }catch(e){ ctx=null; }
+  if(!ctx||!ctx.mark||!ctx.mark.pos){ g.innerHTML=""; return; }
+  const p=ll2pos(ctx.mark.pos[0],ctx.mark.pos[1]), x=p[0], y=p[1];
+  if(x<0||x>POSW||y<0||y>POSH){ g.innerHTML=""; return; }
+  const k=1/POSVIEW.z;
+  g.innerHTML=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(10*k).toFixed(2)}" fill="none" stroke="#FF6A13" stroke-width="${(2.5*k).toFixed(2)}"/>`+
+    `<text x="${(x+10*k).toFixed(1)}" y="${(y-8*k).toFixed(1)}" font-size="${(11*k).toFixed(2)}" font-weight="800" fill="#FF6A13" stroke="#fff" stroke-width="${(2.5*k).toFixed(2)}" paint-order="stroke">Mark ${ctx.markNo}</text>`;
+}
 function posScale(){                                   // keep marks, labels and the dot a constant size on screen
   const k=1/POSVIEW.z, g=$("posMarks");
   if(g){
@@ -1665,6 +1678,7 @@ function posScale(){                                   // keep marks, labels and
       tx.setAttribute("y",(+tx.getAttribute("data-by")+4*k).toFixed(1));
     });
   }
+  posUpdateTarget();
   const d=$("posDot"); if(d){d.setAttribute("r",(7*k).toFixed(2)); d.setAttribute("stroke-width",(2.5*k).toFixed(2));}
   const cg=$("posCog"); if(cg)cg.setAttribute("stroke-width",(3*k).toFixed(2));
   const tk=$("posTrack"); if(tk)tk.setAttribute("stroke-width",(3*k).toFixed(2));
@@ -1689,7 +1703,7 @@ function posMapInit(){
     s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#000" stroke="#fff" stroke-width="0.8"/>`;
     s+=`<text data-bx="${x.toFixed(1)}" data-by="${y.toFixed(1)}" x="${(x+5).toFixed(1)}" y="${(y+4).toFixed(1)}" font-size="12" font-weight="800" fill="#12283A" stroke="#fff" stroke-width="2.5" paint-order="stroke">${k}</text>`;
   }
-  s+=`</g><polyline id="posTrack" points="" fill="none" stroke="#FF6A13" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/><g id="posDotG" style="display:none"><circle id="posAcc" cx="0" cy="0" r="0" fill="#0E7C94" opacity=".15"/><line id="posCog" x1="0" y1="0" x2="0" y2="0" stroke="#12283A" stroke-width="3"/><circle id="posDot" cx="0" cy="0" r="7" fill="#0E7C94" stroke="#fff" stroke-width="2.5"/></g>`;
+  s+=`</g><g id="posTargetHi"></g><polyline id="posTrack" points="" fill="none" stroke="#FF6A13" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/><g id="posDotG" style="display:none"><circle id="posAcc" cx="0" cy="0" r="0" fill="#0E7C94" opacity=".15"/><line id="posCog" x1="0" y1="0" x2="0" y2="0" stroke="#12283A" stroke-width="3"/><circle id="posDot" cx="0" cy="0" r="7" fill="#0E7C94" stroke="#fff" stroke-width="2.5"/></g>`;
   svg.innerHTML=s; window.posBuilt=true;
   const bi=$("posIn"), bo=$("posOut"), tc=$("trackClearBtn"), td=$("trackDlBtn");
   if(bi)bi.onclick=()=>posZoom(1.6);
@@ -1875,10 +1889,24 @@ function garminFmtClock(ms){
   const d=new Date(ms);
   return d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
 }
+function garminLabelsSync(){
+  // The label text only depends on the selected course/leg, not on having a live GPS fix, so
+  // this can run on every render() and keep the labels correct even before GPS ever connects,
+  // rather than leaving the page's hardcoded "Bearing to Next" placeholder showing indefinitely.
+  const bl=$("gBrgLabel"),dl=$("gDistLabel"),el=$("gEtaLabel"),tl=$("gTimeLabel");
+  if(!bl)return;
+  let tgt=null; try{ tgt=garminTargetInfo(); }catch(e){ tgt=null; }
+  let started=false; try{ started=garminStarted(); }catch(e){ started=false; }
+  const tgtWord=(tgt&&tgt.name)?tgt.name:(started?"Next":"Start");
+  bl.textContent="Bearing to "+tgtWord;
+  dl.textContent="Dist to "+tgtWord;
+  if(tl)tl.textContent="Time to "+tgtWord;
+  if(el)el.textContent="ETA at "+tgtWord;
+}
 function garminRender(pos){
   garminCompassBuild();
   const co=$("gCourse"),sp=$("gSpeed"),br=$("gBrg"),ds=$("gDist"),vg=$("gVmg"),vc=$("gVmc"),et=$("gEta"),tm=$("gTime"),
-        bl=$("gBrgLabel"),dl=$("gDistLabel"),el=$("gEtaLabel"),tl=$("gTimeLabel"),ptr=$("garminPtr");
+        ptr=$("garminPtr");
   if(!sp)return;
   const me=[pos.coords.latitude,pos.coords.longitude];
   const cog=pos.coords.heading!=null&&isFinite(pos.coords.heading)?pos.coords.heading:null;
@@ -1895,10 +1923,7 @@ function garminRender(pos){
   }
   const tgt=garminTargetInfo();
   const started=garminStarted();
-  if(bl)bl.textContent="Bearing to "+(started?"Next":"Start");
-  if(dl)dl.textContent="Dist to "+(started?"Next":"Start");
-  if(tl)tl.textContent="Time to "+(started?"Next":"Start");
-  if(el)el.textContent="ETA at "+(started?"Next":"Start");
+  garminLabelsSync();
   if(!tgt){ if(br)br.textContent="\u2013"; if(ds)ds.textContent="\u2013"; if(vc)vc.innerHTML=`&ndash;<span class="garmin-unit">kt</span>`; if(et)et.textContent="\u2013"; if(tm)tm.textContent="\u2013"; return; }
   const bd=brgDist(me,tgt.pos);
   const nm=bd.dist, m=nm*1852;
@@ -1958,6 +1983,20 @@ function rtArmAudio(){ try{ if(!RT.ac)RT.ac=new (window.AudioContext||window.web
   }catch(e){} }
 async function rtWake(on){ try{ if(on&&"wakeLock"in navigator){RT.wl=await navigator.wakeLock.request("screen");} else if(RT.wl){RT.wl.release();RT.wl=null;} }catch(e){} }
 function rtFmt(s){ const neg=s<-0.5; s=Math.abs(Math.round(s)); const m=Math.floor(s/60); return (neg?"+":"")+m+":"+String(s%60).padStart(2,"0"); }
+// Big-display version: days+hours a day or more out, hours+minutes an hour or more out,
+// minutes:seconds under an hour -- seconds only matter, and only get shown, once that close.
+function rtFmtBig(s){
+  const neg=s<-0.5; s=Math.abs(Math.round(s));
+  if(s>=86400){
+    const days=Math.floor(s/86400), hours=Math.floor((s%86400)/3600);
+    return (neg?"+":"")+days+"d "+hours+"h";
+  }
+  if(s>=3600){
+    const hours=Math.floor(s/3600), mins=Math.floor((s%3600)/60);
+    return (neg?"+":"")+hours+"h "+mins+"m";
+  }
+  return rtFmt(neg?-s:s);
+}
 function rtHoot(dur){                                            // horn-like hoot of dur seconds
   if(RT.silent)return;
   try{ if(!RT.ac)RT.ac=new (window.AudioContext||window.webkitAudioContext)();
@@ -2017,10 +2056,10 @@ function rtClaimTime(){
 function rtTick(){
   const big=$("rtBig"),lab=$("rtLabel"); if(!big)return;
   rtClaimTime();
-  if(RT.src==="armed"){ big.textContent=rtFmt(RT.armSec); big.style.color="#fff"; if(lab)lab.textContent="Ready \u00B7 Start for manual, Auto to join the live sequence"; return; }
+  if(RT.src==="armed"){ big.textContent=rtFmtBig(RT.armSec); big.style.color="#fff"; if(lab)lab.textContent="Ready \u00B7 Start for manual, Auto to join the live sequence"; return; }
   const tgt=rtTarget(); if(tgt==null)return;
   const tRem=(tgt-Date.now())/1000;
-  big.textContent=rtFmt(tRem);
+  big.textContent=rtFmtBig(tRem);
   big.style.color = tRem<=0?"#4ADE80" : tRem<=60?"#FF6A13" : "#fff";
   let lbl;
   if(tRem>300)lbl="Warning at 5:00 (in "+rtFmt(tRem-300)+")";
@@ -2115,7 +2154,7 @@ function rtInit(){
   const bind=(id,fn)=>{const el=$(id);if(el)el.onclick=fn;};
   bind("rtAuto",rtAuto); bind("rtReset",rtReset); bind("rtStart",rtStartManual);
   bind("rtM5",()=>rtNudge(-5)); bind("rtM1",()=>rtNudge(-1)); bind("rtP1",()=>rtNudge(1)); bind("rtP5",()=>rtNudge(5));
-  bind("rtSync",rtSync); bind("rtSilent",rtSilent);
+  bind("rtSync",rtSync); bind("rtSilent",rtSilent); bind("rtGps",gpsToggle);
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && RT.timer && (RT.src==="auto"||RT.src==="manual")) rtWake(true); });
   const tab=$("timertab"); if(tab)tab.addEventListener("toggle",()=>{ if(tab.open)rtArmAudio(); });
   RT.autoOn=false; RT.src="armed"; RT.armSec=300; RT.offset=0; RT.lastWhole=null;   // default: Auto off, armed 5:00; toggle Auto to join the live sequence
@@ -2316,6 +2355,7 @@ function render(){
     drawMap(null,wdir);
     try{miniLegRender();}catch(e){}
     try{renderCoursePlan();}catch(e){}
+    try{garminLabelsSync();}catch(e){}
     document.querySelectorAll("#letters .pick").forEach(b=>{
       b.classList.toggle("on",WIND.chosen&&b.dataset.l===state.letter);
       const atWind=suggestLetter(wdir), showOrange=(WIND.src!=="expected");
@@ -2368,6 +2408,7 @@ function render(){
   drawMap(r,wdir);
   try{miniLegRender();}catch(e){}
   try{renderCoursePlan();}catch(e){}
+  try{garminLabelsSync();}catch(e){}
   if(state.leg>=r.legs.length||state.leg<0)state.leg=0;
   const legHeadEl=$("legHead");
   if(legHeadEl){const L=r.legs[state.leg];
@@ -2609,6 +2650,7 @@ function buoySVG(x,y,pt,above){
 // two raw fixes, so it is solved twice: rough bearing first, then again once corrected.
 const M_PER_NM=1852;
 const START={cv:null,pin:null,entering:null,target:null};
+let PING_STATE={cv:null,pin:null};   // 'ok' | 'fail' | null (never tried), per end, for the Pin/CV button colour
 function startSave(){ try{ localStorage.setItem("cc_line",JSON.stringify({cv:START.cv,pin:START.pin,target:START.target,t:Date.now()})); }catch(e){} }
 function startLoad(){
   try{ const o=JSON.parse(localStorage.getItem("cc_line")||"null");
@@ -2702,7 +2744,7 @@ function fmtSec(s){
 }
 function drawStart(r,wdir,wspd){
   const svg=$("startView"); if(!svg)return;
-  const W=360,H=430, INK="#12283A", ORANGE="#FF6A13", GREEN="#007A33", RED="#C8102E";
+  const W=360,H=280, INK="#12283A", ORANGE="#FF6A13", GREEN="#007A33", RED="#C8102E";
   const L=startLine();
   const live=!!GPS.last;                        // a real fix always beats a finger
   const me=live?[GPS.last.coords.latitude,GPS.last.coords.longitude]:(START.me||null);
@@ -2821,9 +2863,26 @@ function startCtl(){
       `<div style="flex:0.7">${B("cancel","Cancel")}</div></div>`+
       `<div style="font-size:11px;color:#7C93A4;margin-top:6px">Metres. Inside means you were between the two ends, outside means past this end.</div>`;
   } else if(!live){
-    h=`<div class="inrow"><div style="flex:1">`+B("gps","Use my location")+`</div>`+
-      (START.me?`<div style="flex:0.7">`+B("clearme","Clear")+`</div>`:``)+`</div>`+
-      `<div style="font-size:11px;color:#7C93A4;margin-top:6px">Showing an assumed line, square to the wind, half a mile downwind of mark 1. Turn on GPS to ping the real ends and to time the run-in.</div>`;
+    const wdir=+($("wdir").value||0), bias=L?lineBias(L,wdir):null;
+    const square=L&&!L.assumed&&bias&&Math.abs(bias.deg)<1;
+    const favTxt=(!L||L.assumed)?"\u2013":(square?"Square":(bias.end==="pin"?"Pin":"CV"));
+    const degTxt=(!L||L.assumed)?"\u2013":(square?"0\u00B0":Math.abs(bias.deg).toFixed(0)+"\u00B0");
+    const roStyle="flex:1;min-height:46px;border-radius:10px;background:rgba(255,255,255,.10);border:1.5px solid rgba(255,255,255,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px";
+    // colour reflects the outcome of the last GPS request from this button: green = got a fix
+    // and pinged, orange = no response (denied/no signal/timed out), default blue = not tried yet
+    const btnStyle=end=>{
+      const s=PING_STATE[end];
+      return "flex:1;min-height:46px;"+(s==="ok"?"background:#1E8449;border-color:#2FA35C"
+        :s==="fail"?"background:#C8551A;border-color:#E07A3C"
+        :"background:#2E6D96;border-color:#5090B8");
+    };
+    h=(START.me?`<div class="inrow"><div style="flex:1">`+B("clearme","Clear")+`</div></div>`:``)+
+      `<div style="display:flex;gap:8px;margin-top:6px">`+
+      `<button class="rtbtn" data-s="ppin" style="${btnStyle("pin")}">Pin</button>`+
+      `<div style="${roStyle}"><div style="font-size:9px;letter-spacing:.03em;color:#C9DFEC;font-weight:700">FAVOURED</div><div style="font-weight:800;color:#fff;font-size:15px">${favTxt}</div></div>`+
+      `<div style="${roStyle}"><div style="font-size:9px;letter-spacing:.03em;color:#C9DFEC;font-weight:700">OFF SQUARE</div><div style="font-weight:800;color:#fff;font-size:15px">${degTxt}</div></div>`+
+      `<button class="rtbtn" data-s="pcv" style="${btnStyle("cv")}">CV</button>`+
+      `</div>`;
   } else if(!START.cv||!START.pin){
     h=`<div class="inrow">`+
       `<div style="flex:1">${B("pcv",START.cv?"CV \u2713 redo":"Ping CV")}</div>`+
@@ -2857,8 +2916,20 @@ function startClick(ev){
   const d=$("startD"), keep=()=>{ if(d&&START.entering)START.entering.d=d.value; };
   if(k==="gps"){ if(typeof gpsStart==="function")gpsStart(); }
   else if(k==="pcv"||k==="ppin"){
-    if(!GPS.last)return;
-    START.entering={end:k==="pcv"?"cv":"pin",d:"",side:"in"};
+    const end=k==="pcv"?"cv":"pin";
+    if(GPS.last){
+      PING_STATE[end]="ok";
+      START.entering={end,d:"",side:"in"};
+    } else {
+      if(!("geolocation"in navigator)){ PING_STATE[end]="fail"; startCtl(); return; }
+      PING_STATE[end]=null;                    // neutral while the request is in flight
+      navigator.geolocation.getCurrentPosition(
+        p=>{ GPS.last=p; try{gpsRender(p);}catch(e){}
+             PING_STATE[end]="ok"; START.entering={end,d:"",side:"in"}; startCtl(); },
+        e=>{ PING_STATE[end]="fail"; startCtl(); },
+        {enableHighAccuracy:true, maximumAge:2000, timeout:8000});
+      return;                                  // async: the callbacks above trigger their own re-render
+    }
   }
   else if(k==="in"||k==="out"){ keep(); START.entering.side=k; }
   else if(k==="cancel"){ START.entering=null; }
@@ -3753,6 +3824,7 @@ function miniLegStep(dir){                        // dir: -1 previous leg, +1 ne
   state.chartLeg=dir>0?Math.min(n-1,state.chartLeg+1):Math.max(0,state.chartLeg-1);
   state.leg=state.chartLeg;                       // keep Course Analysis's leg index locked to this
   render();                                        // render() already calls miniLegRender() internally
+  if(typeof GPS!=="undefined"&&GPS.last)try{ gpsRender(GPS.last); }catch(e){}
 }
 function miniLegSwipeInit(){
   const svg=$("miniLegSvg"); if(!svg||svg.dataset.swipeWired)return;
@@ -3784,6 +3856,7 @@ function legStep(dir){                             // dir: -1 previous leg, +1 n
   state.leg=dir>0?Math.min(n-1,state.leg+1):Math.max(0,state.leg-1);
   state.chartLeg=state.leg;                        // keep the mini-chart's leg index locked to this
   render();
+  if(typeof GPS!=="undefined"&&GPS.last)try{ gpsRender(GPS.last); }catch(e){}
 }
 function legSwipeInit(){
   const svg=$("legview"); if(!svg||svg.dataset.swipeWired)return;
