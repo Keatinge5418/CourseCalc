@@ -319,7 +319,7 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
 <details class="notes" id="garmintab" style="background:#3A4552;border:1px solid #2A323C"><summary style="color:#fff">GPS Display</summary>
   <div class="garmin-frame">
     <div class="garmin-tile">
-      <div class="garmin-label">Course</div>
+      <div class="garmin-label">Heading</div>
       <div class="garmin-value" id="gCourse">&ndash;</div>
     </div>
     <div class="garmin-tile">
@@ -335,6 +335,14 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
       <div class="garmin-value" id="gDist">&ndash;</div>
     </div>
     <div class="garmin-tile">
+      <div class="garmin-label">Turn</div>
+      <div class="garmin-value" id="gTurn">&ndash;</div>
+    </div>
+    <div class="garmin-tile">
+      <div class="garmin-label">Off Course</div>
+      <div class="garmin-value" id="gOffCourse">&ndash;</div>
+    </div>
+    <div class="garmin-tile">
       <div class="garmin-label">VMG</div>
       <div class="garmin-value" id="gVmg">&ndash;<span class="garmin-unit">kt</span></div>
     </div>
@@ -343,19 +351,27 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
       <div class="garmin-value" id="gVmc">&ndash;<span class="garmin-unit">kt</span></div>
     </div>
     <div class="garmin-tile">
+      <div class="garmin-label" id="gEtaLabel">ETA at Next</div>
+      <div class="garmin-value" id="gEta">&ndash;</div>
+    </div>
+    <div class="garmin-tile">
       <div class="garmin-label" id="gTimeLabel">Time to Next</div>
       <div class="garmin-value" id="gTime">&ndash;</div>
     </div>
     <div class="garmin-tile">
-      <div class="garmin-label" id="gEtaLabel">ETA at Next</div>
-      <div class="garmin-value" id="gEta">&ndash;</div>
+      <div class="garmin-label">Destination</div>
+      <div class="garmin-value" id="gDest" style="font-size:20px">&ndash;</div>
+    </div>
+    <div class="garmin-tile">
+      <div class="garmin-label">Tack/Gybe</div>
+      <div class="garmin-value" id="gTackGybe" style="font-size:20px">&ndash;</div>
     </div>
   </div>
 
   <div class="garmin-compass-wrap">
     <svg id="garminCompass" viewBox="0 0 300 300" style="width:100%;max-width:320px;display:block"></svg>
   </div>
-  <div style="font-size:11px;color:#C9D3DC;margin-top:8px">Shows the start line before your start, then switches to the next mark once the gun has gone. Course-up: the ring turns to your current heading (GPS, or the compass when stationary), and the pointer shows the target relative to that. Not for navigation.</div>
+  <div style="font-size:11px;color:#C9D3DC;margin-top:8px">Tracks whichever leg is selected in Course Analysis, pre-start or racing. Course-up: the ring turns to your current heading (GPS, or the compass when stationary), and the pointer shows the target relative to that. Not for navigation.</div>
 </details>
 
 <details class="notes" id="windtab" style="background:var(--start);border:1px solid #E8892E"><summary style="color:#12283A">Weather settings</summary>
@@ -1486,6 +1502,21 @@ function circMeanDeg(degs){
   return (Math.atan2(sy/degs.length, sx/degs.length)*180/Math.PI+360)%360;
 }
 let TREND6={avgSpd:null,maxSpd:null,avgDir:null,n:0,points:[]};
+// The buoy's timestamp comes back as e.g. "2026-08-09 18:00:00+00": space-separated, not
+// "T"-separated, with a bare "+00" offset rather than "+00:00". new Date(string) on that exact
+// shape is a known cross-engine inconsistency -- V8 (and Node, so this passed testing here) tends
+// to parse it leniently, but Safari's own engine has been much stricter historically and can
+// silently return an Invalid Date for it. Since this app runs as a Safari PWA, parse it by hand
+// into explicit numeric parts and build the timestamp with Date.UTC, which has no such ambiguity.
+function parseBuoyTs(s){
+  if(!s)return NaN;
+  const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:([+-])(\d{2}):?(\d{2})?)?/);
+  if(!m)return NaN;
+  const y=+m[1],mo=+m[2],d=+m[3],h=+m[4],mi=+m[5],se=+m[6];
+  const offSign=m[7]==="-"?-1:1, offH=m[8]?+m[8]:0, offM=m[9]?+m[9]:0;
+  const offMin=offSign*(offH*60+offM);
+  return Date.UTC(y,mo-1,d,h,mi,se)-offMin*60000;
+}
 function dbbTrendFetch(){
   const st=$("dbbTrendStat");
   const offline=()=>(typeof navigator!=="undefined"&&navigator.onLine===false);
@@ -1503,7 +1534,7 @@ function dbbTrendFetch(){
       const spds=good.map(r=>r.avg_wind), dirs=good.map(r=>r.wind_dir);
       TREND6={avgSpd:spds.reduce((a,b)=>a+b,0)/spds.length, maxSpd:Math.max(...spds),
         avgDir:circMeanDeg(dirs), n:good.length,
-        points:good.map(r=>({t:new Date(r.timestamp).getTime(),dir:r.wind_dir}))};
+        points:good.map(r=>({t:parseBuoyTs(r.timestamp),dir:r.wind_dir})).filter(p=>isFinite(p.t))};
       trend6Render();
       if(st)st.textContent=`${good.length} reading${good.length===1?"":"s"} in the last 6 hours.`;
     })
@@ -1577,7 +1608,7 @@ function dbbFetch(){
       const row=rows&&rows[0];
       if(!row||row.wind_dir==null||row.avg_wind==null){ windAvail(); buoyDashRender();
         if(st)st.textContent="Buoy has no current reading (the Irish Lights feed may be offline)."; return; }
-      const ageMin=(Date.now()-new Date(row.timestamp).getTime())/60000;
+      const ageMin=(Date.now()-parseBuoyTs(row.timestamp))/60000;
       setUsed(row.wind_dir,"dbb");
       setUsedSpd(row.avg_wind,"dbb");
       if(row.gust_speed!=null)setUsedGst(row.gust_speed,"dbb");
@@ -1605,7 +1636,7 @@ function buoyDashRender(){
   const ds=douglasState(BUOY.waveHeight);
   set("bdSea",ds?ds.degree+" \u00B7 "+ds.name:dash);
   const ageEl=$("bdAge");
-  if(ageEl)ageEl.textContent=BUOY.ts?Math.round((Date.now()-new Date(BUOY.ts).getTime())/60000)+" min ago":"no reading yet";
+  if(ageEl)ageEl.textContent=BUOY.ts?Math.round((Date.now()-parseBuoyTs(BUOY.ts))/60000)+" min ago":"no reading yet";
 }
 
 // ---------- seeding the oscillation band: from the forecast before the start, from observations during ----------
@@ -1963,7 +1994,7 @@ function gpsNextMark(){
   // the same mark the sailor is looking at there, not always the first rounding after the start.
   try{ const r=compute(state.card,+$("wdir").value||0,+$("wspd").value||10,+$("wgst").value||15,state.letter,state.num);
     const idx=Math.max(0,Math.min(state.leg,r.legs.length-1));
-    return {line:r.pts[0], mark:r.pts[idx+1]||null, markNo:idx+2}; }catch(e){ return null; }
+    return {line:r.pts[0], from:r.pts[idx]||null, mark:r.pts[idx+1]||null, markNo:idx+2}; }catch(e){ return null; }
 }
 // Before the gun: target is the start line. Once the timer has actually reached zero
 // (racing), target switches to the next mark. Same target drives both the Next tiles
@@ -1973,8 +2004,11 @@ function garminStarted(){
 }
 function garminTargetInfo(){
   const ctx=gpsNextMark(); if(!ctx)return null;
-  if(garminStarted()&&ctx.mark) return {pos:ctx.mark.pos, label:"Mark "+ctx.markNo, name:ctx.mark.name||""};
-  if(ctx.line) return {pos:ctx.line.pos, label:"Start line", name:ctx.line.lbl||""};
+  // Always mirrors whatever leg is currently selected in Course Analysis (state.leg), pre-start
+  // or racing, rather than special-casing the start line before the gun -- if you're previewing
+  // leg 3 pre-start, GPS Display tracks leg 3's mark, not the start.
+  if(ctx.mark) return {pos:ctx.mark.pos, from:(ctx.from&&ctx.from.pos)||null, label:"Mark "+ctx.markNo, name:ctx.mark.name||""};
+  if(ctx.line) return {pos:ctx.line.pos, from:null, label:"Start line", name:ctx.line.lbl||""};
   return null;
 }
 const POSVIEW={z:1,cx:POSW/2,cy:POSH/2,follow:true};
@@ -2237,7 +2271,7 @@ function garminLabelsSync(){
   // The label text only depends on the selected course/leg, not on having a live GPS fix, so
   // this can run on every render() and keep the labels correct even before GPS ever connects,
   // rather than leaving the page's hardcoded "Bearing to Next" placeholder showing indefinitely.
-  const bl=$("gBrgLabel"),dl=$("gDistLabel"),el=$("gEtaLabel"),tl=$("gTimeLabel");
+  const bl=$("gBrgLabel"),dl=$("gDistLabel"),el=$("gEtaLabel"),tl=$("gTimeLabel"),dest=$("gDest"),tg=$("gTackGybe");
   if(!bl)return;
   let tgt=null; try{ tgt=garminTargetInfo(); }catch(e){ tgt=null; }
   let started=false; try{ started=garminStarted(); }catch(e){ started=false; }
@@ -2246,6 +2280,25 @@ function garminLabelsSync(){
   dl.textContent="Dist to "+tgtWord;
   if(tl)tl.textContent="Time to "+tgtWord;
   if(el)el.textContent="ETA at "+tgtWord;
+  if(dest)dest.textContent=tgtWord;
+  // Tack/Gybe: is a tack or gybe needed at the rounding coming up (the mark ending the leg
+  // currently selected), and if so, roughly what angle. Reuses the same manoeuvre2verb/tackAngle
+  // already computed for the Course Plan's own advice text, rather than a second copy of the logic.
+  if(tg){
+    let txt="\u2013";
+    try{
+      const r=compute(state.card,+$("wdir").value||0,+$("wspd").value||10,+$("wgst").value||15,state.letter,state.num);
+      const nextIdx=state.leg+1;
+      if(r&&r.legs&&nextIdx<r.legs.length){
+        const adv=computeLegAdvice(r,nextIdx,+$("wdir").value||0,+$("wspd").value||10);
+        if(adv&&(adv.manoeuvre2verb==="tack"||adv.manoeuvre2verb==="gybe")){
+          const verb=adv.manoeuvre2verb==="tack"?"Tack":"Gybe";
+          txt=adv.tackAngle!=null?`${verb} ${Math.abs(adv.tackAngle)}\u00B0`:verb;
+        } else if(adv){ txt="None"; }
+      }
+    }catch(e){}
+    tg.textContent=txt;
+  }
 }
 function garminRender(pos){
   garminCompassBuild();
@@ -2276,13 +2329,35 @@ function garminRender(pos){
     } else vg.innerHTML=`&ndash;<span class="garmin-unit">kt</span>`;
   }
   const tgt=garminTargetInfo();
-  const started=garminStarted();
   garminLabelsSync();
-  if(!tgt){ if(br)br.textContent="\u2013"; if(ds)ds.textContent="\u2013"; if(vc)vc.innerHTML=`&ndash;<span class="garmin-unit">kt</span>`; if(et)et.textContent="\u2013"; if(tm)tm.textContent="\u2013"; return; }
+  const tc=$("gTurn"), oc=$("gOffCourse");
+  if(!tgt){ if(br)br.textContent="\u2013"; if(ds)ds.textContent="\u2013"; if(vc)vc.innerHTML=`&ndash;<span class="garmin-unit">kt</span>`; if(et)et.textContent="\u2013"; if(tm)tm.textContent="\u2013"; if(tc)tc.textContent="\u2013"; if(oc)oc.textContent="\u2013"; return; }
   const bd=brgDist(me,tgt.pos);
   const nm=bd.dist, m=nm*1852;
   if(br)br.textContent = String(Math.round(bd.brg)).padStart(3,"0")+"\u00B0";
   if(ds)ds.textContent = nm<0.2 ? `${Math.round(m)} m` : `${nm.toFixed(2)} NM`;
+  // Turn: signed turn-to-steer from current heading to the target bearing. Positive = turn
+  // right/starboard, negative = turn left/port, matching the L/R convention on a real
+  // chartplotter (verified against a real Garmin reading: heading 032, bearing 012 -> turn 020 L).
+  if(tc){
+    if(courseVal!=null){
+      const turnRaw=((bd.brg-heading+540)%360)-180;
+      tc.textContent=String(Math.round(Math.abs(turnRaw))).padStart(3,"0")+"\u00B0"+(turnRaw<0?"L":"R");
+    } else tc.textContent="\u2013";
+  }
+  // Off Course: perpendicular (cross-track) distance from the current position to the leg's
+  // own rhumb line (the straight line from the leg's start mark to this target), not just total
+  // distance remaining. Only meaningful once actually racing a defined leg (see garminTargetInfo).
+  if(oc){
+    if(tgt.from){
+      const vLeg=metresEN(tgt.from,tgt.pos), vMe=metresEN(tgt.from,me);
+      const legLen=Math.hypot(vLeg[0],vLeg[1]);
+      if(legLen>1){
+        const offNm=Math.abs(vMe[0]*vLeg[1]-vMe[1]*vLeg[0])/legLen/1852;
+        oc.textContent = offNm<0.2 ? `${Math.round(offNm*1852)} m` : `${offNm.toFixed(2)} NM`;
+      } else oc.textContent="\u2013";
+    } else oc.textContent="\u2013";
+  }
   // VMC: speed made good on course toward the target (signed, negative if heading >90 deg off the direct line)
   if(vc){
     if(cog!=null&&sog!=null){
