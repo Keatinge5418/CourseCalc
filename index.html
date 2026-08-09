@@ -59,6 +59,9 @@ input[type=date],input[type=time]{text-align:center;-webkit-appearance:none;appe
 input[type=number],input[type=date],input[type=time]{width:100%;font-size:24px;font-weight:700;padding:10px 8px;border:1.5px solid var(--rule);box-sizing:border-box;min-width:0;
   border-radius:10px;background:#FBFDFE;color:var(--ink);text-align:center;
   font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+.buoytile{width:100%;font-size:24px;font-weight:700;padding:10px 8px;border:1.5px solid var(--rule);box-sizing:border-box;min-width:0;
+  border-radius:10px;background:#FBFDFE;color:var(--ink);text-align:center;
+  font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
 input[type=date],input[type=time]{font-size:17px;padding:10px 2px}
 /* a field the app is filling in for you: tinted, and the value shown at full strength */
 input.autoval{background:#E4F2F6;border-color:#9CCFDA}
@@ -159,43 +162,57 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
   </div>
 </details>
 
-<details class="notes" id="windtab" style="background:var(--start);border:1px solid #E8892E"><summary style="color:#12283A">Wind</summary>
-<div id="wsGauge"></div>
-<div style="margin:8px 0 2px;display:flex;align-items:center;gap:10px"><label style="white-space:nowrap;margin:0;color:#12283A">Wind <span class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label><input class="wslide" type="range" min="0" max="359" step="1" style="flex:1"><button class="wslideR" aria-label="Restore forecast wind" title="hand the wind back to the forecast" style="flex:0 0 auto;width:30px;height:30px;border-radius:8px;border:1.5px solid #12283A;background:#fff;color:#12283A;font-weight:800;font-size:13px;padding:0">R</button></div>
-<div style="font-size:12px;color:#333;margin:8px 0 4px">Describe the day’s wind: the range you expect, and the mean it sits around. Tap Forecast and it fills itself in.</div>
-<div class="inrow" style="margin-bottom:8px">
-  <div style="flex:1"><label>Mean °</label><input id="wsMean" type="number" inputmode="numeric" value="234"></div>
-  <div style="flex:1"><label>From °</label><input id="wsLo" type="number" inputmode="numeric" value="220"></div>
-  <div style="flex:1"><label>To °</label><input id="wsHi" type="number" inputmode="numeric" value="250"></div>
-</div>
-<div class="inrow" style="margin-bottom:8px">
-  <div style="flex:1"><label>Swing min</label><input id="wsPer" type="number" inputmode="numeric" value="20"></div>
-  <div style="flex:2;font-size:11.5px;color:#48627A;align-self:flex-end;padding-bottom:9px">How long one full oscillation takes. The shape of the curve follows where the mean sits inside the band.</div>
-</div>
-<div class="inrow" style="margin-bottom:8px;align-items:flex-end">
-  <div style="flex:2.2"><label>NMEA / Signal K WebSocket</label><input id="nmeaUrl" type="text" placeholder="ws://192.168.1.10:2000" style="width:100%;font-size:14px;font-weight:600;padding:10px 8px;border:1.5px solid var(--rule);border-radius:10px;box-sizing:border-box"></div>
-  <div style="flex:1"><button class="pick" id="nmeaBtn" style="width:100%">Connect</button></div>
-</div>
-<div id="nmeaStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px"></div>
-<div class="inrow" style="margin-bottom:8px;align-items:flex-end">
-  <div style="flex:1.5"><label>Trend &deg;/h (+ veer)</label><input id="trRate" type="number" inputmode="decimal" step="0.5" placeholder="auto"></div>
-  <div style="flex:1.2"><button class="pick" id="trFetch" style="width:100%">Forecast</button></div>
-</div>
-<div id="trStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px">No trend set: oscillating model only.</div>
-<div class="inrow" style="margin-bottom:8px;align-items:flex-end">
-  <div style="flex:1"><button class="pick" id="dbbFetch" style="width:100%">Dublin Bay Buoy</button></div>
-</div>
-<div id="dbbStat" style="font-size:12px;color:#48627A;margin:-2px 0 8px">Live wind/gust from Irish Lights' Dublin Bay buoy, via dublinbaybuoy.com.</div>
-<div id="trLinks" class="inrow" style="margin:-2px 0 8px;display:none">
-  <div style="flex:1"><button class="pick" id="trManual" style="width:100%">Get forecast</button></div>
-</div>
-<div id="bandStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px"></div>
-<div id="trPasteWrap" style="display:none;margin:0 0 8px">
-  <div style="font-size:12px;color:#48627A;margin-bottom:4px">The forecast page should have opened in your browser: select all, copy, come back, and paste it below. If it did not open, <a id="trOpen" href="#" target="_blank" rel="noopener" style="color:#0E7C94;text-decoration:underline">tap here</a>.</div>
-  <textarea id="trPaste" rows="3" placeholder="Paste the forecast data here" style="width:100%;font-size:12px;padding:8px;border:1.5px solid var(--rule);border-radius:10px;box-sizing:border-box"></textarea>
-  <button class="pick" id="trPasteGo" style="width:100%;margin-top:4px">Use pasted forecast</button>
-</div>
-<div id="wsOut" style="font-size:13px;line-height:1.5"></div>
+
+<details class="notes" id="buoytab" style="background:#DCF0F8;border:1px solid #8FCBE0">
+  <summary style="color:#0B4A63">Dublin Bay Buoy</summary>
+  <div class="inrow" style="margin-bottom:8px;align-items:flex-end">
+    <div style="flex:1"><button class="pick" id="bdRefresh" style="width:100%">Refresh</button></div>
+  </div>
+  <div id="dbbStat2" style="font-size:12px;color:#3A6A7D;margin:-2px 0 10px">Tap Refresh to pull the latest buoy reading. Last updated: <span id="bdAge">no reading yet</span>.</div>
+  <div class="inrow" style="margin-bottom:8px">
+    <div style="flex:1"><label>Wind from</label><div class="buoytile" id="bdWind">&ndash;</div></div>
+    <div style="flex:1"><label>Gusts from</label><div class="buoytile" id="bdGust">&ndash;</div></div>
+  </div>
+  <div class="inrow" style="margin-bottom:8px">
+    <div style="flex:1"><label>Avg wind (kt)</label><div class="buoytile" id="bdAvgWind">&ndash;</div></div>
+    <div style="flex:1"><label>Avg gust (kt)</label><div class="buoytile" id="bdGustSpd">&ndash;</div></div>
+  </div>
+  <div class="inrow" style="margin-bottom:8px">
+    <div style="flex:1"><label>Wave height</label><div class="buoytile" id="bdWave" style="font-size:19px">&ndash;</div></div>
+    <div style="flex:1"><label>Water temp</label><div class="buoytile" id="bdTemp" style="font-size:19px">&ndash;</div></div>
+  </div>
+  <div class="inrow" style="margin-bottom:4px">
+    <div style="flex:1"><label>Sea state (Douglas)</label><div class="buoytile" id="bdSea" style="font-size:17px">&ndash;</div></div>
+  </div>
+  <div style="font-size:11px;color:#3A6A7D;margin-top:6px">Wind and gusts are the compass bearing each is coming from. Sea state uses the standard Douglas Scale, worked out here from wave height (dublinbaybuoy.com's own reading uses the same scale). Not for navigation.</div>
+  <div style="border-top:1px solid #8FCBE0;margin:14px 0 10px"></div>
+  <div style="font-weight:800;color:#0B4A63;font-size:14px;margin-bottom:6px">6-hour Trends</div>
+  <div id="dbbTrendStat" style="font-size:12px;color:#3A6A7D;margin-bottom:8px">Tap Refresh above to pull the last 6 hours.</div>
+  <div style="font-weight:700;color:#0B4A63;font-size:12.5px;margin-bottom:2px">Wind Direction</div>
+  <div id="dbbDirChart" style="background:#fff;border-radius:10px;padding:8px 4px;margin-bottom:10px"></div>
+  <div class="inrow" style="margin-bottom:4px">
+    <div style="flex:1"><label>Avg speed (kt)</label><div class="buoytile" id="bdAvgSpd6">&ndash;</div></div>
+    <div style="flex:1"><label>Max speed (kt)</label><div class="buoytile" id="bdMaxSpd6">&ndash;</div></div>
+    <div style="flex:1"><label>Avg direction</label><div class="buoytile" id="bdAvgDir6">&ndash;</div></div>
+  </div>
+  <div style="font-size:11px;color:#3A6A7D;margin-top:6px">Average direction is a proper circular mean, not a plain average, so it handles the 360\u00B0/0\u00B0 wrap correctly (e.g. readings of 350\u00B0 and 10\u00B0 average to about 0\u00B0, not 180\u00B0). The chart plots raw degrees, so a genuine wrap crossing (say 350\u00B0 to 10\u00B0) will show as a jump top-to-bottom on the axis, rather than the short way round.</div>
+</details>
+
+<details class="notes" id="tidetab" style="background:#0B5D3C;color:#fff;border:1px solid #073F29">
+  <summary style="color:#fff">Tides</summary>
+  <div id="tideSubtitle" style="font-size:12px;color:#BFE8D4;margin:2px 0 6px">Dun Laoghaire (Dublin North Wall)</div>
+  <div id="tideDay" class="tiderow"></div>
+  <div id="tideNow" class="tidenow" style="color:#fff"></div>
+  <div id="tideWrap" style="position:relative"><div id="tideFlow"></div><div style="position:absolute;top:16px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="tideIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="tideOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="tideZlab" style="position:absolute;bottom:12px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
+  <div style="margin-top:6px">
+    <input id="tflow" type="range" min="0" max="6" step="0.5" value="0" style="width:100%;display:block">
+    <label style="white-space:nowrap;margin:4px 0 0;color:#BFE8D4">Time <span id="tflowLbl" class="mono" style="font-weight:800;color:#fff;font-size:22px">now</span></label>
+  </div>
+  <div style="font-size:11px;color:#BFE8D4;margin-top:4px">Stream from the Dublin Port Company tidal atlas, springs and neaps blended on the day’s range. Slide from the race start to 6 h ahead; each navy arrow shows the stream set, with rate in knots at the arrowhead.</div>
+  <div style="border-top:1px solid rgba(255,255,255,.2);margin:14px 0 10px"></div>
+  <div style="font-weight:800;color:#fff;font-size:14px;margin-bottom:6px">Tide Curve</div>
+  <div id="tideCurve" style="background:rgba(0,0,0,.12);border-radius:10px;padding:8px 4px"></div>
+  <div style="font-size:11px;color:#BFE8D4;margin-top:6px">Height at Dun Laoghaire (North Wall), from the same Dublin Port Company tide tables. The orange dot tracks the slider above; drag it and the dot moves with it.</div>
 </details>
 
 <details class="notes" id="timertab" style="background:#2A6285;color:#fff;border:1px solid #1C4E6D">
@@ -225,20 +242,6 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
     <button class="rtbtn" id="rtSilent" style="flex:1;padding:13px 4px;font-size:14px">Sounds Off</button>
   </div>
   <div id="rtInfo" style="font-size:14px;color:#C9DFEC;line-height:1.55;margin-top:12px"></div>
-</details>
-
-
-<details class="notes" id="tidetab" style="background:#0B5D3C;color:#fff;border:1px solid #073F29">
-  <summary style="color:#fff">Tides</summary>
-  <div id="tideSubtitle" style="font-size:12px;color:#BFE8D4;margin:2px 0 6px">Dun Laoghaire (Dublin North Wall)</div>
-  <div id="tideDay" class="tiderow"></div>
-  <div id="tideNow" class="tidenow" style="color:#fff"></div>
-  <div id="tideWrap" style="position:relative"><div id="tideFlow"></div><div style="position:absolute;top:16px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="tideIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="tideOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="tideZlab" style="position:absolute;bottom:12px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
-  <div style="margin-top:6px;display:flex;align-items:center;gap:10px">
-    <label style="white-space:nowrap;margin:0;color:#BFE8D4">Time <span id="tflowLbl" class="mono" style="font-weight:800;color:#fff">now</span></label>
-    <input id="tflow" type="range" min="0" max="6" step="0.5" value="0" style="flex:1">
-  </div>
-  <div style="font-size:11px;color:#BFE8D4;margin-top:4px">Stream from the Dublin Port Company tidal atlas, springs and neaps blended on the day’s range. Slide from the race start to 6 h ahead; each navy arrow shows the stream set, with rate in knots at the arrowhead.</div>
 </details>
 
 <details class="notes" id="charttab"><summary>Course Chart</summary>
@@ -352,7 +355,46 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
   <div class="garmin-compass-wrap">
     <svg id="garminCompass" viewBox="0 0 300 300" style="width:100%;max-width:320px;display:block"></svg>
   </div>
-  <div style="font-size:11px;color:#C9D3DC;margin-top:8px">Shows the start line before your start, then switches to the next mark once the gun has gone. The pointer is the true bearing to that target on a north-up ring. Not for navigation.</div>
+  <div style="font-size:11px;color:#C9D3DC;margin-top:8px">Shows the start line before your start, then switches to the next mark once the gun has gone. Course-up: the ring turns to your current heading (GPS, or the compass when stationary), and the pointer shows the target relative to that. Not for navigation.</div>
+</details>
+
+<details class="notes" id="windtab" style="background:var(--start);border:1px solid #E8892E"><summary style="color:#12283A">Weather settings</summary>
+<div id="wsGauge"></div>
+<div style="margin:8px 0 2px;display:flex;align-items:center;gap:10px"><label style="white-space:nowrap;margin:0;color:#12283A">Wind <span class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label><input class="wslide" type="range" min="0" max="359" step="1" style="flex:1"><button class="wslideR" aria-label="Restore forecast wind" title="hand the wind back to the forecast" style="flex:0 0 auto;width:30px;height:30px;border-radius:8px;border:1.5px solid #12283A;background:#fff;color:#12283A;font-weight:800;font-size:13px;padding:0">R</button></div>
+<div style="font-size:12px;color:#333;margin:8px 0 4px">Describe the day’s wind: the range you expect, and the mean it sits around. Tap Forecast and it fills itself in.</div>
+<div class="inrow" style="margin-bottom:8px">
+  <div style="flex:1"><label>Mean °</label><input id="wsMean" type="number" inputmode="numeric" value="234"></div>
+  <div style="flex:1"><label>From °</label><input id="wsLo" type="number" inputmode="numeric" value="220"></div>
+  <div style="flex:1"><label>To °</label><input id="wsHi" type="number" inputmode="numeric" value="250"></div>
+</div>
+<div class="inrow" style="margin-bottom:8px">
+  <div style="flex:1"><label>Swing min</label><input id="wsPer" type="number" inputmode="numeric" value="20"></div>
+  <div style="flex:2;font-size:11.5px;color:#48627A;align-self:flex-end;padding-bottom:9px">How long one full oscillation takes. The shape of the curve follows where the mean sits inside the band.</div>
+</div>
+<div class="inrow" style="margin-bottom:8px;align-items:flex-end">
+  <div style="flex:2.2"><label>NMEA / Signal K WebSocket</label><input id="nmeaUrl" type="text" placeholder="ws://192.168.1.10:2000" style="width:100%;font-size:14px;font-weight:600;padding:10px 8px;border:1.5px solid var(--rule);border-radius:10px;box-sizing:border-box"></div>
+  <div style="flex:1"><button class="pick" id="nmeaBtn" style="width:100%">Connect</button></div>
+</div>
+<div id="nmeaStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px"></div>
+<div class="inrow" style="margin-bottom:8px;align-items:flex-end">
+  <div style="flex:1.5"><label>Trend &deg;/h (+ veer)</label><input id="trRate" type="number" inputmode="decimal" step="0.5" placeholder="auto"></div>
+  <div style="flex:1.2"><button class="pick" id="trFetch" style="width:100%">Forecast</button></div>
+</div>
+<div id="trStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px">No trend set: oscillating model only.</div>
+<div class="inrow" style="margin-bottom:8px;align-items:flex-end">
+  <div style="flex:1"><button class="pick" id="dbbFetch" style="width:100%">Dublin Bay Buoy</button></div>
+</div>
+<div id="dbbStat" style="font-size:12px;color:#48627A;margin:-2px 0 8px">Live wind/gust from Irish Lights' Dublin Bay buoy, via dublinbaybuoy.com.</div>
+<div id="trLinks" class="inrow" style="margin:-2px 0 8px;display:none">
+  <div style="flex:1"><button class="pick" id="trManual" style="width:100%">Get forecast</button></div>
+</div>
+<div id="bandStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px"></div>
+<div id="trPasteWrap" style="display:none;margin:0 0 8px">
+  <div style="font-size:12px;color:#48627A;margin-bottom:4px">The forecast page should have opened in your browser: select all, copy, come back, and paste it below. If it did not open, <a id="trOpen" href="#" target="_blank" rel="noopener" style="color:#0E7C94;text-decoration:underline">tap here</a>.</div>
+  <textarea id="trPaste" rows="3" placeholder="Paste the forecast data here" style="width:100%;font-size:12px;padding:8px;border:1.5px solid var(--rule);border-radius:10px;box-sizing:border-box"></textarea>
+  <button class="pick" id="trPasteGo" style="width:100%;margin-top:4px">Use pasted forecast</button>
+</div>
+<div id="wsOut" style="font-size:13px;line-height:1.5"></div>
 </details>
 
 <details class="notes" id="notestab" style="background:#A9C3DE;border:1px solid #7A9CC4"><summary style="color:#12283A">Notes &amp; assumptions</summary>
@@ -685,6 +727,74 @@ function tideState(dateStr,timeStr){
   return {ev,h,off,rising,range,phase};
 }
 let TIDECTX=null;
+// Given the race date/start time and an elapsed-hours offset (which may cross midnight or land
+// on the next/previous day), work out the actual calendar date and time-of-day, via real Date
+// arithmetic rather than a same-day wrap, so tideEvents() gets asked about the correct day.
+function dateTimeAt(rdate,rtime,elapsedH){
+  if(!rdate||!rtime)return null;
+  const [rh,rm]=rtime.split(":").map(Number);
+  const d=new Date(rdate+"T00:00:00");
+  d.setMinutes(rh*60+rm+Math.round(elapsedH*60));
+  const p2=n=>String(n).padStart(2,"0");
+  return {dateStr:d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()),
+    timeStr:p2(d.getHours())+":"+p2(d.getMinutes()), ms:d.getTime()};
+}
+function drawTideCurve(){
+  const host=$("tideCurve"); if(!host)return;
+  const rdate=$("rdate")&&$("rdate").value, rtime=$("rtime")&&$("rtime").value;
+  const slide=+($("tflow")?$("tflow").value:0);
+  if(!rdate||!rtime){ host.innerHTML=`<div style="font-size:12px;color:#BFE8D4;padding:8px 0">Pick a course to see the tide curve.</div>`; return; }
+  // -3h to +9h around the race start: gives context before the gun and covers the slider's
+  // whole 0-6h range with room after it, a 12h window like the ones tide sites typically show.
+  const WIN0=-3, WIN1=9, STEP=0.25;
+  const pts=[];
+  for(let h=WIN0; h<=WIN1+1e-9; h+=STEP){
+    const dt=dateTimeAt(rdate,rtime,h); if(!dt)continue;
+    const st=tideState(dt.dateStr,dt.timeStr);
+    if(st&&st.h!=null)pts.push({h,height:st.h,ms:dt.ms});
+  }
+  if(pts.length<2){ host.innerHTML=`<div style="font-size:12px;color:#BFE8D4;padding:8px 0">No tide data for this date.</div>`; return; }
+  const hs=pts.map(p=>p.height);
+  const yLo=Math.floor(Math.min(...hs)*2)/2-0.25, yHi=Math.ceil(Math.max(...hs)*2)/2+0.25;
+  const W=340,H=170,L=30,R=10,T=10,B=22, PW=W-L-R, PH=H-T-B;
+  const X=h=>L+(h-WIN0)/(WIN1-WIN0)*PW, Y=v=>T+PH-(v-yLo)/(yHi-yLo)*PH;
+  let g=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:420px;display:block;margin:0 auto">`;
+  // gridlines every 0.5m
+  for(let v=Math.ceil(yLo/0.5)*0.5; v<=yHi; v+=0.5){
+    g+=`<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W-R}" y2="${Y(v).toFixed(1)}" stroke="rgba(255,255,255,.12)" stroke-width="1"/>`;
+    g+=`<text x="${L-4}" y="${(Y(v)+3).toFixed(1)}" font-size="8.5" text-anchor="end" fill="#BFE8D4">${v.toFixed(1)}</text>`;
+  }
+  // hour labels along the bottom, every 2h
+  for(let h=Math.ceil(WIN0/2)*2; h<=WIN1; h+=2){
+    const dt=dateTimeAt(rdate,rtime,h); if(!dt)continue;
+    g+=`<text x="${X(h).toFixed(1)}" y="${H-6}" font-size="8.5" text-anchor="middle" fill="#BFE8D4">${dt.timeStr}</text>`;
+  }
+  // filled curve
+  const line=pts.map((p,i)=>(i?"L":"M")+X(p.h).toFixed(1)+","+Y(p.height).toFixed(1)).join("");
+  g+=`<path d="${line}L${X(WIN1).toFixed(1)},${(T+PH).toFixed(1)}L${X(WIN0).toFixed(1)},${(T+PH).toFixed(1)}Z" fill="#8FE0C4" opacity="0.18"/>`;
+  g+=`<path d="${line}" fill="none" stroke="#8FE0C4" stroke-width="2.2" stroke-linejoin="round"/>`;
+  // HW/LW markers within the window, derived directly from tideEvents on each day touched
+  const daysTouched=new Set([dateTimeAt(rdate,rtime,WIN0).dateStr, dateTimeAt(rdate,rtime,0).dateStr, dateTimeAt(rdate,rtime,WIN1).dateStr]);
+  daysTouched.forEach(ds=>{
+    const ev=tideEvents(ds); if(!ev)return;
+    ev.forEach(e=>{
+      const evMs=new Date(ds+"T00:00:00").getTime()+e.min*60000;
+      const evH=WIN0+(evMs-dateTimeAt(rdate,rtime,WIN0).ms)/3600000;
+      if(evH<WIN0||evH>WIN1)return;
+      g+=`<circle cx="${X(evH).toFixed(1)}" cy="${Y(e.h).toFixed(1)}" r="2.5" fill="#8FE0C4"/>`;
+      g+=`<text x="${X(evH).toFixed(1)}" y="${(Y(e.h)+(e.type==='H'?-7:14)).toFixed(1)}" font-size="8.5" text-anchor="middle" font-weight="800" fill="#fff">${e.h.toFixed(1)}</text>`;
+    });
+  });
+  // "now"/slider marker
+  const cur=pts.reduce((best,p)=>Math.abs(p.h-slide)<Math.abs(best.h-slide)?p:best, pts[0]);
+  g+=`<line x1="${X(cur.h).toFixed(1)}" y1="${T}" x2="${X(cur.h).toFixed(1)}" y2="${T+PH}" stroke="#fff" stroke-width="1" stroke-dasharray="2 3" opacity="0.6"/>`;
+  g+=`<circle cx="${X(cur.h).toFixed(1)}" cy="${Y(cur.height).toFixed(1)}" r="5" fill="#FF6A13" stroke="#fff" stroke-width="1.5"/>`;
+  g+=`<line x1="${L}" y1="${T+PH}" x2="${W-R}" y2="${T+PH}" stroke="#BFE8D4" stroke-width="1"/>`;
+  g+=`</svg>`;
+  const dt0=dateTimeAt(rdate,rtime,cur.h);
+  g+=`<div style="text-align:center;font-size:12px;color:#fff;margin-top:2px"><b>${dt0.timeStr}</b> \u00B7 height ${cur.height.toFixed(2)} m</div>`;
+  host.innerHTML=g;
+}
 function drawTideFlow(){
   const el=$("tideFlow"); if(!el)return;
   const base=(TIDECTX&&TIDECTX.off!==undefined)?TIDECTX.off:0;
@@ -805,6 +915,7 @@ function renderTide(){
     $("tideNow").innerHTML=`At ${ts}: <b>HW${sign}${om}</b> \u00B7 ht \u2248 <b class="mono">${st.h.toFixed(1)} m</b> \u00B7 ${st.rising?"flooding \u25B2":"ebbing \u25BC"} \u00B7 ${st.phase} (range ${st.range.toFixed(1)} m)<br>Stream: at the Hut <b class="mono">${fs(si)}</b> \u00B7 at Poldy <b class="mono">${fs(so)}</b>`;
   } else {$("tideNow").textContent="";TIDECTX=null;}
   drawTideFlow();
+  try{drawTideCurve();}catch(e){}
 }
 
 
@@ -1236,6 +1347,7 @@ function fcIngest(j){                           // accepts an Open-Meteo reply f
   seedFromForecast();                          // one tap now does the whole job
   windAvail();
   render();
+  try{drawWindDirChart();}catch(e){}
 }
 
 // Seed the wind boxes and the band from the forecast. Uses the live "now" reading if
@@ -1336,12 +1448,12 @@ function trendFetch(){
   const st=$("trStat");
   const offline=()=>(typeof navigator!=="undefined"&&navigator.onLine===false);
   if(offline()){ window.fcFailed=true; windAvail();
-    if(st)st.innerHTML="No data connection. Type a trend in the box, or paste a forecast below."; return; }
+    if(st)st.innerHTML="No data connection. Type a trend in the box, or paste a forecast below."; return Promise.resolve(); }
   window.fcBusy=true; window.fcFailed=false; windAvail();
   if(st)st.textContent="fetching forecast\u2026";
   const done=()=>{ window.fcBusy=false; windAvail(); };
   const get=u=>fetch(u).then(r=>{ if(!r.ok)throw new Error("HTTP "+r.status); return r.json(); });
-  get(fcUrl(false))
+  return get(fcUrl(false))
     .catch(()=>get(fcUrl(true)))               // second try, cache-busted, in case a stale entry is in the way
     .then(j=>{ fcIngest(j); done(); })
     .catch(e=>{
@@ -1353,35 +1465,147 @@ function trendFetch(){
 // A second, independent live-wind source alongside instruments/forecast: the Dublin Bay Buoy
 // (Irish Lights' own instrument, republished hourly by dublinbaybuoy.com with a free anonymous
 // API). Units already match the app throughout (knots, degrees true), so no conversion needed.
+let BUOY={windDir:null,gustDir:null,avgWind:null,gustSpeed:null,waveHeight:null,waterTemp:null,ts:null};
+// Douglas Sea Scale (the standard maritime reference dublinbaybuoy.com's own "Sea State" reading
+// uses): degree 0-9 from average wave height, in metres.
+const DOUGLAS=[[0,0,"Calm (glassy)"],[0,0.10,"Calm (rippled)"],[0.10,0.50,"Smooth"],[0.50,1.25,"Slight"],
+  [1.25,2.50,"Moderate"],[2.50,4.00,"Rough"],[4.00,6.00,"Very rough"],[6.00,9.00,"High"],
+  [9.00,14.00,"Very high"],[14.00,Infinity,"Phenomenal"]];
+function douglasState(h){
+  if(h==null||!isFinite(h))return null;
+  for(let d=0;d<DOUGLAS.length;d++){ const[lo,hi,name]=DOUGLAS[d]; if(h>=lo&&h<hi)return{degree:d,name}; }
+  return{degree:9,name:"Phenomenal"};
+}
+// Circular mean: averaging raw degrees is wrong across the 360/0 wrap (350 and 10 would
+// naively average to 180, exactly backwards, instead of the correct ~0). Convert each angle
+// to a unit vector, average the vectors, convert back.
+function circMeanDeg(degs){
+  if(!degs.length)return null;
+  let sx=0, sy=0;
+  degs.forEach(d=>{ const r=d*Math.PI/180; sx+=Math.cos(r); sy+=Math.sin(r); });
+  return (Math.atan2(sy/degs.length, sx/degs.length)*180/Math.PI+360)%360;
+}
+let TREND6={avgSpd:null,maxSpd:null,avgDir:null,n:0,points:[]};
+function dbbTrendFetch(){
+  const st=$("dbbTrendStat");
+  const offline=()=>(typeof navigator!=="undefined"&&navigator.onLine===false);
+  if(offline()){ trend6Render(); if(st)st.textContent="No data connection."; return; }
+  if(st)st.textContent="fetching\u2026";
+  const KEY="sb_publishable_R5KkIpbiwNajUyx3I4aewQ_S4NI8hl3";
+  const since=new Date(Date.now()-6*3600000).toISOString();
+  fetch("https://api.dublinbaybuoy.com/rest/v1/readings?select=timestamp,avg_wind,wind_dir&timestamp=gte."+since+"&order=timestamp.asc",
+    {headers:{apikey:KEY}})
+    .then(r=>{ if(!r.ok)throw new Error("HTTP "+r.status); return r.json(); })
+    .then(rows=>{
+      const good=(rows||[]).filter(r=>r.avg_wind!=null&&r.wind_dir!=null);
+      if(!good.length){ TREND6={avgSpd:null,maxSpd:null,avgDir:null,n:0,points:[]}; trend6Render();
+        if(st)st.textContent="No readings in the last 6 hours."; return; }
+      const spds=good.map(r=>r.avg_wind), dirs=good.map(r=>r.wind_dir);
+      TREND6={avgSpd:spds.reduce((a,b)=>a+b,0)/spds.length, maxSpd:Math.max(...spds),
+        avgDir:circMeanDeg(dirs), n:good.length,
+        points:good.map(r=>({t:new Date(r.timestamp).getTime(),dir:r.wind_dir}))};
+      trend6Render();
+      if(st)st.textContent=`${good.length} reading${good.length===1?"":"s"} in the last 6 hours.`;
+    })
+    .catch(e=>{ trend6Render(); if(st)st.textContent=`Trend fetch failed (${e.message}). Tap to try again.`; });
+}
+function trend6Render(){
+  const set=(id,txt)=>{ const el=$(id); if(el)el.textContent=txt; };
+  const dash="\u2013";
+  set("bdAvgSpd6",TREND6.avgSpd!=null?TREND6.avgSpd.toFixed(1):dash);
+  set("bdMaxSpd6",TREND6.maxSpd!=null?TREND6.maxSpd.toFixed(1):dash);
+  set("bdAvgDir6",TREND6.avgDir!=null?Math.round(TREND6.avgDir)+"\u00B0":dash);
+  drawWindDirChart();
+}
+function drawWindDirChart(){
+  const host=$("dbbDirChart"); if(!host)return;
+  const obs=(TREND6.points||[]).filter(p=>p.dir!=null);
+  const fc=(FC.data&&FC.data.time&&FC.data.dir)
+    ? FC.data.time.map((t,i)=>({t:t*1000, dir:FC.data.dir[i]})).filter(p=>p.dir!=null) : [];
+  if(!obs.length&&!fc.length){
+    host.innerHTML=`<div style="font-size:12px;color:#3A6A7D;padding:10px 0">No direction history yet \u2014 tap Refresh above, and fetch a forecast from Weather settings, to see the trend.</div>`;
+    return;
+  }
+  const W=320,H=170,L=34,R=10,T=10,B=24, PW=W-L-R, PH=H-T-B;
+  // Window: 6h of observed history through to the end of whatever forecast is cached
+  // (capped so a very long cached forecast doesn't stretch the axis absurdly thin).
+  const now=Date.now();
+  const t0=obs.length?Math.min(now-6*3600000,obs[0].t):now-6*3600000;
+  const t1=fc.length?Math.min(Math.max(...fc.map(p=>p.t)),now+12*3600000):now;
+  const X=t=>L+(t-t0)/Math.max(t1-t0,1)*PW, Y=d=>T+PH-(d/360)*PH;
+  let g=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:420px;display:block;margin:0 auto">`;
+  [0,90,180,270,360].forEach(d=>{
+    g+=`<line x1="${L}" y1="${Y(d).toFixed(1)}" x2="${W-R}" y2="${Y(d).toFixed(1)}" stroke="#E2EAF0" stroke-width="1"/>`;
+    g+=`<text x="${L-4}" y="${(Y(d)+3).toFixed(1)}" font-size="9" text-anchor="end" fill="#48627A">${d}\u00B0</text>`;
+  });
+  // "now" marker
+  if(now>=t0&&now<=t1)g+=`<line x1="${X(now).toFixed(1)}" y1="${T}" x2="${X(now).toFixed(1)}" y2="${T+PH}" stroke="#C9D6DF" stroke-width="1" stroke-dasharray="2 3"/>`;
+  // hour labels along the bottom, roughly every 2h
+  for(let t=Math.ceil(t0/7200000)*7200000; t<=t1; t+=7200000){
+    const hh=new Date(t).getHours();
+    g+=`<text x="${X(t).toFixed(1)}" y="${H-8}" font-size="9" text-anchor="middle" fill="#48627A">${String(hh).padStart(2,"0")}:00</text>`;
+  }
+  const path=(pts,dash)=>{
+    if(pts.length<2)return "";
+    const d=pts.map((p,i)=>(i?"L":"M")+X(p.t).toFixed(1)+","+Y(p.dir).toFixed(1)).join("");
+    return `<path d="${d}" fill="none" stroke="${dash?"#12283A":"#0E7C94"}" stroke-width="2"${dash?` stroke-dasharray="5 4"`:""}/>`;
+  };
+  g+=path(fc,true);
+  g+=path(obs,false);
+  obs.forEach(p=>{ g+=`<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.dir).toFixed(1)}" r="2.5" fill="#0E7C94"/>`; });
+  g+=`<line x1="${L}" y1="${T+PH}" x2="${W-R}" y2="${T+PH}" stroke="#48627A" stroke-width="1"/>`;
+  g+=`</svg>`;
+  g+=`<div style="display:flex;gap:14px;justify-content:center;font-size:11px;color:#3A6A7D;margin-top:2px">
+    <span><span style="display:inline-block;width:14px;height:2px;background:#0E7C94;vertical-align:middle;margin-right:4px"></span>Observed (from)</span>
+    <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #12283A;vertical-align:middle;margin-right:4px"></span>Forecast</span>
+  </div>`;
+  host.innerHTML=g;
+}
 function dbbFetch(){
   const st=$("dbbStat");
   const offline=()=>(typeof navigator!=="undefined"&&navigator.onLine===false);
-  if(offline()){ window.dbbBusy=false; windAvail();
+  if(offline()){ window.dbbBusy=false; windAvail(); buoyDashRender();
     if(st)st.textContent="No data connection."; return; }
   window.dbbBusy=true; windAvail();
   if(st)st.textContent="fetching\u2026";
   const KEY="sb_publishable_R5KkIpbiwNajUyx3I4aewQ_S4NI8hl3";
-  fetch("https://api.dublinbaybuoy.com/rest/v1/readings?select=timestamp,avg_wind,wind_dir,gust_speed&order=timestamp.desc&limit=1",
+  fetch("https://api.dublinbaybuoy.com/rest/v1/readings?select=timestamp,avg_wind,wind_dir,gust_speed,gust_dir,wave_height,water_temp&order=timestamp.desc&limit=1",
     {headers:{apikey:KEY}})
     .then(r=>{ if(!r.ok)throw new Error("HTTP "+r.status); return r.json(); })
     .then(rows=>{
       window.dbbBusy=false;
       const row=rows&&rows[0];
-      if(!row||row.wind_dir==null||row.avg_wind==null){ windAvail();
+      if(!row||row.wind_dir==null||row.avg_wind==null){ windAvail(); buoyDashRender();
         if(st)st.textContent="Buoy has no current reading (the Irish Lights feed may be offline)."; return; }
       const ageMin=(Date.now()-new Date(row.timestamp).getTime())/60000;
       setUsed(row.wind_dir,"dbb");
       setUsedSpd(row.avg_wind,"dbb");
       if(row.gust_speed!=null)setUsedGst(row.gust_speed,"dbb");
+      BUOY={windDir:row.wind_dir,gustDir:row.gust_dir,avgWind:row.avg_wind,gustSpeed:row.gust_speed,
+        waveHeight:row.wave_height,waterTemp:row.water_temp,ts:row.timestamp};
       try{render();}catch(e){}
-      windAvail();
+      windAvail(); buoyDashRender();
       if(st)st.textContent=`Dublin Bay Buoy: ${Math.round(row.wind_dir)}\u00B0 / ${row.avg_wind.toFixed(1)} kt`+
         (ageMin>90?` \u2014 ${Math.round(ageMin)} min old, feed may be stale`:` \u2014 ${Math.round(ageMin)} min old`);
     })
     .catch(e=>{
-      window.dbbBusy=false; windAvail();
+      window.dbbBusy=false; windAvail(); buoyDashRender();
       if(st)st.textContent=`Buoy fetch failed (${e.message}). Tap to try again.`;
     });
+}
+function buoyDashRender(){
+  const set=(id,txt)=>{ const el=$(id); if(el)el.textContent=txt; };
+  const dash="\u2013";
+  set("bdWind",BUOY.windDir!=null?Math.round(BUOY.windDir)+"\u00B0":dash);
+  set("bdGust",BUOY.gustDir!=null?Math.round(BUOY.gustDir)+"\u00B0":dash);
+  set("bdAvgWind",BUOY.avgWind!=null?BUOY.avgWind.toFixed(1):dash);
+  set("bdGustSpd",BUOY.gustSpeed!=null?BUOY.gustSpeed.toFixed(1):dash);
+  set("bdWave",BUOY.waveHeight!=null?BUOY.waveHeight.toFixed(2)+" m":dash);
+  set("bdTemp",BUOY.waterTemp!=null?BUOY.waterTemp.toFixed(1)+"\u00B0C":dash);
+  const ds=douglasState(BUOY.waveHeight);
+  set("bdSea",ds?ds.degree+" \u00B7 "+ds.name:dash);
+  const ageEl=$("bdAge");
+  if(ageEl)ageEl.textContent=BUOY.ts?Math.round((Date.now()-new Date(BUOY.ts).getTime())/60000)+" min ago":"no reading yet";
 }
 
 // ---------- seeding the oscillation band: from the forecast before the start, from observations during ----------
@@ -1973,6 +2197,7 @@ function garminCompassBuild(){
   let s="";
   s+=`<circle cx="${cx}" cy="${cy}" r="${R+8}" fill="#fff" stroke="#12283A" stroke-width="4"/>`;
   s+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="#fff" stroke="#B7C2CC" stroke-width="1.5"/>`;
+  s+=`<g id="garminRing" transform="rotate(0 ${cx} ${cy})">`;
   // tick marks every 10 degrees, longer every 30
   for(let d=0;d<360;d+=10){
     const a=rad(d), major=d%30===0;
@@ -1981,17 +2206,18 @@ function garminCompassBuild(){
     s+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#8A97A3" stroke-width="${major?2:1}"/>`;
   }
   const LBL=[["N",0],["NE",45],["E",90],["SE",135],["S",180],["SW",225],["W",270],["NW",315]];
-  s+=`<circle cx="${cx}" cy="${cy}" r="5" fill="#12283A"/>`;
-  // pointer group, rotated per-fix; a filled triangle from centre out to the ring
-  s+=`<g id="garminPtr" transform="rotate(0 ${cx} ${cy})">
-      <polygon points="${cx-13},${cy} ${cx+13},${cy} ${cx},${cy-R+18}" fill="#B4232F" stroke="#fff" stroke-width="2"/>
-      <polygon points="${cx-13},${cy} ${cx+13},${cy} ${cx},${cy+34}" fill="#7A1620"/>
-    </g>`;
-  // labels last so they always stay legible on top of the needle, whatever it's pointing at
+  // labels rotate together with the ring as one group, same as a real compass card
   LBL.forEach(([t,d])=>{
     const a=rad(d), r=R-30, x=cx+r*Math.sin(a), y=cy-r*Math.cos(a)+6;
     s+=`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${t.length>1?15:19}" font-weight="800" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="3" paint-order="stroke">${t}</text>`;
   });
+  s+=`</g>`;
+  s+=`<circle cx="${cx}" cy="${cy}" r="5" fill="#12283A"/>`;
+  // pointer group, rotated per-fix relative to the ring; a filled triangle from centre out to the ring
+  s+=`<g id="garminPtr" transform="rotate(0 ${cx} ${cy})">
+      <polygon points="${cx-13},${cy} ${cx+13},${cy} ${cx},${cy-R+18}" fill="#B4232F" stroke="#fff" stroke-width="2"/>
+      <polygon points="${cx-13},${cy} ${cx+13},${cy} ${cx},${cy+34}" fill="#7A1620"/>
+    </g>`;
   svg.innerHTML=s;
 }
 function garminFmtClock(ms){
@@ -2024,7 +2250,7 @@ function garminLabelsSync(){
 function garminRender(pos){
   garminCompassBuild();
   const co=$("gCourse"),sp=$("gSpeed"),br=$("gBrg"),ds=$("gDist"),vg=$("gVmg"),vc=$("gVmc"),et=$("gEta"),tm=$("gTime"),
-        ptr=$("garminPtr");
+        ptr=$("garminPtr"), ring=$("garminRing");
   if(!sp)return;
   const me=[pos.coords.latitude,pos.coords.longitude];
   const cog=pos.coords.heading!=null&&isFinite(pos.coords.heading)?pos.coords.heading:null;
@@ -2035,6 +2261,11 @@ function garminRender(pos){
   const compassOk=COMPASS.active&&COMPASS.heading!=null&&isFinite(COMPASS.heading);
   const courseVal=cog!=null?cog:(compassOk?COMPASS.heading:null), courseIsCompass=cog==null&&compassOk;
   if(co)co.textContent = courseVal!=null ? String(Math.round(courseVal)).padStart(3,"0")+"\u00B0"+(courseIsCompass?"*":"") : "\u2013";
+  // Course-up: rotate the whole ring so the current heading sits at the top, same source as the
+  // Course tile above (GPS course-over-ground, falling back to the magnetic compass when
+  // stationary). Falls back to north-up (0) only when neither heading source is available at all.
+  const heading=courseVal!=null?courseVal:0;
+  if(ring)ring.setAttribute("transform",`rotate(${(-heading).toFixed(1)} 150 150)`);
   sp.innerHTML = sog!=null ? `${sog.toFixed(1)}<span class="garmin-unit">kt</span>` : `&ndash;<span class="garmin-unit">kt</span>`;
   // VMG: speed made good along the wind axis (signed, negative when running/reaching away from it)
   if(vg){
@@ -2065,7 +2296,7 @@ function garminRender(pos){
     if(tm)tm.textContent = `${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
     if(et)et.textContent = garminFmtClock(Date.now()+totalSec*1000);
   } else { if(tm)tm.textContent="\u2013"; if(et)et.textContent="\u2013"; }
-  if(ptr)ptr.setAttribute("transform",`rotate(${bd.brg.toFixed(1)} 150 150)`);
+  if(ptr)ptr.setAttribute("transform",`rotate(${(bd.brg-heading).toFixed(1)} 150 150)`);
 }
 function garminInit(){ const b=$("garminBtn"); if(b)b.onclick=gpsToggle; garminCompassBuild(); }
 // Header GO button: a real on/off toggle for location. ON starts location tracking (which is
@@ -2087,7 +2318,13 @@ function goBtnInit(){
     const turningOn=GPS.watch==null;
     gpsToggle();
     if(turningOn){
-      try{ if(WIND.forecast!==null&&(WIND.observed!==null||WIND.manual!==null))fcResume(); else trendFetch(); }catch(e){}
+      try{
+        // Forecast still gets fetched (it feeds the persistent-trend model and is the fallback
+        // if the buoy is unreachable), but the buoy fetch is chained to run after it settles,
+        // so the buoy reliably ends up as the active wind source rather than racing it.
+        if(WIND.forecast!==null&&(WIND.observed!==null||WIND.manual!==null)){ fcResume(); dbbFetch(); }
+        else trendFetch().then(dbbFetch).catch(dbbFetch);
+      }catch(e){}
       try{ compassStart(); }catch(e){}   // must be called synchronously within this click for iOS's permission prompt
     }
     goBtnPaint();
@@ -2286,7 +2523,12 @@ function rtInit(){
 }
 function buildPickers(){
   $("boatbtns").innerHTML=Object.keys(BOATS).map(k=>`<button class="pick" data-b="${k}">${BOATS[k].label}</button>`).join("");
-  $("boatbtns").onclick=e=>{if(e.target.dataset.b){setBoat(e.target.dataset.b);render();RT.lastWhole=null;rtInfo();}};
+  $("boatbtns").onclick=e=>{if(e.target.dataset.b){setBoat(e.target.dataset.b);
+    if(TIME.cardChosen){                         // a card is already locked in: its start time
+      const g=nextCardGun(state.card,Date.now()); // depends on the boat's class, so refresh it too
+      if(g!=null){TIME.user=g; TIME.src="user";}
+    }
+    render();RT.lastWhole=null;rtInfo();}};
   $("cardbtns").innerHTML=Object.keys(CARDS).map(k=>`<button class="pick" data-c="${k}">${CARDS[k].btn}</button>`).join("");
   $("cardbtns").onclick=e=>{if(e.target.dataset.c){state.card=e.target.dataset.c;state.num=Math.min(state.num,(CARDS[state.card].courses[state.letter]||[]).length||8);buildNums();
     TIME.cardChosen=true;                        // you picked the card, so the programme stops moving it
@@ -2313,6 +2555,7 @@ function buildPickers(){
      else trendFetch();
    };
    const db=$("dbbFetch"); if(db)db.onclick=dbbFetch;
+   const bdr=$("bdRefresh"); if(bdr)bdr.onclick=()=>{ dbbFetch(); dbbTrendFetch(); };
    const rb=$("trRate"); if(rb){rb.onchange=trendManual; rb.oninput=null;}
    const mf=$("trManual"); if(mf)mf.onclick=getForecastManual;
    const pg=$("trPasteGo"); if(pg)pg.onclick=trendPasteGo;
@@ -2325,7 +2568,7 @@ function buildPickers(){
                      if(obsStats())bandFromObserved(true); },60000);
    windAvail();}
   rtInit();
-  const tf=$("tflow"); if(tf)tf.addEventListener("input",drawTideFlow);
+  const tf=$("tflow"); if(tf)tf.addEventListener("input",()=>{ drawTideFlow(); try{drawTideCurve();}catch(e){} });
   posMapInit();
   mapInit();
   garminInit();
