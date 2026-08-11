@@ -28,9 +28,9 @@ header{padding:12px 14px 10px;background:#FFF6D0;border-radius:12px;margin:6px 0
 input[type=range]{-webkit-appearance:none;appearance:none;height:34px;background:transparent}
 input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:#C9D6DF}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;border-radius:50%;background:#12283A;margin-top:-11px;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}
-.legpanel .leginfo{padding-top:2px;grid-template-columns:repeat(2,1fr);gap:10px 20px;font-size:12.5px;line-height:1.35}
+.legpanel .leginfo{padding-top:2px;grid-template-columns:repeat(3,auto);justify-content:space-between;gap:8px 14px;font-size:11.5px;line-height:1.25}
 .legpanel .leginfo, .legpanel .leginfo *{color:#111}
-.legpanel .leginfo b{color:#000;font-size:16.5px}
+.legpanel .leginfo b{color:#000;font-size:13.5px;white-space:nowrap}
 .legpanel .why{grid-column:1/-1;margin:2px 0 4px}
 .legpanel .why div{margin:3px 0;font-size:13px;line-height:1.45;color:#0E6074}
 .legpanel .why .whyhead{font-weight:800;font-size:13.5px}
@@ -191,11 +191,11 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
   <div style="font-weight:700;color:#0B4A63;font-size:12.5px;margin-bottom:2px">Wind Direction</div>
   <div id="dbbDirChart" style="background:#fff;border-radius:10px;padding:8px 4px;margin-bottom:10px"></div>
   <div class="inrow" style="margin-bottom:4px">
+    <div style="flex:1"><label>Avg direction</label><div class="buoytile" id="bdAvgDir6">&ndash;</div></div>
     <div style="flex:1"><label>Avg speed (kt)</label><div class="buoytile" id="bdAvgSpd6">&ndash;</div></div>
     <div style="flex:1"><label>Max speed (kt)</label><div class="buoytile" id="bdMaxSpd6">&ndash;</div></div>
-    <div style="flex:1"><label>Avg direction</label><div class="buoytile" id="bdAvgDir6">&ndash;</div></div>
   </div>
-  <div style="font-size:11px;color:#3A6A7D;margin-top:6px">Average direction is a proper circular mean, not a plain average, so it handles the 360\u00B0/0\u00B0 wrap correctly (e.g. readings of 350\u00B0 and 10\u00B0 average to about 0\u00B0, not 180\u00B0). The chart plots raw degrees, so a genuine wrap crossing (say 350\u00B0 to 10\u00B0) will show as a jump top-to-bottom on the axis, rather than the short way round.</div>
+  <div style="font-size:11px;color:#3A6A7D;margin-top:6px">Average direction is a proper circular mean, not a plain average, so it handles the 360&deg;/0&deg; wrap correctly (e.g. readings of 350&deg; and 10&deg; average to about 0&deg;, not 180&deg;). The chart plots raw degrees, so a genuine wrap crossing (say 350&deg; to 10&deg;) will show as a jump top-to-bottom on the axis, rather than the short way round.</div>
 </details>
 
 <details class="notes" id="tidetab" style="background:#0B5D3C;color:#fff;border:1px solid #073F29">
@@ -244,6 +244,17 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
   <div id="rtInfo" style="font-size:14px;color:#C9DFEC;line-height:1.55;margin-top:12px"></div>
 </details>
 
+<details class="notes" id="tabletab"><summary>Course Table</summary>
+  <div class="badge"><div class="big" id="courseName">C1</div><div class="sub" id="courseSummary"></div></div>
+  <table id="legTable"></table>
+  <div class="tot">
+    <div>Rhumb<br><b class="mono" id="totDist">&ndash;</b> NM</div>
+    <div>Est sailed<br><b class="mono" id="totSail">&ndash;</b> NM</div>
+    <div>Est time<br><b class="mono" id="totTime">&ndash;</b></div>
+    <div>Hoists<br><b class="mono" id="totHoist">&ndash;</b></div>
+  </div>
+</details>
+
 <details class="notes" id="charttab"><summary>Course Chart</summary>
   <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
   <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
@@ -258,17 +269,6 @@ svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-rad
     </div>
     <svg id="miniLegSvg" viewBox="0 0 360 250" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;margin-top:6px;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA;touch-action:pan-y"></svg>
     <div class="tot leginfo" id="miniLegInfo"></div>
-  </div>
-</details>
-
-<details class="notes" id="tabletab"><summary>Course Table</summary>
-  <div class="badge"><div class="big" id="courseName">C1</div><div class="sub" id="courseSummary"></div></div>
-  <table id="legTable"></table>
-  <div class="tot">
-    <div>Rhumb<br><b class="mono" id="totDist">&ndash;</b> NM</div>
-    <div>Est sailed<br><b class="mono" id="totSail">&ndash;</b> NM</div>
-    <div>Est time<br><b class="mono" id="totTime">&ndash;</b></div>
-    <div>Hoists<br><b class="mono" id="totHoist">&ndash;</b></div>
   </div>
 </details>
 
@@ -642,12 +642,28 @@ function interp(xs,ys,x){
   return ys[ys.length-1];
 }
 function nearestIdx(arr,v){let bi=0,bd=1e9;arr.forEach((a,i)=>{const d=Math.abs(a-v);if(d<bd){bd=d;bi=i;}});return bi;}
+// Downwind rig differs by boat, and the SAILS table above is a single global lookup written
+// around the sprit boats' asymmetric wardrobe (A1-A4). Red Tape carries one symmetric kite on an
+// end-for-end pole, so those four labels collapse to a single sail for her, and the foredeck
+// advice below has to describe pole work rather than sprit work.
+const RIG={
+  etap28i:{kite:"sym", gear:"end-for-end pole", kiteLabel:"Kite"},
+  j122:   {kite:"asym", gear:"bowsprit"},
+  j109:   {kite:"asym", gear:"bowsprit"}
+};
+function rigOf(){ return RIG[(state&&state.boat)||"etap28i"]||RIG.etap28i; }
+const isKite=s=>/^A[1-4]\*?$/.test(s)||/^Kite\*?$/.test(s);
 function sailFor(twa,tws){
   const upT=interp(P_TWS,P_UP.twa,tws);
   const rowTwa = twa<S_TWA[0] ? upT : twa;        // beats read the chart at the target beat TWA
   let r=0; for(let i=0;i<S_TWA.length;i++) if(S_TWA[i]<=rowTwa) r=i;  // floor row (matches CourseCalc V3)
   const c=Math.min(Math.max(Math.round(tws)-S_TWS0,0),SAILS[0].length-1);
-  return SAILS[r][c];
+  const raw=SAILS[r][c];
+  const rig=rigOf();
+  // One symmetric kite covers the whole spinnaker range, so any A-sail becomes that one sail.
+  // The trailing * (meaning reefed//heavy) is preserved, it is a condition flag not a sail name.
+  if(rig.kite==="sym"&&/^A[1-4]/.test(raw)) return (rig.kiteLabel||"Kite")+(raw.endsWith("*")?"*":"");
+  return raw;
 }
 function legModel(twa,tws){
   const upT=interp(P_TWS,P_UP.twa,tws), dnT=interp(P_TWS,P_DN.twa,tws);
@@ -1562,13 +1578,11 @@ function drawWindDirChart(){
   const fc=(FC.data&&FC.data.time&&FC.data.dir)
     ? FC.data.time.map((t,i)=>({t:(typeof t==="number"?t*1000:new Date(t).getTime()), dir:FC.data.dir[i]}))
         .filter(p=>p.dir!=null&&isFinite(p.t)) : [];
-  // Temporary diagnostic strip: reports what the chart actually has to work with, so a screenshot
-  // is enough to tell whether the problem is missing data or unusable timestamps. Remove once the
-  // Safari-only empty-chart issue is confirmed fixed.
+  // Are the observed timestamps usable? If not, the chart falls back to plotting readings by
+  // their order of arrival further below, rather than showing nothing at all.
   const tsOk = obs.length>0 && obs.every(p=>isFinite(p.t));
-  const diag=`<div style="font-size:10px;color:#7A97A8;text-align:center;margin-top:2px">diag: obs=${obs.length} ts${tsOk?"OK":"BAD"} fc=${fc.length}${obs.length?" raw0="+String(obs[0].t):""}</div>`;
   if(!obs.length&&!fc.length){
-    host.innerHTML=`<div style="font-size:12px;color:#3A6A7D;padding:10px 0">No direction history yet \u2014 tap Refresh above, and fetch a forecast from Weather settings, to see the trend.</div>`+diag;
+    host.innerHTML=`<div style="font-size:12px;color:#3A6A7D;padding:10px 0">No direction history yet \u2014 tap Refresh above, and fetch a forecast from Weather settings, to see the trend.</div>`;
     return;
   }
   const W=320,H=170,L=34,R=10,T=10,B=24, PW=W-L-R, PH=H-T-B;
@@ -1592,7 +1606,7 @@ function drawWindDirChart(){
     obs.forEach((p,i)=>{ if(n<=8||i%Math.ceil(n/8)===0)g+=`<text x="${Xi(i).toFixed(1)}" y="${H-8}" font-size="9" text-anchor="middle" fill="#48627A">${i+1}</text>`; });
     g+=`<line x1="${L}" y1="${T+PH}" x2="${W-R}" y2="${T+PH}" stroke="#48627A" stroke-width="1"/></svg>`;
     g+=`<div style="font-size:11px;color:#3A6A7D;text-align:center;margin-top:2px">Readings in order (oldest to newest), not to time scale.</div>`;
-    host.innerHTML=g+diag;
+    host.innerHTML=g;
     return;
   }
   // Window: 6h of observed history through to the end of whatever forecast is cached
@@ -1622,8 +1636,12 @@ function drawWindDirChart(){
     <span><span style="display:inline-block;width:14px;height:2px;background:#0E7C94;vertical-align:middle;margin-right:4px"></span>Observed (from)</span>
     <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #12283A;vertical-align:middle;margin-right:4px"></span>Forecast</span>
   </div>`;
-  host.innerHTML=g+diag;
+  host.innerHTML=g;
 }
+// Both buoy fetches together: the current reading (tiles) and the 6-hour history (chart).
+// Every caller should use this rather than dbbFetch alone, otherwise the tiles populate but the
+// direction chart stays empty until the user happens to press Refresh.
+function dbbFetchAll(){ dbbFetch(); dbbTrendFetch(); }
 function dbbFetch(){
   const st=$("dbbStat");
   const offline=()=>(typeof navigator!=="undefined"&&navigator.onLine===false);
@@ -2433,8 +2451,8 @@ function goBtnInit(){
         // Forecast still gets fetched (it feeds the persistent-trend model and is the fallback
         // if the buoy is unreachable), but the buoy fetch is chained to run after it settles,
         // so the buoy reliably ends up as the active wind source rather than racing it.
-        if(WIND.forecast!==null&&(WIND.observed!==null||WIND.manual!==null)){ fcResume(); dbbFetch(); }
-        else trendFetch().then(dbbFetch).catch(dbbFetch);
+        if(WIND.forecast!==null&&(WIND.observed!==null||WIND.manual!==null)){ fcResume(); dbbFetchAll(); }
+        else trendFetch().then(dbbFetchAll).catch(dbbFetchAll);
       }catch(e){}
       try{ compassStart(); }catch(e){}   // must be called synchronously within this click for iOS's permission prompt
     }
@@ -2665,8 +2683,8 @@ function buildPickers(){
      if(WIND.forecast!==null&&(WIND.observed!==null||WIND.manual!==null)) fcResume();
      else trendFetch();
    };
-   const db=$("dbbFetch"); if(db)db.onclick=dbbFetch;
-   const bdr=$("bdRefresh"); if(bdr)bdr.onclick=()=>{ dbbFetch(); dbbTrendFetch(); };
+   const db=$("dbbFetch"); if(db)db.onclick=dbbFetchAll;
+   const bdr=$("bdRefresh"); if(bdr)bdr.onclick=dbbFetchAll;
    const rb=$("trRate"); if(rb){rb.onchange=trendManual; rb.oninput=null;}
    const mf=$("trManual"); if(mf)mf.onclick=getForecastManual;
    const pg=$("trPasteGo"); if(pg)pg.onclick=trendPasteGo;
@@ -3442,6 +3460,7 @@ function drawLeg(r,idx,wdir,wspd){
   let target=null; if(L.pos==="Beat")target=upT; else if(L.pos==="Run")target=dnT;
   const effOff=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off+elapsed:null;
   let stL=effOff!==null?streamAtPos(legMid(L),effOff,TIDECTX.range):null;  // stream over this leg
+  const stLTrue=stL;                         // real stream, kept for the ladder even in wind-only view
   if(state.viewMode==="wind")stL=null;                               // wind-only view: still water
   const frL=a=>a-co;                         // leg frame (course-up) for route geometry
   const corners=[];                          // [sgn, x NM, y NM] in the LEG frame (over the ground)
@@ -3492,6 +3511,41 @@ function drawLeg(r,idx,wdir,wspd){
   };
   let s="";
   s+=`<line x1="0" y1="${bandH}" x2="${W}" y2="${bandH}" stroke="#D8E0E6" stroke-width="1"/>`;
+  // Ladder rungs: faint grey lines parallel to the two boards, so a live track can be read
+  // against the expected angle. Always built in the GROUND frame (boat velocity plus the real
+  // tide), even in the wind-only view where the drawn boards ignore tide. That is deliberate:
+  // the GPS track is recorded over the ground, so ground-frame rungs are the only comparison
+  // that stays honest. In wind-only view the rungs will therefore sit at an angle to the drawn
+  // boards whenever tide is running, which is the real offset, not a drawing error.
+  if(target!==null){
+    const VbL=interp(P_TWS,(L.pos==="Beat"?P_UP:P_DN).vel,wspd);
+    const TvL=(stLTrue&&!stLTrue.slack)
+      ? [stLTrue.kt*Math.sin(rad(stLTrue.dir-co)), stLTrue.kt*Math.cos(rad(stLTrue.dir-co))] : [0,0];
+    const o=F(0,0);
+    const dirs=[1,-1].map(sg=>{
+      const h=frL(wdir+sg*target);
+      const g=[VbL*Math.sin(rad(h))+TvL[0], VbL*Math.cos(rad(h))+TvL[1]];   // ground velocity
+      const p=F(g[0],g[1]);                                                 // F is affine, so this
+      return [p[0]-o[0], p[1]-o[1]];                                        // gives the screen direction
+    });
+    const plotX0=6,plotY0=bandH+2,plotX1=W-6,plotY1=H-6;
+    const pcx=(plotX0+plotX1)/2, pcy=(plotY0+plotY1)/2;
+    const diag=Math.hypot(plotX1-plotX0,plotY1-plotY0);
+    s+=`<clipPath id="legLadderClip"><rect x="${plotX0}" y="${plotY0}" width="${plotX1-plotX0}" height="${plotY1-plotY0}"/></clipPath>`;
+    s+=`<g clip-path="url(#legLadderClip)">`;
+    const SPACING=26;                                   // px between rungs
+    for(const dv of dirs){
+      const len=Math.hypot(dv[0],dv[1]); if(len<1e-6)continue;
+      const ux=dv[0]/len, uy=dv[1]/len;                 // along the board, on screen
+      const nx=-uy, ny=ux;                              // perpendicular: the offset direction
+      const n=Math.ceil(diag/SPACING);
+      for(let k=-n;k<=n;k++){
+        const ox=pcx+nx*k*SPACING, oy=pcy+ny*k*SPACING;
+        s+=`<line x1="${(ox-ux*diag).toFixed(1)}" y1="${(oy-uy*diag).toFixed(1)}" x2="${(ox+ux*diag).toFixed(1)}" y2="${(oy+uy*diag).toFixed(1)}" stroke="#8A97A3" stroke-width="1" opacity="0.16"/>`;
+      }
+    }
+    s+=`</g>`;
+  }
   // rhumb
   const [ax0,ay0]=F(0,0),[bx0,by0]=F(0,D);
   s+=`<line x1="${ax0}" y1="${ay0}" x2="${bx0}" y2="${by0}" stroke="#48627A" stroke-width="2" stroke-dasharray="7 5"/>`;
@@ -3751,6 +3805,20 @@ function drawLeg(r,idx,wdir,wspd){
   // inside the existing frame it is simply not drawn. Nothing about the diagram changes.
   if(typeof GPS!=="undefined"&&GPS.last&&GPS.watch!=null&&L.from&&L.from.pos){
     const me=[GPS.last.coords.latitude,GPS.last.coords.longitude];
+    // Track sailed so far, pushed through the same transform as the live fix. Points that fall
+    // outside the frame are dropped rather than clamped, so the line never bends to a false
+    // position; the path simply starts where it enters the diagram.
+    if(typeof TRACK!=="undefined"&&TRACK.length>1){
+      let seg=[];
+      const flush=()=>{ if(seg.length>1)s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="#FF6A13" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>`; seg=[]; };
+      for(const pt of TRACK){
+        const tb=brgDist(L.from.pos,[pt.lat,pt.lon]);
+        const tp=F(tb.dist*Math.sin(rad(tb.brg-co)), tb.dist*Math.cos(rad(tb.brg-co)));
+        if(tp[0]>=14&&tp[0]<=W-14&&tp[1]>=28&&tp[1]<=H-28) seg.push(tp[0].toFixed(1)+","+tp[1].toFixed(1));
+        else flush();
+      }
+      flush();
+    }
     const bd=brgDist(L.from.pos,me);                                   // from the leg's start mark
     const bnx=bd.dist*Math.sin(rad(bd.brg-co)), bny=bd.dist*Math.cos(rad(bd.brg-co));  // leg frame, NM
     const bp=F(bnx,bny);
@@ -3764,31 +3832,6 @@ function drawLeg(r,idx,wdir,wspd){
     }
   }
   svg.innerHTML=s;
-  // rounding advice, three parts: arrive on <side>, round <mark> to <hand>, then <verb>
-  let roundTxt="";
-  if(idx>0&&L.from.side&&L.from.side!=="F"){
-    const ai=arrivalInfo(r,idx,wdir,wspd);
-    const Hi=ai.heading;
-    const atStbd=(((wdir-Hi+540)%360)-180)>0;               // tack carried through the rounding
-    let Ho=null, open=false;
-    if(target!==null){
-      // pref is geographic (right=+1); on a run the right-hand board is wdir-target, not
-      // wdir+target (the mirror of a beat), so the sign needs flipping before use here.
-      if(pref!==null){ const windPref=(L.pos==="Run")?-pref:pref; Ho=norm(wdir+windPref*target); }
-      else{open=true;Ho=norm(wdir+(atStbd?-1:1)*target);}   // first option: the same-side board
-    } else Ho=co;
-    const turn=L.from.side==="P"?-1:1;                       // mark to port -> turn left
-    const sweep=(((Ho-Hi)*turn%360)+360)%360;
-    const da=a=>(((a-Hi)*turn+3)%360+360)%360;
-    const dW=da(wdir), dL=da(norm(wdir+180));
-    const crossW=dW<=sweep+3, crossL=dL<=sweep+3;
-    let verb;
-    if(crossW&&(!crossL||dW<=dL))verb="tack";                // bow crosses the wind first
-    else if(crossL)verb="gybe";                              // stern crosses the wind first
-    else{const to_=angdiff(wdir,Ho);verb=to_<ai.ti-5?"harden up":to_>ai.ti+5?"bear away":"carry on";}
-    const hand=L.from.side==="P"?"port":"starboard";
-    roundTxt=`Arrive on ${ai.side}${ai.preTack?", tack":ai.preGybe?", gybe":""}, round ${L.from.name||L.from.m} to ${hand}, then ${verb}${open?" (or keep rounding for the far side)":""}`;
-  }
   const gustDiff=L.gsail!==L.sail;
   let dPref=L.sailed, estMin=L.time*60, splitTxt="", estSplit="";  // routed distance, tide-aware time, board time split
   if(target!==null){
@@ -3834,15 +3877,28 @@ function drawLeg(r,idx,wdir,wspd){
         <td>Route</td><td>1st leg</td><td></td><td>2nd leg</td><td></td></tr>
       ${rows}</table></div>`;
   }
-  let adviceHTML="";
-  try{ adviceHTML=renderAdviceHTML(computeLegAdvice(r,idx,wdir,wspd))+nextArrivalPreviewHTML(r,idx,wdir,wspd); }catch(e){}
-  $("leginfo").innerHTML=verdictHTML+(roundTxt?`<div class="roundline">${roundTxt}</div>`:"")+(sideTxt?`<div class="why">${sideTxt}</div>`:"")+routesHTML+`
+  // The long advice sentence now leads (it says everything the old short heading did, plus the
+  // course to steer, apparent wind and sail), the numeric breakdown sits under the grid, and
+  // the next mark gets the same full treatment at the very bottom.
+  let leadHTML="",breakdownHTML="",nextHTML="";
+  try{
+    const advNow=computeLegAdvice(r,idx,wdir,wspd);
+    leadHTML=adviceSentenceHTML(advNow);
+    breakdownHTML=adviceBreakdownHTML(advNow);
+    let advNext=null;
+    if(idx+1<r.legs.length){
+      advNext=computeLegAdvice(r,idx+1,wdir,wspd);
+      nextHTML=adviceSentenceHTML(advNext,{prefix:"Then ",muted:true});
+    }
+    breakdownHTML=spinnakerCallHTML(advNow,advNext,L.twa)+breakdownHTML;
+  }catch(e){}
+  $("leginfo").innerHTML=verdictHTML+leadHTML+(sideTxt?`<div class="why">${sideTxt}</div>`:"")+routesHTML+`
     <div>Leg<br><b>${L.pos.replace(" ","&nbsp;")}</b></div>
     <div>TWA / AW<br><b class="mono">${Math.round(L.twa)}\u00B0 ${L.tack}${Math.round(L.awa)}\u00B0</b></div>
     <div>Sail<br><b>${gustDiff?L.sail+"\u2192<br>"+L.gsail:L.sail}</b></div>
     <div class="row2">Dist (course)<br><b class="mono">${dPref.toFixed(1)}'${splitTxt}</b></div>
     <div class="row2">Tgt VMG<br><b class="mono">${L.smg.toFixed(1)}kt</b></div>
-    <div class="row2">Est<br><b class="mono">${Math.round(estMin)} min${estSplit}</b></div>${adviceHTML}`;
+    <div class="row2">Est<br><b class="mono">${Math.round(estMin)} min${estSplit}</b></div>`+breakdownHTML+nextHTML;
 }
 
 // ---------- Course Chart mini leg panel: leg shape, course to steer, tactical numbers, one side ----------
@@ -4012,6 +4068,65 @@ function computeLegAdvice(r,idx,wdir,wspd){
     firstPct, firstTimeMin, tackAngle, legIsRun:L.pos==="Run", tideOffsetDeg, tideOffsetSide, sail:L.sail,
     tideMin:sp.tideMin, shiftMin:sp.shiftMin, netMin:sp.netPlus, pWin:sp.pWin, pref:sp.pref};
 }
+// Foredeck call for a spinnaker leg. Everything here follows from geometry the advice object
+// already carries, plus the boat's rig. The one universal rule is that the hoist happens to
+// leeward, in the wind shadow of the main, so the sail cannot fill until it is up; leeward is
+// simply the opposite side to the boom, i.e. the opposite side to the tack you are on.
+// Deliberately advisory: it states the standard call, and the helm still owns the decision in
+// breeze or short-handed.
+// twa is the leg's true wind angle, needed for the tight-angle warning below.
+function spinnakerCallHTML(a,nextAdv,twa){
+  if(!a||!isKite(a.sail))return "";
+  const rig=rigOf(), sym=rig.kite==="sym";
+  // The SAILS table calls for a kite from TWA 110 up, which suits a sprit boat's asymmetric.
+  // A symmetric on a fixed pole cannot be braced as far forward, so those tightest rows are
+  // optimistic for Red Tape: marginal from about 120 down, and past the pole's useful range
+  // near 110. Warn rather than silently change the sail, since it is a judgement call on the
+  // day (crew, breeze, sea state) and the helm may still choose to carry it.
+  let warnHTML="";
+  if(sym&&twa!=null&&isFinite(twa)&&twa<=120){
+    const hard=twa<=110;
+    warnHTML=`<div class="span" style="margin-top:4px;font-size:11.5px;line-height:1.45;color:#7A1620;background:#FDECEC;border:1px solid #E8B4B4;border-radius:8px;padding:6px 9px">`+
+      `<b>${hard?"Too tight for the pole":"Tight for the pole"}</b> \u00B7 TWA ${Math.round(twa)}\u00B0. `+
+      (hard
+        ? `A symmetric kite cannot be braced this far forward. Expect the genoa to be as quick and far easier to hold.`
+        : `Marginal for a symmetric: pole well forward and eased, tack down, and be ready to drop if it will not stay full.`)+
+      ` The sail table is written around the sprit boats' asymmetrics, which carry tighter than Red Tape can.</div>`;
+  }
+  // Tack sailed on this leg comes from the board heading vs the wind: wind on starboard side
+  // means starboard tack, boom to port, so leeward (and the hoist) is to port.
+  const parts=[];
+  if(a.Ho!=null){
+    const rel=((wdirOf()-a.Ho+540)%360)-180;         // + = wind off the starboard bow/quarter
+    const onStbdTack=rel>0;
+    const hoistSide=onStbdTack?"port":"starboard";   // leeward side
+    parts.push(`<b>Hoist to ${hoistSide}</b> (leeward, blanketed by the main)`);
+    if(sym)parts.push(`pole to ${onStbdTack?"starboard":"port"}`);
+    else parts.push(`tack line to the sprit`);
+  } else {
+    parts.push(`<b>Hoist to leeward</b>, blanketed by the main`);
+  }
+  // Set type: a gybe at the rounding makes it a gybe set, otherwise the standard bear-away set.
+  const setType=(a.manoeuvre1&&/gybe/i.test(a.manoeuvre1))?"gybe set":"bear-away set";
+  parts.push(setType);
+  const line1=`Spinnaker: ${parts.join(", ")}.`;
+  // Gybe handling mid-leg, and the drop at the far end of this leg (which is where the NEXT
+  // leg's advice describes the rounding).
+  let line2="";
+  const bits=[];
+  if(sym)bits.push("gybe end-for-end");
+  else bits.push("inside gybe if the downhaul is over the sheets, outside if under");
+  if(nextAdv){
+    const dropWindward=/gybe/i.test(nextAdv.manoeuvre1||"");
+    bits.push(dropWindward
+      ? (sym?"windward drop at the mark, guy free to run":"windward drop at the mark, lazy sheet round the headstay")
+      : "leeward drop at the mark, behind the main");
+  }
+  if(bits.length)line2=`Then ${bits.join("; ")}.`;
+  return `<div class="span" style="margin-top:6px;font-size:12px;line-height:1.5;color:#12283A;background:#FFF3E0;border:1px solid #F0C79A;border-radius:8px;padding:6px 9px">`+
+    `${line1}${line2?" "+line2:""}</div>`+warnHTML;
+}
+function wdirOf(){ const v=$("wdir"); return v?(+v.value||0):0; }
 function nextArrivalPreviewHTML(r,idx,wdir,wspd){
   // The main advice sentence covers arriving at THIS leg's start mark. This adds a short
   // preview of the mark at the OTHER end (the next rounding), so a swipe isn't needed just to
@@ -4023,7 +4138,10 @@ function nextArrivalPreviewHTML(r,idx,wdir,wspd){
     `Then arrive ${adv.markName} on ${adv.arrivalTack.charAt(0).toUpperCase()+adv.arrivalTack.slice(1)}, `+
     `leave to ${adv.roundHand.charAt(0).toUpperCase()+adv.roundHand.slice(1)}, ${adv.manoeuvre1}.</div>`;
 }
-function renderAdviceHTML(a){
+// Split into two halves so callers can place them independently: Course Tactics leads with the
+// sentence (replacing the old short heading) and keeps the numeric breakdown lower down.
+function renderAdviceHTML(a){ return adviceBreakdownHTML(a)+adviceSentenceHTML(a); }
+function adviceBreakdownHTML(a){
   if(!a)return "";
   const fmtSigned=v=>`${v>=0?"+":"\u2212"}${Math.abs(v).toFixed(1)} min`;
   const sideOf=v=>v>=0?"right":"left";
@@ -4040,7 +4158,13 @@ function renderAdviceHTML(a){
   const tieLine=a.tieBreak?`Tie-break: ${a.tieBreak}`:"";
   const breakdown=`<div class="span" style="font-size:11px;line-height:1.7;color:#12283A;background:#EEF4F8;border-radius:8px;padding:6px 9px;margin-top:2px">`+
     `${tideLine}<br>${shiftLine}<br>${netLine}${tieLine?`<br>${tieLine}`:""}</div>`;
-
+  return breakdown;
+}
+// opts.prefix prepends a word (e.g. "Then "); opts.muted styles it as a look-ahead rather
+// than the instruction for the leg you are sailing now.
+function adviceSentenceHTML(a,opts){
+  if(!a)return "";
+  const o=opts||{};
   const sideWord=a.geoSide==="right"?"Right":a.geoSide==="left"?"Left":"";
   const stayOrGo=!sideWord
     ? (a.manoeuvre2verb==="tack"?"tack at the mark":a.manoeuvre2verb==="gybe"?"gybe at the mark":"carry on")
@@ -4060,11 +4184,14 @@ function renderAdviceHTML(a){
       `${gybeOrTack} angle ${a.tackAngle}\u00B0, mark expected ~${a.tideOffsetDeg}\u00B0 off the `+
       `${a.tideOffsetSide==="S"?"starboard":"port"} bow due to tide.`;
   }
-  const sentence=`<div class="span" style="margin-top:6px;font-size:12.5px;line-height:1.55;color:#12283A">`+
-    `Arrive ${a.markName} on ${a.arrivalTack.charAt(0).toUpperCase()+a.arrivalTack.slice(1)}, `+
+  const sty=o.muted
+    ? `margin-top:6px;font-size:11.5px;line-height:1.5;color:#48627A;font-style:italic`
+    : `margin-top:6px;font-size:12.5px;line-height:1.55;color:#12283A`;
+  const lead=o.prefix?`${o.prefix}arrive`:`Arrive`;
+  return `<div class="span" style="${sty}">`+
+    `${lead} ${a.markName} on ${a.arrivalTack.charAt(0).toUpperCase()+a.arrivalTack.slice(1)}, `+
     `leave the mark to ${a.roundHand.charAt(0).toUpperCase()+a.roundHand.slice(1)}, ${a.manoeuvre1}, `+
     `${stayOrGo}. Steer ${HoTxt}${awaTxt}.${tailTxt}${a.sail?` Sail ${a.sail}.`:""}</div>`;
-  return breakdown+sentence;
 }
 function firstLegHTML(r,wdir,wspd){
   // Leg 1 (the start): computeLegAdvice has no arrival concept here, so this is a bespoke,
