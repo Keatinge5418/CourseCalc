@@ -124,6 +124,10 @@ tr:nth-child(even) td{background:var(--zebra)}
 .tot b{color:var(--ink);font-size:17px}
 svg{display:block;width:100%;height:auto;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA}
 svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0;background:none;vertical-align:-2px;margin-right:4px;flex:none}
+/* Map marker glyphs are SVGs too, so the global svg rule above was giving each one the pale
+   card background, border and rounded corners meant for the big charts. */
+.leaflet-marker-icon svg,.leaflet-marker-icon>svg{display:block;width:auto;height:auto;
+  border:0;border-radius:0;background:none}
 .note{font-size:11.5px;color:var(--ink2);line-height:1.45;margin-top:10px}
 .warn{color:var(--port);font-weight:600}
 .garmin-frame{background:#6B7684;border-radius:14px;padding:3px;display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:10px}
@@ -3130,8 +3134,17 @@ function gps2Build(){
   // The .pmtiles sits beside index.html, so this resolves under GitHub Pages and the PWA alike.
   // flavor + lang are required: without a flavor the layer has no cartography, so it fetches
   // the tiles and then draws nothing at all (a blank map with no errors).
-  const lyr=protomapsL.leafletLayer({url:"dublin_bay.pmtiles", flavor:"light", lang:"en",
-    attribution:'&copy; OpenStreetMap'});
+  // A sea chart wants land, water and place names, not streets and buildings. Take the
+  // standard cartography and drop the layers that only add clutter offshore; this also keeps
+  // the picture legible when the basemap is coarse.
+  const KEEP=new Set(["earth","water","landcover","boundaries","places"]);
+  const opts={url:"dublin_bay.pmtiles", flavor:"light", lang:"en",
+    attribution:'&copy; OpenStreetMap'};
+  const lyr=protomapsL.leafletLayer(opts);
+  try{
+    if(lyr.paintRules)  lyr.paintRules  = lyr.paintRules.filter(r=>KEEP.has(r.dataLayer));
+    if(lyr.labelRules)  lyr.labelRules  = lyr.labelRules.filter(r=>KEEP.has(r.dataLayer));
+  }catch(e){}
   lyr.addTo(MAP2);
   // If the map file cannot be reached the layer just draws nothing, so say so plainly rather
   // than leaving a blank panel with no explanation.
