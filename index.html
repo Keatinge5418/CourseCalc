@@ -336,10 +336,12 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 
 <details class="notes" id="gps2tab" style="background:#D6ECF7;border:1px solid #A9D3E8"><summary>GPS</summary>
   <div id="map2" style="height:630px;margin-top:10px;border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:#dfeaf0"></div>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px">
-    <div id="gps2Stats" style="font-size:11.5px;color:#7C93A4;line-height:1.5"></div>
-    <button class="pick" id="gps2Fit" style="padding:8px 12px;font-size:12px;white-space:nowrap">Fit course</button>
+  <div style="display:flex;gap:8px;margin-top:8px;align-items:stretch">
+    <button class="rtbtn" id="gps2Fit" style="flex:1;min-height:46px;background:#2E6D96;border-color:#5090B8">Fit course</button>
+    <button class="rtbtn" id="gps2Clear" style="flex:1;min-height:46px;background:#2E6D96;border-color:#5090B8">Clear Track</button>
+    <button class="rtbtn" id="gps2Dl" style="flex:1;min-height:46px;background:#2E6D96;border-color:#5090B8">Download</button>
   </div>
+  <div id="gps2Stats" style="font-size:11.5px;color:#7C93A4;line-height:1.5;margin-top:6px"></div>
   
 </details>
 
@@ -3055,6 +3057,9 @@ function gpsRender(pos){
   if(out)out.innerHTML=h;
   posUpdate(pos);
   try{garminRender(pos);}catch(e){}
+  // keep the map's boat and track current on every fix, rather than waiting for the throttled
+  // full render below
+  try{ if(MAP2&&$("gps2tab")&&$("gps2tab").open)gps2Render(); }catch(e){}
   const _t=Date.now();                       // keep the leg diagram's dot current, at most every 3 s
   if(!GPS.lastDraw||_t-GPS.lastDraw>3000){ GPS.lastDraw=_t; try{render();}catch(e){} }
 }
@@ -3290,6 +3295,8 @@ function gps2Init(){
   const tab=$("gps2tab");
   if(tab)tab.addEventListener("toggle",()=>{ if(tab.open){ gps2Render(); setTimeout(()=>{ if(MAP2)MAP2.invalidateSize(); gps2Fit(); },60); } });
   const b=$("gps2Fit"); if(b)b.onclick=gps2Fit;
+  const c=$("gps2Clear"); if(c)c.onclick=()=>{ try{trackClear();}catch(e){} gps2Render(); };
+  const dl=$("gps2Dl");   if(dl)dl.onclick=()=>{ try{trackDownloadCSV();}catch(e){} };
 }
 function gpsToggle(){
   if(GPS.watch!=null){ navigator.geolocation.clearWatch(GPS.watch); GPS.watch=null; gpsSay("Stopped. Tap to resume."); }
