@@ -1,4 +1,4 @@
-const CACHE = "coursecalc-v360";
+const CACHE = "coursecalc-v361";
 const ASSETS = ["./", "./index.html", "./apple-touch-icon.png", "./dublin_bay.pmtiles"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));

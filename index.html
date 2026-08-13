@@ -3091,7 +3091,10 @@ function gps2Build(){
   const el=$("map2"); if(!el||typeof L==="undefined"||typeof protomapsL==="undefined")return null;
   MAP2=L.map(el,{zoomControl:true, attributionControl:true}).setView([53.31,-6.12],13);
   // The .pmtiles sits beside index.html, so this resolves under GitHub Pages and the PWA alike.
-  protomapsL.leafletLayer({url:"dublin_bay.pmtiles", attribution:'&copy; OpenStreetMap'}).addTo(MAP2);
+  // flavor + lang are required: without a flavor the layer has no cartography, so it fetches
+  // the tiles and then draws nothing at all (a blank map with no errors).
+  protomapsL.leafletLayer({url:"dublin_bay.pmtiles", flavor:"light", lang:"en",
+    attribution:'&copy; OpenStreetMap'}).addTo(MAP2);
   MAP2LAYERS=L.layerGroup().addTo(MAP2);
   MAP2.whenReady(()=>{ const st=$("gps2Stats"); if(st)st.textContent="Map loaded."; });
   return MAP2;
