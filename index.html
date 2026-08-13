@@ -10,16 +10,6 @@
 <title>DBSC CourseCalc</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
-/* The ping entry questions sit inside a dense panel, so they use compact buttons rather than
-   the full-size ones from Setup, which dominated the panel and each took a different width. */
-#startCtl .sq button.pick{min-height:38px;font-size:13.5px;padding:0 6px;white-space:nowrap}
-#startCtl .sq{display:flex;gap:8px}
-#startCtl .sq>div{flex:1 1 0;min-width:0}
-/* Disabled Save: readable, and clearly not yet pressable. Dimming the whole button left grey
-   text on a grey face. */
-#startCtl button.pick[disabled]{opacity:1;background:#EAF0F4;color:#8FA6B4;border-color:#D6E0E8}
-</style>
-<style>
 </style>
 <style>
 :root{
@@ -90,6 +80,13 @@ button.pick.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 button.pick.sug{border-color:var(--start);box-shadow:inset 0 0 0 2px var(--start)}
 /* black course button can also carry the orange "used wind" ring: outline sits outside */
 button.pick.on.sug{box-shadow:0 0 0 2px var(--start)}
+/* Ping entry rows. These sit in a dense panel, so the buttons are smaller than the Setup ones
+   and every cell is the same width. (This block must stay AFTER the rules above: an earlier
+   copy was silently overridden by them.) */
+#startCtl .sq{display:flex;gap:8px;align-items:stretch}
+#startCtl .sq>div{flex:1 1 0;min-width:0;display:flex}
+#startCtl .sq button.pick{min-height:38px;font-size:13.5px;padding:0 4px;width:100%;white-space:nowrap}
+#startCtl button.pick[disabled]{opacity:1;background:#EAF0F4;color:#8FA6B4;border-color:#D6E0E8}
 .rtbtn{min-height:46px;border:1.5px solid #6098BE;background:#3D7CA3;color:#fff;border-radius:10px;font-weight:800;-webkit-tap-highlight-color:transparent}
 .rtbtn:active{filter:brightness(1.18)}
 .rtbtn.on{background:#4ADE80;color:#0E1E2C;border-color:#4ADE80}
@@ -4319,6 +4316,7 @@ function buoySVG(x,y,pt,above){
 const M_PER_NM=1852;
 const START={cv:null,pin:null,entering:null,target:null,obsWind:null,obsTack:null,obsAt:0};
 let PING_MSG=null;                              // why the last Pin/CV press did not produce a fix
+let WINDPRESS={tack:null,ok:null};              // last Wind-beat press: which tack, and whether it took
 let PING_STATE={cv:null,pin:null};   // 'ok' | 'fail' | null (never tried), per end, for the Pin/CV button colour
 function startSave(){ try{ localStorage.setItem("cc_line",JSON.stringify({cv:START.cv,pin:START.pin,target:START.target,obsWind:START.obsWind,obsTack:START.obsTack,obsAt:START.obsAt,t:Date.now()})); }catch(e){} }
 function startLoad(){
@@ -4447,7 +4445,8 @@ function timeToPoint(p,tgt,wdir,tws,tide){
   return {sec:d/(sp*M_PER_NM)*3600,dist:d,brg:bd.brg,lay};
 }
 function startTarget(L,wdir){                   // the end you are heading for
-  if(START.target==="cv"||START.target==="pin")return START.target;
+  // Always the favoured end. There used to be Start CV / Start pin buttons to override this,
+  // but the panel already shows which end is favoured, so they only added a row to press.
   const b=lineBias(L,wdir);
   return b?b.end:"cv";
 }
@@ -4685,23 +4684,29 @@ function startCtl(){
       `<div class="sq" style="margin-bottom:8px">`+
       [25,50,75].map(m=>`<div>${B("d"+m,m+" m",dSel===String(m)?on:"")}</div>`).join("")+
       `</div><div class="sq">`+
-      `<div style="flex:1.4 1 0"><button class="pick" data-s="save" style="width:100%"${dSel?"":" disabled"}>Save ${nm}</button></div>`+
+      `<div><button class="pick" data-s="save" style="width:100%"${dSel?"":" disabled"}>Save</button></div>`+
       `<div>${B("cancel","Cancel")}</div></div></div>`;
   }
+  // Clearing the line matters: a bad ping would otherwise persist for 12 hours with no way
+  // back. Shown only when there is something to clear, and kept small so it is not a target
+  // for a stray thumb.
+  if(START.cv||START.pin)
+    h+=`<div style="text-align:right;margin-top:6px">`+
+       `<button class="pick" data-s="clearline" style="min-height:30px;font-size:11.5px;padding:0 10px;width:auto">Clear line</button></div>`;
   // wind check, always available
+  // Same three-state colouring as Pin and CV: green it took, orange the last press could not
+  // read a heading, blue not tried. Without this a press with no fix looked like a dead button.
+  const wStyle=t=>{
+    const took=START.obsTack===t;
+    const failed=!took&&WINDPRESS.tack===t&&WINDPRESS.ok===false;
+    return "flex:1;min-height:40px;font-size:13px;"+(took?"background:#1E8449;border-color:#2FA35C"
+      :failed?"background:#C8551A;border-color:#E07A3C":"");
+  };
   h+=`<div style="display:flex;gap:8px;margin-top:8px;align-items:stretch">`+
-    `<button class="rtbtn" data-s="wport" style="flex:1;min-height:40px;font-size:13px;${START.obsTack==="port"?"background:#1E8449;border-color:#2FA35C":""}">Wind: port beat</button>`+
-    `<button class="rtbtn" data-s="wstbd" style="flex:1;min-height:40px;font-size:13px;${START.obsTack==="stbd"?"background:#1E8449;border-color:#2FA35C":""}">Wind: stbd beat</button>`+
+    `<button class="rtbtn" data-s="wport" style="${wStyle("port")}">Wind: port beat${START.obsTack==="port"?" \u2713":""}</button>`+
+    `<button class="rtbtn" data-s="wstbd" style="${wStyle("stbd")}">Wind: stbd beat${START.obsTack==="stbd"?" \u2713":""}</button>`+
     (START.obsWind!=null?`<button class="rtbtn" data-s="wclear" style="flex:0.5;min-height:40px;font-size:13px">Clear</button>`:``)+
     `</div>`;
-  // which end to start at, once the line is actually known
-  if(known){
-    const tgt=startTarget(L,wdir);
-    h+=`<div class="inrow" style="margin-top:8px">`+
-      `<div style="flex:1">${B("tcv","Start CV",tgt==="cv"?"background:#FF6A13;color:#fff;border-color:#FF6A13":"")}</div>`+
-      `<div style="flex:1">${B("tpin","Start pin",tgt==="pin"?"background:#FF6A13;color:#fff;border-color:#FF6A13":"")}</div>`+
-      `<div style="flex:0.6">${B("redo","Reset")}</div></div>`;
-  }
   if(START.obsWind!=null)
     h+=`<div style="font-size:11px;line-height:1.4;color:#BFE8D4;margin-top:6px">Wind from your ${START.obsTack==="stbd"?"starboard":"port"} beat: <b>${d3(START.obsWind)}\u00B0</b> \u00B7 T line squared to it. Card wind unchanged.</div>`;
   if(PING_MSG)
@@ -4716,6 +4721,8 @@ function startClick(ev){
   else if(k==="pcv"||k==="ppin"){
     const end=k==="pcv"?"cv":"pin";
     if(GPS.last){
+      // Starting a new ping replaces any half-finished one, so pressing Pin then CV cannot
+      // leave the earlier question still on screen asking about the other end.
       PING_STATE[end]="ok"; PING_MSG=null;
       START.entering={end,d:"",side:"in"};
     } else {
@@ -4743,13 +4750,17 @@ function startClick(ev){
     }
   }
   else if(k==="wport"||k==="wstbd"){
-    const res=windFromBeat(k==="wstbd"?"stbd":"port");
+    const tk=k==="wstbd"?"stbd":"port";
+    const res=windFromBeat(tk);
+    WINDPRESS={tack:tk, ok:!!res};
     if(!res){ PING_MSG="Need a live GPS fix and some boat speed: start the timer's GPS, get sailing on the beat, then press this."; }
     else { START.obsWind=res.wind; START.obsTack=res.tack; START.obsAt=Date.now(); PING_MSG=null; startSave(); }
   }
-  else if(k==="wclear"){ START.obsWind=null; START.obsTack=null; START.obsAt=0; startSave(); }
+  else if(k==="wclear"){ START.obsWind=null; START.obsTack=null; START.obsAt=0; WINDPRESS={tack:null,ok:null}; startSave(); }
   else if(k==="in"||k==="out"){ START.entering.side=k; }
   else if(/^d\d+$/.test(k)&&START.entering){ START.entering.d=k.slice(1); }
+  else if(k==="clearline"){ START.cv=null; START.pin=null; START.target=null;
+    PING_STATE.cv=null; PING_STATE.pin=null; START.entering=null; startSave(); }
   else if(k==="cancel"){ START.entering=null; }
   else if(k==="save"){
     if(!START.entering||!START.entering.d){ render(); return; }   // pick a distance first
@@ -4759,8 +4770,6 @@ function startClick(ev){
     if(e.end==="cv")START.cv=rec; else START.pin=rec;
     START.entering=null; startSave();
   }
-  else if(k==="tcv"||k==="tpin"){ START.target=k==="tcv"?"cv":"pin"; startSave(); }
-  else if(k==="redo"){ START.cv=null; START.pin=null; START.target=null; startSave(); }
   render();
 }
 
