@@ -10,6 +10,11 @@
 <title>DBSC CourseCalc</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
+.cc-mk{background:rgba(255,255,255,.82);border:0;box-shadow:none;color:#12283A;font-weight:800;
+  font-size:11px;padding:1px 5px;border-radius:5px;white-space:nowrap}
+.cc-mk:before{display:none}
+</style>
+<style>
 :root{
   --paper:#F7FAFC; --ink:#12283A; --ink2:#48627A; --rule:#D6E2EB; --zebra:#EEF4F8;
   --ctlh:52px;                 /* one height for inputs and buttons that share a row */
@@ -337,10 +342,10 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 <details class="notes" id="gps2tab" style="background:#D6ECF7;border:1px solid #A9D3E8"><summary>GPS2 (map)</summary>
   <div id="map2" style="height:420px;margin-top:10px;border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:#dfeaf0"></div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px">
-    <div id="gps2Stats" style="font-size:11.5px;color:#7C93A4;line-height:1.5">Open this tab to load the map.</div>
+    <div id="gps2Stats" style="font-size:11.5px;color:#7C93A4;line-height:1.5"></div>
     <button class="pick" id="gps2Fit" style="padding:8px 12px;font-size:12px;white-space:nowrap">Fit course</button>
   </div>
-  <div style="font-size:11px;color:#7C93A4;margin-top:8px">Test tab: OpenStreetMap basemap from a local dublin_bay.pmtiles, course marks and your position drawn over it. The GPS tab is unchanged.</div>
+  <div style="font-size:11px;color:#7C93A4;margin-top:8px">OpenStreetMap basemap for Dublin Bay, held in a local file. Course marks, the rhumb line and your position are drawn over it. Needs a connection for now; offline still to come. No seamarks yet, so buoys and lights are not shown. Not for navigation.</div>
 </details>
 
 <details class="notes" id="garmintab" style="background:#3A4552;border:1px solid #2A323C"><summary style="color:#fff">GPS Display</summary>
@@ -3096,17 +3101,16 @@ function gps2Build(){
   const lyr=protomapsL.leafletLayer({url:"dublin_bay.pmtiles", flavor:"light", lang:"en",
     attribution:'&copy; OpenStreetMap'});
   lyr.addTo(MAP2);
-  // Report what happens rather than failing silently: a blank map with no message tells us
-  // nothing, and this has already cost two wrong guesses.
-  const say=t=>{ const st=$("gps2Stats"); if(st)st.textContent=t; };
-  fetch("dublin_bay.pmtiles",{headers:{Range:"bytes=0-16"}})
-    .then(r=>r.arrayBuffer().then(b=>{
-      const magic=new TextDecoder().decode(new Uint8Array(b).slice(0,7));
-      say("map file: HTTP "+r.status+", magic \""+magic+"\""+(r.status===206?" (range OK)":" (NO range support)"));
-    }))
-    .catch(e=>say("map file fetch failed: "+e.message));
+  // If the map file cannot be reached the layer just draws nothing, so say so plainly rather
+  // than leaving a blank panel with no explanation.
+  // Guarded: this is only a courtesy check on the basemap, and must never stop the marks and
+  // position from being drawn if it fails or fetch is unavailable.
+  try{
+    if(typeof fetch==="function")
+      fetch("dublin_bay.pmtiles",{headers:{Range:"bytes=0-16"}})
+        .catch(()=>{ const st=$("gps2Stats"); if(st)st.textContent="Map file not found. Check dublin_bay.pmtiles sits beside index.html."; });
+  }catch(e){}
   MAP2LAYERS=L.layerGroup().addTo(MAP2);
-  MAP2.whenReady(()=>{ const st=$("gps2Stats"); if(st)st.textContent="Map loaded."; });
   return MAP2;
 }
 function gps2Render(){
@@ -3120,8 +3124,29 @@ function gps2Render(){
     r.pts.forEach((pt,i)=>{
       if(!pt||!pt.pos)return;
       pts.push(pt.pos);
-      L.circleMarker(pt.pos,{radius:6,color:"#12283A",weight:2,fillColor:"#FF6A13",fillOpacity:1})
-        .bindTooltip(String(i+1)+" "+(pt.name||pt.lbl||""),{permanent:true,direction:"right",className:"cc-mk"})
+      // Same visual language as the rest of the app: the buoy's own banding as a small chip,
+      // inside a ring coloured by the side it is left on (red to port, green to starboard).
+      const ring = pt.side==="P" ? "#C8102E" : pt.side==="S" ? "#007A33" : "#FF6A13";
+      const cols = (pt.m && MARKS[pt.m]) ? (CHIP[MARKS[pt.m][3]]||["#8aa"]) : ["#FF6A13"];
+      const W=11,H=17,seg=H/cols.length;
+      const bands=cols.map((c,k)=>`<rect x="0" y="${(k*seg).toFixed(2)}" width="${W}" height="${seg.toFixed(2)}" fill="${c}"/>`).join("");
+      const start=!pt.m;                                   // the start/finish is a diamond, not a buoy
+      const html = start
+        ? `<div style="width:34px;height:34px;position:relative">
+             <div style="position:absolute;left:11px;top:11px;width:12px;height:12px;background:#FF6A13;border:2px solid #fff;transform:rotate(45deg);box-shadow:0 0 2px rgba(0,0,0,.5)"></div>
+           </div>`
+        : `<div style="width:34px;height:34px;position:relative">
+             <svg width="34" height="34" viewBox="0 0 34 34">
+               <circle cx="17" cy="17" r="13" fill="none" stroke="${ring}" stroke-width="2.5"/>
+               <g transform="translate(${(17-W/2).toFixed(1)},${(17-H/2).toFixed(1)})">
+                 ${bands}
+                 <rect x="0" y="0" width="${W}" height="${H}" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="1"/>
+               </g>
+             </svg>
+           </div>`;
+      L.marker(pt.pos,{icon:L.divIcon({html,className:"",iconSize:[34,34],iconAnchor:[17,17]})})
+        .bindTooltip(String(i+1)+" "+(pt.name||pt.lbl||""),
+          {permanent:true,direction:"right",offset:[12,0],className:"cc-mk"})
         .addTo(MAP2LAYERS);
     });
     if(pts.length>1)L.polyline(pts,{color:"#12283A",weight:2,opacity:.8,dashArray:"5 4"}).addTo(MAP2LAYERS);
