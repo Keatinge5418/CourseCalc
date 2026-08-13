@@ -3018,7 +3018,10 @@ function trackDownloadCSV(){
   setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 function gpsRender(pos){
-  const out=$("gpsOut"); if(!out)return;
+  // #gpsOut belonged to the old GPS tab, which is gone. Returning here when it is missing also
+  // skipped garminRender below, which is what turns the compass ring, so the rose sat at north
+  // on every fix. The readout is optional now; everything after it is not.
+  const out=$("gpsOut");
   const me=[pos.coords.latitude,pos.coords.longitude];
   const acc=pos.coords.accuracy!=null?Math.round(pos.coords.accuracy):null;
   const sog=pos.coords.speed!=null&&isFinite(pos.coords.speed)?pos.coords.speed*1.94384:null; // m/s -> kt
@@ -3042,7 +3045,7 @@ function gpsRender(pos){
   if(cog!=null)sc.push(`COG <b class="mono">${String(Math.round(cog)).padStart(3,"0")}\u00B0</b>`);
   if(sc.length)h+=`<div style="margin-top:8px;font-size:13px">${sc.join(" \u00B7 ")}</div>`;
   h+=`<div style="font-size:11px;color:#7C93A4;margin-top:6px">Fix \u00B1${acc!=null?acc+" m":"?"} \u00B7 updated ${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>`;
-  out.innerHTML=h;
+  if(out)out.innerHTML=h;
   posUpdate(pos);
   try{garminRender(pos);}catch(e){}
   const _t=Date.now();                       // keep the leg diagram's dot current, at most every 3 s
@@ -3261,6 +3264,16 @@ function gps2Fit(){
     if(r&&r.pts)r.pts.forEach(pt=>{ if(pt&&pt.pos)b.push(pt.pos); }); }catch(e){}
   if(typeof GPS!=="undefined"&&GPS.last)b.push([GPS.last.coords.latitude,GPS.last.coords.longitude]);
   if(b.length)m.fitBounds(L.latLngBounds(b).pad(0.25));
+}
+// The compass needs starting before the rose can turn, and it used to be started only by the
+// GO button on Setup, so opening this tab without pressing GO left the rose stuck north-up.
+// Opening the tab is itself a user gesture, which is what iOS requires for the permission
+// prompt, so start it there rather than adding a button.
+function garminCompassInit(){
+  const tab=$("garmintab"); if(!tab)return;
+  tab.addEventListener("toggle",()=>{
+    if(tab.open&&!COMPASS.active){ try{ compassStart(); }catch(e){} }
+  });
 }
 function gps2Init(){
   const tab=$("gps2tab");
@@ -3858,6 +3871,7 @@ function buildPickers(){
   garminInit();
   goBtnInit();
   gps2Init();
+  garminCompassInit();
   legSwipeInit();
   startLoad();
   {const el=$("startCtl"); if(el)el.addEventListener("click",startClick);
@@ -4610,72 +4624,66 @@ function startCtl(){
   const el=$("startCtl"); if(!el)return;
   el.style.display="block";
   const B=(id,txt,st)=>`<button class="pick" data-s="${id}" style="flex:1;${st||""}">${txt}</button>`;
-  const live=!!GPS.last, L=startLine();
-  let h="";
+  const L=startLine();
+  const on="background:#12283A;color:#fff;border-color:#12283A";
+  // ONE layout, always. The controls never move or disappear: Pin and CV stay put, the entry
+  // questions appear beneath them when a ping is being recorded, and the readouts sit below.
+  // (This panel used to swap between four different layouts, so pressing Pin replaced the whole
+  // thing and, once a GPS fix existed, Cancel left you with no way back.)
+  const wdir=+($("wdir").value||0), bias=L?lineBias(L,wdir):null;
+  const known=L&&!L.assumed;
+  const square=known&&bias&&Math.abs(bias.deg)<1;
+  const favTxt=!known?"\u2013":(square?"Square":(bias.end==="pin"?"Pin":"CV"));
+  const degTxt=!known?"\u2013":(square?"0\u00B0":Math.abs(bias.deg).toFixed(0)+"\u00B0");
+  const roStyle="flex:1;min-height:46px;border-radius:10px;background:rgba(255,255,255,.10);border:1.5px solid rgba(255,255,255,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px";
+  // Button colour says what that end's state is: green pinged, orange last attempt failed,
+  // blue not tried. A tick marks an end already recorded, and pressing it again re-pings.
+  const btnStyle=end=>{
+    const st=PING_STATE[end], has=end==="cv"?START.cv:START.pin;
+    return "flex:1;min-height:46px;"+(has?"background:#1E8449;border-color:#2FA35C"
+      :st==="fail"?"background:#C8551A;border-color:#E07A3C"
+      :"background:#2E6D96;border-color:#5090B8");
+  };
+  const label=end=>(end==="cv"?(START.cv?"CV \u2713":"CV"):(START.pin?"Pin \u2713":"Pin"));
+  let h=`<div style="display:flex;gap:8px;margin-top:6px">`+
+    `<button class="rtbtn" data-s="ppin" style="${btnStyle("pin")}">${label("pin")}</button>`+
+    `<div style="${roStyle}"><div style="font-size:9px;letter-spacing:.03em;color:#C9DFEC;font-weight:700">FAVOURED</div><div style="font-weight:800;color:#fff;font-size:15px">${favTxt}</div></div>`+
+    `<div style="${roStyle}"><div style="font-size:9px;letter-spacing:.03em;color:#C9DFEC;font-weight:700">OFF SQUARE</div><div style="font-weight:800;color:#fff;font-size:15px">${degTxt}</div></div>`+
+    `<button class="rtbtn" data-s="pcv" style="${btnStyle("cv")}">${label("cv")}</button>`+
+    `</div>`;
+  // the two questions, shown in place beneath the buttons while a ping is being recorded
   if(START.entering){
-    const e=START.entering, nm=e.end==="cv"?"CV":"Pin";
-    // Two questions, in the order they are answered on the water: which side of the end you
-    // were, then how far off. Distances are fixed taps rather than a typed box, since this is
-    // done one-handed on a wet phone. Save stays an explicit press so a mistap is recoverable.
-    const on="background:#12283A;color:#fff;border-color:#12283A";
-    const dOpts=[25,50,75];
-    const dSel=String(e.d||"");
-    h=`<div style="font-size:12px;color:#48627A;margin-bottom:4px">1 &middot; At the ${nm}, were you inside the line or outside it?</div>`+
+    const e=START.entering, nm=e.end==="cv"?"CV":"Pin", dSel=String(e.d||"");
+    h+=`<div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18)">`+
+      `<div style="font-size:12px;color:#C9DFEC;margin-bottom:4px">${nm}: were you inside the line or outside it?</div>`+
       `<div class="inrow" style="margin-bottom:8px">`+
       `<div style="flex:1">${B("in","Inside",e.side==="in"?on:"")}</div>`+
-      `<div style="flex:1">${B("out","Outside",e.side==="out"?on:"")}</div>`+
-      `</div>`+
-      `<div style="font-size:12px;color:#48627A;margin-bottom:4px">2 &middot; How far off, in metres?</div>`+
+      `<div style="flex:1">${B("out","Outside",e.side==="out"?on:"")}</div></div>`+
+      `<div style="font-size:12px;color:#C9DFEC;margin-bottom:4px">How far off?</div>`+
       `<div class="inrow" style="margin-bottom:8px">`+
-      dOpts.map(m=>`<div style="flex:1">${B("d"+m,m+" m",dSel===String(m)?on:"")}</div>`).join("")+
-      `</div>`+
-      `<div class="inrow">`+
+      [25,50,75].map(m=>`<div style="flex:1">${B("d"+m,m+" m",dSel===String(m)?on:"")}</div>`).join("")+
+      `</div><div class="inrow">`+
       `<div style="flex:1">${B("save","Save "+nm,dSel?"":"opacity:.45")}</div>`+
-      `<div style="flex:0.7">${B("cancel","Cancel")}</div></div>`+
-      `<div style="font-size:11px;color:#7C93A4;margin-top:6px">Ping from on the line or its extension. Inside means toward the other end, outside means past this end.</div>`;
-  } else if(!live){
-    const wdir=+($("wdir").value||0), bias=L?lineBias(L,wdir):null;
-    const square=L&&!L.assumed&&bias&&Math.abs(bias.deg)<1;
-    const favTxt=(!L||L.assumed)?"\u2013":(square?"Square":(bias.end==="pin"?"Pin":"CV"));
-    const degTxt=(!L||L.assumed)?"\u2013":(square?"0\u00B0":Math.abs(bias.deg).toFixed(0)+"\u00B0");
-    const roStyle="flex:1;min-height:46px;border-radius:10px;background:rgba(255,255,255,.10);border:1.5px solid rgba(255,255,255,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px";
-    // colour reflects the outcome of the last GPS request from this button: green = got a fix
-    // and pinged, orange = no response (denied/no signal/timed out), default blue = not tried yet
-    const btnStyle=end=>{
-      const s=PING_STATE[end];
-      return "flex:1;min-height:46px;"+(s==="ok"?"background:#1E8449;border-color:#2FA35C"
-        :s==="fail"?"background:#C8551A;border-color:#E07A3C"
-        :"background:#2E6D96;border-color:#5090B8");
-    };
-    h=`<div style="display:flex;gap:8px;margin-top:6px">`+
-      `<button class="rtbtn" data-s="ppin" style="${btnStyle("pin")}">Pin</button>`+
-      `<div style="${roStyle}"><div style="font-size:9px;letter-spacing:.03em;color:#C9DFEC;font-weight:700">FAVOURED</div><div style="font-weight:800;color:#fff;font-size:15px">${favTxt}</div></div>`+
-      `<div style="${roStyle}"><div style="font-size:9px;letter-spacing:.03em;color:#C9DFEC;font-weight:700">OFF SQUARE</div><div style="font-weight:800;color:#fff;font-size:15px">${degTxt}</div></div>`+
-      `<button class="rtbtn" data-s="pcv" style="${btnStyle("cv")}">CV</button>`+
-      `</div>`+
-      // Wind check: sail the boat properly on a beat, say which tack, and the heading fixes
-      // the wind. Only re-squares the assumed line; the app's wind source is left alone.
-      `<div style="display:flex;gap:8px;margin-top:8px;align-items:stretch">`+
-      `<button class="rtbtn" data-s="wport" style="flex:1;min-height:40px;font-size:13px;${START.obsTack==="port"?"background:#1E8449;border-color:#2FA35C":""}">Wind: port beat</button>`+
-      `<button class="rtbtn" data-s="wstbd" style="flex:1;min-height:40px;font-size:13px;${START.obsTack==="stbd"?"background:#1E8449;border-color:#2FA35C":""}">Wind: stbd beat</button>`+
-      (START.obsWind!=null?`<button class="rtbtn" data-s="wclear" style="flex:0.5;min-height:40px;font-size:13px">Clear</button>`:``)+
-      `</div>`+
-      (START.obsWind!=null
-        ? `<div style="font-size:11px;line-height:1.4;color:#BFE8D4;margin-top:6px">Wind from your ${START.obsTack==="stbd"?"starboard":"port"} beat: <b>${d3(START.obsWind)}\u00B0</b> \u00B7 assumed line squared to it. Card wind is unchanged.</div>`
-        : ``)+
-      (PING_MSG?`<div style="font-size:11px;line-height:1.4;color:#FFD9C2;margin-top:6px">${PING_MSG}</div>`:``);
-  } else if(!START.cv||!START.pin){
-    h=`<div class="inrow">`+
-      `<div style="flex:1">${B("pcv",START.cv?"CV \u2713 redo":"Ping CV")}</div>`+
-      `<div style="flex:1">${B("ppin",START.pin?"Pin \u2713 redo":"Ping pin")}</div></div>`+
-      `<div style="font-size:11px;color:#7C93A4;margin-top:6px">Sail to each end, sit on the line, and tap.</div>`;
-  } else {
-    const tgt=startTarget(L,+($("wdir").value||0));
-    h=`<div class="inrow">`+
+      `<div style="flex:0.7">${B("cancel","Cancel")}</div></div></div>`;
+  }
+  // wind check, always available
+  h+=`<div style="display:flex;gap:8px;margin-top:8px;align-items:stretch">`+
+    `<button class="rtbtn" data-s="wport" style="flex:1;min-height:40px;font-size:13px;${START.obsTack==="port"?"background:#1E8449;border-color:#2FA35C":""}">Wind: port beat</button>`+
+    `<button class="rtbtn" data-s="wstbd" style="flex:1;min-height:40px;font-size:13px;${START.obsTack==="stbd"?"background:#1E8449;border-color:#2FA35C":""}">Wind: stbd beat</button>`+
+    (START.obsWind!=null?`<button class="rtbtn" data-s="wclear" style="flex:0.5;min-height:40px;font-size:13px">Clear</button>`:``)+
+    `</div>`;
+  // which end to start at, once the line is actually known
+  if(known){
+    const tgt=startTarget(L,wdir);
+    h+=`<div class="inrow" style="margin-top:8px">`+
       `<div style="flex:1">${B("tcv","Start CV",tgt==="cv"?"background:#FF6A13;color:#fff;border-color:#FF6A13":"")}</div>`+
       `<div style="flex:1">${B("tpin","Start pin",tgt==="pin"?"background:#FF6A13;color:#fff;border-color:#FF6A13":"")}</div>`+
-      `<div style="flex:0.6">${B("redo","Line \u2713")}</div></div>`;
+      `<div style="flex:0.6">${B("redo","Reset")}</div></div>`;
   }
+  if(START.obsWind!=null)
+    h+=`<div style="font-size:11px;line-height:1.4;color:#BFE8D4;margin-top:6px">Wind from your ${START.obsTack==="stbd"?"starboard":"port"} beat: <b>${d3(START.obsWind)}\u00B0</b> \u00B7 T line squared to it. Card wind unchanged.</div>`;
+  if(PING_MSG)
+    h+=`<div style="font-size:11px;line-height:1.4;color:#FFD9C2;margin-top:6px">${PING_MSG}</div>`;
   el.innerHTML=h;
 }
 function startClick(ev){
