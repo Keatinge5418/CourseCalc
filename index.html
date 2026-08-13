@@ -3093,8 +3093,18 @@ function gps2Build(){
   // The .pmtiles sits beside index.html, so this resolves under GitHub Pages and the PWA alike.
   // flavor + lang are required: without a flavor the layer has no cartography, so it fetches
   // the tiles and then draws nothing at all (a blank map with no errors).
-  protomapsL.leafletLayer({url:"dublin_bay.pmtiles", flavor:"light", lang:"en",
-    attribution:'&copy; OpenStreetMap'}).addTo(MAP2);
+  const lyr=protomapsL.leafletLayer({url:"dublin_bay.pmtiles", flavor:"light", lang:"en",
+    attribution:'&copy; OpenStreetMap'});
+  lyr.addTo(MAP2);
+  // Report what happens rather than failing silently: a blank map with no message tells us
+  // nothing, and this has already cost two wrong guesses.
+  const say=t=>{ const st=$("gps2Stats"); if(st)st.textContent=t; };
+  fetch("dublin_bay.pmtiles",{headers:{Range:"bytes=0-16"}})
+    .then(r=>r.arrayBuffer().then(b=>{
+      const magic=new TextDecoder().decode(new Uint8Array(b).slice(0,7));
+      say("map file: HTTP "+r.status+", magic \""+magic+"\""+(r.status===206?" (range OK)":" (NO range support)"));
+    }))
+    .catch(e=>say("map file fetch failed: "+e.message));
   MAP2LAYERS=L.layerGroup().addTo(MAP2);
   MAP2.whenReady(()=>{ const st=$("gps2Stats"); if(st)st.textContent="Map loaded."; });
   return MAP2;
