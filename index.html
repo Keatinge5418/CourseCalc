@@ -10,9 +10,6 @@
 <title>DBSC CourseCalc</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
-.cc-mk{background:rgba(255,255,255,.82);border:0;box-shadow:none;color:#12283A;font-weight:800;
-  font-size:11px;padding:1px 5px;border-radius:5px;white-space:nowrap}
-.cc-mk:before{display:none}
 </style>
 <style>
 :root{
@@ -324,28 +321,15 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div id="coursePlanBody"></div>
 </details>
 
-<details class="notes" id="gpstab" style="background:#D6ECF7;border:1px solid #A9D3E8"><summary>GPS</summary>
-  <div id="gpsBody" style="font-size:13px;color:#333">
-    <div id="gpsOut" style="margin-top:10px"></div>
-    <div id="posWrap" style="position:relative;margin-top:10px"><svg id="posMap" viewBox="0 0 865 869" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;border:1px solid var(--rule);border-radius:12px;background:#dfeaf0"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="posIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="posOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="posZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px">1x</div></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px">
-      <div id="trackStats" style="font-size:11.5px;color:#7C93A4;line-height:1.5"></div>
-      <div style="display:flex;gap:6px;flex-shrink:0">
-        <button class="pick" id="trackDlBtn" disabled style="padding:8px 12px;font-size:12px;white-space:nowrap;opacity:.4">Download CSV</button>
-        <button class="pick" id="trackClearBtn" style="padding:8px 12px;font-size:12px;white-space:nowrap">Clear track</button>
-      </div>
-    </div>
-  </div>
-  <div style="font-size:11px;color:#7C93A4;margin-top:8px">Distance and bearing are great-circle from your fix to the committee-boat end of the line and to the next mark of the selected course. Speed and course over the ground come from GPS movement, so they read true only when you are moving. The orange line is your track sailed since you last cleared it, recorded from live fixes at least 3 m or 5 s apart, kept in memory only; Download CSV exports each point's time, position, SOG, COG and the wind the app was using at that moment. Not for navigation.</div>
-</details>
 
-<details class="notes" id="gps2tab" style="background:#D6ECF7;border:1px solid #A9D3E8"><summary>GPS2 (map)</summary>
-  <div id="map2" style="height:420px;margin-top:10px;border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:#dfeaf0"></div>
+
+<details class="notes" id="gps2tab" style="background:#D6ECF7;border:1px solid #A9D3E8"><summary>GPS</summary>
+  <div id="map2" style="height:630px;margin-top:10px;border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:#dfeaf0"></div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px">
     <div id="gps2Stats" style="font-size:11.5px;color:#7C93A4;line-height:1.5"></div>
     <button class="pick" id="gps2Fit" style="padding:8px 12px;font-size:12px;white-space:nowrap">Fit course</button>
   </div>
-  <div style="font-size:11px;color:#7C93A4;margin-top:8px">OpenStreetMap basemap for Dublin Bay, held in a local file. Course marks, the rhumb line and your position are drawn over it. Needs a connection for now; offline still to come. No seamarks yet, so buoys and lights are not shown. Not for navigation.</div>
+  
 </details>
 
 <details class="notes" id="garmintab" style="background:#3A4552;border:1px solid #2A323C"><summary style="color:#fff">GPS Display</summary>
@@ -1027,8 +1011,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 /* div icon */
 
 .leaflet-div-icon {
-	background: #fff;
-	border: 1px solid #666;
+	/* CourseCalc: the mark glyphs draw their own shape and carry outlined text, so Leaflet's
+	   default white box with a border just sits behind them as clutter. */
+	background: none;
+	border: 0;
 	}
 
 
@@ -3087,6 +3073,52 @@ function gpsStart(){
     e=>{ gpsSay(gpsErr(e)); },
     {enableHighAccuracy:true, maximumAge:1000, timeout:20000});
 }
+// Seamarks for Dublin Bay, from OpenStreetMap via Overpass. Only navigational features are
+// kept (buoys, lights, wrecks); harbours, gates and facilities are dropped. Positions are
+// lat/lon; c = buoy colour, k = cardinal category, lc = light colour, n = its name.
+const SEAMARKS=[{"t":"light_minor","p":[53.342106,-6.151368],"n":"Poolbeg","lc":"red"},{"t":"light_minor","p":[53.344879,-6.149723],"n":"North Bull","lc":"green"},{"t":"wreck","p":[53.394129,-6.079154],"n":"Therese-Emile Yuon"},{"t":"light_major","p":[53.394091,-6.066842],"n":"Howth","lc":"white"},{"t":"light_major","p":[53.302425,-6.127055],"n":"Dun Laoghaire East","lc":"red"},{"t":"light_minor","p":[53.303248,-6.130866],"n":"Dun Laoghaire West Lighthouse","lc":"green"},{"t":"light_major","p":[53.275568,-6.075844],"n":"Muglins","lc":"red"},{"t":"light_major","p":[53.393344,-6.066805],"n":"Howth Lighthouse"},{"t":"light_major","p":[53.361626,-6.052483],"n":"Baily","lc":"white"},{"t":"light_minor","p":[53.392133,-6.068117],"n":"","lc":"green"},{"t":"light_minor","p":[53.345714,-6.216508],"n":"","lc":"white"},{"t":"light_major","p":[53.34486,-6.17635],"n":"North Bank","lc":"green"},{"t":"light_minor","p":[53.340133,-6.189967],"n":"","lc":"red"},{"t":"light_minor","p":[53.298833,-6.142333],"n":"","lc":"red"},{"t":"light_minor","p":[53.295833,-6.1296],"n":"","lc":"red"},{"t":"buoy_safe_water","p":[53.33185,-6.077317],"n":"Dublin Bay","c":"red;white","lc":"white"},{"t":"buoy_cardinal","p":[53.301033,-6.021517],"n":"South Burford","c":"yellow;black","k":"south","lc":"white"},{"t":"buoy_cardinal","p":[53.341867,-6.024783],"n":"North Burford","c":"black;yellow","k":"north","lc":"white"},{"t":"buoy_cardinal","p":[53.350167,-6.057467],"n":"Rosbeg East","c":"black;yellow;black","k":"east","lc":"white"},{"t":"light_minor","p":[53.390917,-6.068067],"n":"","lc":"red"},{"t":"buoy_lateral","p":[53.395451,-6.059883],"n":"Howth Buoy","c":"green","k":"starboard","lc":"green"},{"t":"buoy_lateral","p":[53.3965,-6.065683],"n":"South Rowan","c":"green","k":"starboard","lc":"green"},{"t":"buoy_cardinal","p":[53.397949,-6.054483],"n":"Rowan Rocks","c":"black;yellow;black","k":"east","lc":"white"},{"t":"light_minor","p":[53.301123,-6.130179],"n":"St. Michael's Pier","lc":"green"},{"t":"buoy_lateral","p":[53.345222,-6.220472],"n":"No.20","c":"red","k":"port","lc":"red"},{"t":"buoy_lateral","p":[53.339433,-6.113633],"n":"No 4","c":"red","k":"port","lc":"red"},{"t":"buoy_lateral","p":[53.34045,-6.1275],"n":"No 6","c":"red","k":"port","lc":"red"},{"t":"buoy_lateral","p":[53.3418,-6.141267],"n":"No 8","c":"red","k":"port","lc":"red"},{"t":"buoy_lateral","p":[53.343017,-6.112983],"n":"No 3","c":"green","k":"starboard","lc":"green"},{"t":"buoy_lateral","p":[53.343583,-6.126883],"n":"No 5","c":"green","k":"starboard","lc":"green"},{"t":"buoy_lateral","p":[53.3441,-6.140783],"n":"No 7","c":"green","k":"starboard","lc":"green"},{"t":"buoy_lateral","p":[53.337787,-6.087708],"n":"No. 1","c":"green","k":"starboard","lc":"green"},{"t":"buoy_lateral","p":[53.342867,-6.151033],"n":"Poolbeg Buoy","c":"red","k":"port","lc":"red"},{"t":"buoy_lateral","p":[53.342833,-6.154983],"n":"No 10","c":"red","k":"port","lc":"red"},{"t":"buoy_lateral","p":[53.342667,-6.169167],"n":"No 12","c":"red","k":"port","lc":"red"},{"t":"buoy_lateral","p":[53.3445,-6.155],"n":"No 9","c":"green","k":"starboard","lc":"green"},{"t":"buoy_lateral","p":[53.34465,-6.16915],"n":"No 11","c":"green","k":"starboard","lc":"green"},{"t":"buoy_lateral","p":[53.342667,-6.1765],"n":"No 14","c":"red","k":"port","lc":"red"},{"t":"buoy_lateral","p":[53.3426,-6.190867],"n":"No 16","c":"red","k":"port","lc":"red"},{"t":"buoy_lateral","p":[53.3446,-6.1897],"n":"No 15","c":"green","k":"starboard","lc":"green"},{"t":"buoy_lateral","p":[53.344317,-6.217417],"n":"No 18","c":"red","k":"port","lc":"red"},{"t":"light_minor","p":[53.345099,-6.204802],"n":"East oil pier","lc":"green"},{"t":"light_minor","p":[53.297891,-6.130799],"n":"St Michael's Pier","lc":"green"},{"t":"buoy_cardinal","p":[53.339667,-6.072083],"n":"Rosbeg South","c":"yellow;black","k":"south","lc":"white"},{"t":"wreck","p":[53.354562,-6.241302],"n":"W18539"}];
+// IALA region A: port hand red, starboard green. Cardinals are black/yellow by quadrant.
+function seamarkGlyph(m){
+  const t=m.t, C={red:"#C8102E",green:"#007A33",yellow:"#F2C230",black:"#222",white:"#fff"};
+  if(t==="wreck")
+    return `<g stroke="#12283A" stroke-width="1.6" fill="none"><line x1="-5" y1="0" x2="5" y2="0"/>`+
+           `<line x1="0" y1="-4" x2="0" y2="4"/><line x1="-3" y1="-3" x2="3" y2="3"/></g>`;
+  if(t==="light_major"||t==="light_minor"){
+    const col=C[m.lc]||"#F2C230", r=t==="light_major"?4:3;
+    return `<circle cx="0" cy="0" r="${r}" fill="${col}" stroke="#12283A" stroke-width="1.2"/>`+
+           `<circle cx="0" cy="0" r="${r+3}" fill="none" stroke="${col}" stroke-width="1" opacity=".6"/>`;
+  }
+  if(t==="buoy_cardinal"){
+    // two cones; the pattern of points up/down is what identifies the quadrant
+    const k=(m.k||"").toLowerCase();
+    const up=`<path d="M0,-8 L3.5,-2 L-3.5,-2 Z" fill="#222"/>`, upY=`<path d="M0,-8 L3.5,-2 L-3.5,-2 Z" fill="#F2C230"/>`;
+    const dn=`<path d="M0,-2 L3.5,-8 L-3.5,-8 Z" fill="#222"/>`, dnY=`<path d="M0,-2 L3.5,-8 L-3.5,-8 Z" fill="#F2C230"/>`;
+    const pair = k==="north" ? up+`<g transform="translate(0,7)">`+up+`</g>`
+               : k==="south" ? dn+`<g transform="translate(0,7)">`+dn+`</g>`
+               : k==="east"  ? up+`<g transform="translate(0,7)">`+dn+`</g>`
+               : k==="west"  ? dn+`<g transform="translate(0,7)">`+up+`</g>`
+               : upY+`<g transform="translate(0,7)">`+dnY+`</g>`;
+    return `<g transform="translate(0,-2)">`+pair+`</g>`;
+  }
+  // lateral and safe-water buoys: a small can in its own colour
+  const c=(m.c||"").split(";")[0];
+  const fill=C[c]||"#8aa";
+  const stripes = (m.c||"").includes(";")
+    ? `<rect x="-3.5" y="-2" width="7" height="4" fill="${C[(m.c.split(";")[1])]||"#fff"}"/>` : "";
+  return `<rect x="-3.5" y="-6" width="7" height="12" rx="1.5" fill="${fill}" stroke="#12283A" stroke-width="1.1"/>`+stripes;
+}
+function seamarkLayer(){
+  const g=L.layerGroup();
+  SEAMARKS.forEach(m=>{
+    const html=`<svg width="46" height="34" viewBox="-23 -17 46 34" style="overflow:visible">`+
+      `<g>${seamarkGlyph(m)}</g>`+
+      (m.n?`<text x="0" y="15" font-size="8.5" font-weight="700" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="2" paint-order="stroke">${m.n}</text>`:"")+
+      `</svg>`;
+    L.marker(m.p,{icon:L.divIcon({html,className:"",iconSize:[46,34],iconAnchor:[23,17]}),
+      zIndexOffset:-100, interactive:false}).addTo(g);
+  });
+  return g;
+}
 // ---------- GPS2: real basemap test ----------
 // Leaflet + protomaps-leaflet reading a local dublin_bay.pmtiles. Built lazily on first open,
 // because Leaflet needs a container with a real size and the tab starts collapsed.
@@ -3110,6 +3142,8 @@ function gps2Build(){
       fetch("dublin_bay.pmtiles",{headers:{Range:"bytes=0-16"}})
         .catch(()=>{ const st=$("gps2Stats"); if(st)st.textContent="Map file not found. Check dublin_bay.pmtiles sits beside index.html."; });
   }catch(e){}
+  // seamarks first, so the racing marks sit above them
+  try{ seamarkLayer().addTo(MAP2); }catch(e){}
   MAP2LAYERS=L.layerGroup().addTo(MAP2);
   return MAP2;
 }
@@ -3124,30 +3158,23 @@ function gps2Render(){
     r.pts.forEach((pt,i)=>{
       if(!pt||!pt.pos)return;
       pts.push(pt.pos);
-      // Same visual language as the rest of the app: the buoy's own banding as a small chip,
-      // inside a ring coloured by the side it is left on (red to port, green to starboard).
+      // Laid out like the Course Chart: letter above, small coloured buoy, name below. The app
+      // holds each mark's colour banding but not its shape, so this is colour-only -- the cones
+      // and cans on the Course Chart are printed into its background image, not drawn in code.
       const ring = pt.side==="P" ? "#C8102E" : pt.side==="S" ? "#007A33" : "#FF6A13";
       const cols = (pt.m && MARKS[pt.m]) ? (CHIP[MARKS[pt.m][3]]||["#8aa"]) : ["#FF6A13"];
-      const W=11,H=17,seg=H/cols.length;
+      const W=7,H=12,seg=H/cols.length;
       const bands=cols.map((c,k)=>`<rect x="0" y="${(k*seg).toFixed(2)}" width="${W}" height="${seg.toFixed(2)}" fill="${c}"/>`).join("");
-      const start=!pt.m;                                   // the start/finish is a diamond, not a buoy
-      const html = start
-        ? `<div style="width:34px;height:34px;position:relative">
-             <div style="position:absolute;left:11px;top:11px;width:12px;height:12px;background:#FF6A13;border:2px solid #fff;transform:rotate(45deg);box-shadow:0 0 2px rgba(0,0,0,.5)"></div>
-           </div>`
-        : `<div style="width:34px;height:34px;position:relative">
-             <svg width="34" height="34" viewBox="0 0 34 34">
-               <circle cx="17" cy="17" r="13" fill="none" stroke="${ring}" stroke-width="2.5"/>
-               <g transform="translate(${(17-W/2).toFixed(1)},${(17-H/2).toFixed(1)})">
-                 ${bands}
-                 <rect x="0" y="0" width="${W}" height="${H}" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="1"/>
-               </g>
-             </svg>
-           </div>`;
-      L.marker(pt.pos,{icon:L.divIcon({html,className:"",iconSize:[34,34],iconAnchor:[17,17]})})
-        .bindTooltip(String(i+1)+" "+(pt.name||pt.lbl||""),
-          {permanent:true,direction:"right",offset:[12,0],className:"cc-mk"})
-        .addTo(MAP2LAYERS);
+      const letter=pt.m||"", name=pt.name||pt.lbl||"";
+      const txt=(y,t,sz,col)=>t?`<text x="30" y="${y}" font-size="${sz}" font-weight="800" text-anchor="middle" fill="${col}" stroke="#fff" stroke-width="2.4" paint-order="stroke">${t}</text>`:"";
+      const glyph = !pt.m
+        ? `<rect x="26" y="20" width="8" height="8" fill="#FF6A13" stroke="#fff" stroke-width="1.6" transform="rotate(45 30 24)"/>`
+        : `<g transform="translate(${(30-W/2).toFixed(1)},${(24-H/2).toFixed(1)})">${bands}`+
+          `<rect x="0" y="0" width="${W}" height="${H}" fill="none" stroke="${ring}" stroke-width="1.4"/></g>`;
+      const html=`<svg width="60" height="46" viewBox="0 0 60 46" style="overflow:visible">`+
+        txt(13,letter,11,"#12283A")+glyph+txt(40,name,10.5,"#12283A")+`</svg>`;
+      L.marker(pt.pos,{icon:L.divIcon({html,className:"",iconSize:[60,46],iconAnchor:[30,24]}),
+        zIndexOffset:200}).addTo(MAP2LAYERS);
     });
     if(pts.length>1)L.polyline(pts,{color:"#12283A",weight:2,opacity:.8,dashArray:"5 4"}).addTo(MAP2LAYERS);
   }
