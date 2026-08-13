@@ -10,6 +10,16 @@
 <title>DBSC CourseCalc</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
+/* The ping entry questions sit inside a dense panel, so they use compact buttons rather than
+   the full-size ones from Setup, which dominated the panel and each took a different width. */
+#startCtl .sq button.pick{min-height:38px;font-size:13.5px;padding:0 6px;white-space:nowrap}
+#startCtl .sq{display:flex;gap:8px}
+#startCtl .sq>div{flex:1 1 0;min-width:0}
+/* Disabled Save: readable, and clearly not yet pressable. Dimming the whole button left grey
+   text on a grey face. */
+#startCtl button.pick[disabled]{opacity:1;background:#EAF0F4;color:#8FA6B4;border-color:#D6E0E8}
+</style>
+<style>
 </style>
 <style>
 :root{
@@ -3172,6 +3182,10 @@ function gps2Build(){
   try{
     if(lyr.paintRules)  lyr.paintRules  = lyr.paintRules.filter(r=>KEEP.has(r.dataLayer));
     if(lyr.labelRules)  lyr.labelRules  = lyr.labelRules.filter(r=>KEEP.has(r.dataLayer));
+    // The flavour paints a solid background over every tile before drawing. On the upper layer
+    // that hides the wide backdrop everywhere the detailed file has no data, which is why the
+    // map went grey outside Dublin Bay. Only the bottom layer should paint a background.
+    lyr.backgroundColor=undefined;
   }catch(e){}
   lyr.addTo(MAP2);
   // If the map file cannot be reached the layer just draws nothing, so say so plainly rather
@@ -4487,7 +4501,15 @@ function drawStart(r,wdir,wspd){
   const MINSPAN=420;                            // metres: keep water below the line to tap in
   if(maxx-minx<MINSPAN){const c=(minx+maxx)/2;minx=c-MINSPAN/2;maxx=c+MINSPAN/2;}
   if(maxy-miny<MINSPAN){const c=(miny+maxy)/2;miny=c-MINSPAN/2;maxy=c+MINSPAN/2;}
-  const sc=Math.min((W-56)/Math.max(maxx-minx,1),(H-96)/Math.max(maxy-miny,1));
+  let sc=Math.min((W-56)/Math.max(maxx-minx,1),(H-96)/Math.max(maxy-miny,1));
+  // Fitting boat and line together shrinks the line to a stub on a long run-in: at 1300 m out
+  // a 250 m line drew 37px wide and the end symbols collided. Keep the line legible by capping
+  // how far the view can zoom out, and let the boat sit off the bottom of the frame instead.
+  if(L){
+    const lineM=Math.max(L.len,50);
+    const MIN_LINE_PX=170;                       // the line always reads at least this wide
+    sc=Math.max(sc, MIN_LINE_PX/lineM);
+  }
   const cx0=(minx+maxx)/2, cy0=(miny+maxy)/2;
   let F=p=>{const q=rot(EN(p));return [W/2+(q[0]-cx0)*sc, H/2+16+(q[1]-cy0)*sc];};
   // Pre-start the useful view is the line across the top with open water below it to run in.
@@ -4656,15 +4678,15 @@ function startCtl(){
     const e=START.entering, nm=e.end==="cv"?"CV":"Pin", dSel=String(e.d||"");
     h+=`<div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18)">`+
       `<div style="font-size:12px;color:#C9DFEC;margin-bottom:4px">${nm}: were you inside the line or outside it?</div>`+
-      `<div class="inrow" style="margin-bottom:8px">`+
-      `<div style="flex:1">${B("in","Inside",e.side==="in"?on:"")}</div>`+
-      `<div style="flex:1">${B("out","Outside",e.side==="out"?on:"")}</div></div>`+
+      `<div class="sq" style="margin-bottom:8px">`+
+      `<div>${B("in","Inside",e.side==="in"?on:"")}</div>`+
+      `<div>${B("out","Outside",e.side==="out"?on:"")}</div></div>`+
       `<div style="font-size:12px;color:#C9DFEC;margin-bottom:4px">How far off?</div>`+
-      `<div class="inrow" style="margin-bottom:8px">`+
-      [25,50,75].map(m=>`<div style="flex:1">${B("d"+m,m+" m",dSel===String(m)?on:"")}</div>`).join("")+
-      `</div><div class="inrow">`+
-      `<div style="flex:1">${B("save","Save "+nm,dSel?"":"opacity:.45")}</div>`+
-      `<div style="flex:0.7">${B("cancel","Cancel")}</div></div></div>`;
+      `<div class="sq" style="margin-bottom:8px">`+
+      [25,50,75].map(m=>`<div>${B("d"+m,m+" m",dSel===String(m)?on:"")}</div>`).join("")+
+      `</div><div class="sq">`+
+      `<div style="flex:1.4 1 0"><button class="pick" data-s="save" style="width:100%"${dSel?"":" disabled"}>Save ${nm}</button></div>`+
+      `<div>${B("cancel","Cancel")}</div></div></div>`;
   }
   // wind check, always available
   h+=`<div style="display:flex;gap:8px;margin-top:8px;align-items:stretch">`+
