@@ -287,6 +287,16 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div id="startWrap" style="margin-top:8px">
     <svg id="startView" viewBox="0 0 360 420" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;border-radius:12px;background:#F2F7FA"></svg>
     <div id="startCtl" style="display:none;margin-top:8px"></div>
+    <!-- Lives outside #startCtl deliberately: that div's innerHTML is rebuilt on every render,
+         which would blow away half-typed numbers and steal focus mid-entry. -->
+    <div id="beatIn" style="display:none;margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18)">
+      <div style="font-size:10px;letter-spacing:.06em;color:#C9DFEC;font-weight:800">READ OFF THE BOAT, BEFORE YOU TAP TO STOP</div>
+      <div style="display:flex;gap:8px;margin-top:5px">
+        <div style="flex:1"><label style="color:#C9DFEC">Log kt</label><input id="beatLog" type="number" inputmode="decimal" step="0.1" placeholder="paddlewheel" style="width:100%;box-sizing:border-box"></div>
+        <div style="flex:1"><label style="color:#C9DFEC">Compass &deg;</label><input id="beatHdg" type="number" inputmode="numeric" placeholder="steering" style="width:100%;box-sizing:border-box"></div>
+      </div>
+      <div id="beatInMsg" style="font-size:11px;color:#C9DFEC;line-height:1.4;margin-top:5px">Log speed is the one that matters: it turns the tide from an assumption into a measurement. Compass is optional and calibrates the set banner.</div>
+    </div>
   </div>
 </details>
 
@@ -353,7 +363,6 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 </details>
 
 <details class="notes" id="garmintab" style="background:#3A4552;border:1px solid #2A323C"><summary style="color:#fff">GPS Display</summary>
-  </div>
   <div class="garmin-frame">
     <div class="garmin-tile">
       <div class="garmin-label">Heading</div>
@@ -372,7 +381,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
       <div class="garmin-value" id="gDist">&ndash;</div>
     </div>
     <div class="garmin-tile">
-      <div class="garmin-label">Turn</div>
+      <div class="garmin-label" id="gTurnLabel">To Mark</div>
       <div class="garmin-value" id="gTurn">&ndash;</div>
     </div>
     <div class="garmin-tile">
@@ -3562,42 +3571,108 @@ function climatologySync(wspd){
 // The corner is where the two boards cross: sail board one until the mark bears board two.
 // Recomputed from the boat's ACTUAL position rather than the leg's start, so it counts down as
 // you sail, and returns null once the corner is behind you or there is no corner to make.
-function tackPointInfo(){
+// ---------- the gybe / tack call ----------
+// Answers one question: how far short of the layline am I, in degrees?
+//   big number = angle from your ground track to the mark
+//   bracket    = angle from your ground track to the track you would have after the manoeuvre
+// Reach the first and you gybe (or tack) onto the mark. Both are measured off COG, not the
+// bow, because the layline is a ground-track criterion: with tide the mark ends up dead on
+// your TRACK after the gybe, sitting well off the bow by the crab angle. Measuring one off
+// the bow and one off the track would make the comparison meaningless, which is exactly what
+// the old "(86 deg)" static polar bracket did.
+//
+// Note the two numbers share an origin, so COG noise moves both together and the gap between
+// them (the part you act on) is unaffected. Delta == Gamma is algebraically identical to
+// "the mark bears along the post-manoeuvre ground track", with cogNow cancelling out.
+//
+// Pure geometry, no DOM, so it can be tested directly. polarAt(tws) -> {twa, vel}.
+function gybeGeom(wdirG,wspdG,tideDir,tideKt,cogNow,polarAt){
+  const uE=d=>Math.sin(rad(d)), uN=d=>Math.cos(rad(d));
+  // The stream carries the whole water mass, so the polar sees the wind relative to the
+  // WATER, not the ground: W_water = W_ground - tide. In 7 kt over 1.5 kt of cross stream
+  // this alone is a 12 deg shift, and it moves the laylines by more than that.
+  const T=[tideKt*uE(tideDir), tideKt*uN(tideDir)];
+  const Wg=[wspdG*uE(wdirG+180), wspdG*uN(wdirG+180)];
+  const Ww=[Wg[0]-T[0], Wg[1]-T[1]];
+  const twsW=Math.hypot(Ww[0],Ww[1]);
+  const twdW=twsW>0.2?norm(Math.atan2(Ww[0],Ww[1])*180/Math.PI+180):norm(wdirG);
+  const pol=polarAt(twsW); if(!pol||!isFinite(pol.twa)||!isFinite(pol.vel))return null;
+  const gamma=pol.twa, Vb=pol.vel;
+  // Which board are you on now? Signed angle from the water wind to your track:
+  // positive = wind over the port side, so the other board is the negative one.
+  const relNow=((cogNow-twdW+540)%360)-180;
+  const sideNow=relNow>=0?1:-1;
+  const hOther=norm(twdW-sideNow*gamma);
+  const gOther=[Vb*uE(hOther)+T[0], Vb*uN(hOther)+T[1]];
+  const sogOther=Math.hypot(gOther[0],gOther[1]);
+  if(!(sogOther>0.05))return null;
+  const cogOther=norm(Math.atan2(gOther[0],gOther[1])*180/Math.PI);
+  const hNow=norm(twdW+sideNow*gamma);
+  const gNow=[Vb*uE(hNow)+T[0], Vb*uN(hNow)+T[1]];
+  return {twdW, twsW, gamma, Vb, hOther, cogOther, sogOther,
+          hNow, cogNowModel:norm(Math.atan2(gNow[0],gNow[1])*180/Math.PI),
+          sogNowModel:Math.hypot(gNow[0],gNow[1]),
+          need:((cogOther-cogNow+540)%360)-180};      // signed track change required
+}
+function gybeCallInfo(){
   try{
-    if(!GPS.last||GPS.watch==null)return null;
-    const wdir=+($("wdir").value||0), wspd=+($("wspd").value||10);
-    const r=compute(state.card,wdir,wspd,+($("wgst").value||15),state.letter,state.num);
-    const L=r&&r.legs&&r.legs[state.leg]; if(!L||!L.from||!L.from.pos||!L.to||!L.to.pos)return null;
-    if(L.pos!=="Beat"&&L.pos!=="Run")return null;                  // reaches have no corner
-    const target=interp(P_TWS,(L.pos==="Beat"?P_UP:P_DN).twa,wspd);
-    const Vb=interp(P_TWS,(L.pos==="Beat"?P_UP:P_DN).vel,wspd);
-    const me=[GPS.last.coords.latitude,GPS.last.coords.longitude];
-    // work in a frame aligned with the bearing from HERE to the mark
-    const bd=brgDist(me,L.to.pos); const co=bd.brg, D=bd.dist;
-    if(!(D>0))return null;
-    const off=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off:null;
-    const st=off!==null?streamAtPos(me,off,TIDECTX.range):null;
-    const Tv=st&&!st.slack?[st.kt*Math.sin(rad(st.dir-co)),st.kt*Math.cos(rad(st.dir-co))]:[0,0];
-    let best=null;
-    for(const sgn of [1,-1]){
-      const h1=(wdir+sgn*target)-co, h2=(wdir-sgn*target)-co;
-      const g1=[Vb*Math.sin(rad(h1))+Tv[0],Vb*Math.cos(rad(h1))+Tv[1]];
-      const g2=[Vb*Math.sin(rad(h2))+Tv[0],Vb*Math.cos(rad(h2))+Tv[1]];
-      const den=g1[0]*g2[1]-g1[1]*g2[0]; if(Math.abs(den)<1e-6)continue;
-      const tt=(0*g2[1]-D*g2[0])/den, ss=(D*g1[0])/den;            // hours on each board
-      if(!(tt>0&&ss>0))continue;
-      const dist=Math.hypot(tt*g1[0],tt*g1[1]);                     // NM to the corner
-      if(!best||tt<best.hrs)best={hrs:tt,dist};
+    if(!GPS.last||GPS.watch==null)return {state:"nofix"};
+    const c=GPS.last.coords;
+    const sog=(c.speed!=null&&isFinite(c.speed))?c.speed*1.94384:null;
+    // Prefer the 30 s smoothed track: a raw COG below about 1 kt is noise, and this is the
+    // same window the set banner already uses, so the two never disagree.
+    let si=null; try{ si=setInfo(); }catch(e){}
+    const cogNow=si?si.cog:((c.heading!=null&&isFinite(c.heading))?c.heading:null);
+    if(cogNow==null||sog==null||sog<1)return {state:"slow"};
+    const me=[c.latitude,c.longitude];
+    const wdirG=+(($("wdir")||{}).value||0), wspdG=+(($("wspd")||{}).value||10);
+    const r=compute(state.card,wdirG,wspdG,+(($("wgst")||{}).value||15),state.letter,state.num);
+    const L=r&&r.legs&&r.legs[state.leg];
+    if(!L||!L.to||!L.to.pos)return {state:"noleg"};
+    const bd=brgDist(me,L.to.pos);
+    const delta=((bd.brg-cogNow+540)%360)-180;
+    const beat=L.pos==="Beat", run=L.pos==="Run";
+    if(!beat&&!run)return {state:"reach", delta, dist:bd.dist, name:L.to.name||""};
+    let tideDir=0, tideKt=0;
+    try{
+      const off=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off:null;
+      const st=off!==null?streamAtPos(me,off,TIDECTX.range):null;
+      if(st&&!st.slack){ tideDir=st.dir; tideKt=st.kt; }
+    }catch(e){}
+    const tbl=beat?P_UP:P_DN;
+    const g=gybeGeom(wdirG,wspdG,tideDir,tideKt,cogNow,
+      tws=>({twa:interp(P_TWS,tbl.twa,tws), vel:interp(P_TWS,tbl.vel,tws)}));
+    if(!g)return {state:"noleg"};
+    // Only a boat actually sailing a board has a layline. Reaching along on a beat leg,
+    // mid-tack, or under engine, the "required angle" is arithmetic on a heading that means
+    // nothing, so say so rather than print a confident number. 30 deg is loose enough to
+    // survive a wandering helm and a bad COG, tight enough to catch a reach.
+    const relNow=((cogNow-g.twdW+540)%360)-180;
+    const verb=beat?"tack":"gybe";
+    if(Math.abs(Math.abs(relNow)-g.gamma)>30)
+      return {state:"offboard", delta, need:null, verb, markDist:bd.dist, markBrg:bd.brg,
+              name:L.to.name||"", cog:cogNow, twdW:g.twdW, twsW:g.twsW, tideDir, tideKt};
+    const need=g.need;
+    // Same sign means the mark and the new board are on the same side of your track, so you
+    // are closing the layline. Opposite sign means this board never lays it.
+    const sameSide=(delta>=0)===(need>=0);
+    const room=Math.abs(need)-Math.abs(delta);
+    let dist=null, mins=null;
+    if(sameSide&&room>0&&Math.abs(need)>1){
+      dist=bd.dist*Math.sin(rad(room))/Math.sin(rad(Math.abs(need)));   // sine rule, ground frame
+      if(sog>0.3)mins=dist/sog*60;
     }
-    if(!best)return null;
-    return {dist:best.dist, min:best.hrs*60, verb:L.pos==="Beat"?"Tack":"Gybe"};
-  }catch(e){ return null; }
+    return {state:sameSide?(room>0.5?"run":"now"):"wrongside",
+            delta, need, room, verb, dist, mins, tideDir, tideKt,
+            twdW:g.twdW, twsW:g.twsW, crab:((g.cogOther-g.hOther+540)%360)-180,
+            markDist:bd.dist, markBrg:bd.brg, name:L.to.name||"", cog:cogNow};
+  }catch(e){ return {state:"noleg"}; }
 }
 function garminLabelsSync(){
   // The label text only depends on the selected course/leg, not on having a live GPS fix, so
   // this can run on every render() and keep the labels correct even before GPS ever connects,
   // rather than leaving the page's hardcoded "Bearing to Next" placeholder showing indefinitely.
-  const bl=$("gBrgLabel"),dl=$("gDistLabel"),el=$("gEtaLabel"),tl=$("gTimeLabel"),dest=$("gDest"),tg=$("gTackGybe");
+  const bl=$("gBrgLabel"),dl=$("gDistLabel"),el=$("gEtaLabel"),tl=$("gTimeLabel"),dest=$("gDest");
   if(!bl)return;
   let tgt=null; try{ tgt=garminTargetInfo(); }catch(e){ tgt=null; }
   let started=false; try{ started=garminStarted(); }catch(e){ started=false; }
@@ -3617,24 +3692,8 @@ function garminLabelsSync(){
     }
     dest.innerHTML=chip?`<span style="display:inline-flex;align-items:center;gap:5px">${word}${chip}</span>`:word;
   }
-  // Tack/Gybe: is a tack or gybe needed at the rounding coming up (the mark ending the leg
-  // currently selected), and if so, roughly what angle. Reuses the same manoeuvre2verb/tackAngle
-  // already computed for the Course Plan's own advice text, rather than a second copy of the logic.
-  if(tg){
-    // Distance and time from where you actually are to the point where this leg's tack or
-    // gybe happens. Dash when there is no fix, or no board change to make on this leg.
-    let txt="\u2013";
-    const lb=$("gTackGybeLabel");
-    try{
-      const tp=tackPointInfo();
-      if(tp){
-        const dTxt = tp.dist<0.2 ? Math.round(tp.dist*1852)+" m" : tp.dist.toFixed(1)+"\u2032";
-        txt = dTxt+" ("+Math.round(tp.min)+")";
-        if(lb)lb.textContent="To "+tp.verb;
-      } else if(lb)lb.textContent="To Tack";
-    }catch(e){}
-    tg.textContent=txt;
-  }
+  // Tack/Gybe distance and time now come from gybeCallInfo, written in garminRender alongside
+  // the To Mark tile, so the two tiles are driven by one model and cannot disagree.
 }
 // The banner. Always shows the raw difference; the colour says whether to act on it. Orange
 // while the compass and track are still settling, dark once both have been steady long enough.
@@ -3792,7 +3851,6 @@ function sixRender(){
   // 6 which tack gets there sooner
   let c6=cell("FAVOURED",dash,"");
   try{
-    const tp=tackPointInfo();
     if(fn&&si){
       const nowSide=fn.across>0?"right":"left";
       c6=cell("FAVOURED",fn.across>0?"Port":"Stbd",
@@ -3843,24 +3901,63 @@ function garminRender(pos){
   // Turn: signed turn-to-steer from current heading to the target bearing. Positive = turn
   // right/starboard, negative = turn left/port, matching the L/R convention on a real
   // chartplotter (verified against a real Garmin reading: heading 032, bearing 012 -> turn 020 L).
+  const gc=gybeCallInfo();
   if(tc){
-    // Turn to the mark, with the leg's own tack/gybe angle in brackets: "020°L (86°)".
-    // A dash in the brackets means no board change on this leg.
-    let ang="\u2013";
-    try{
-      const ws2a=+($("wspd").value||10);
-      const rr=compute(state.card,+($("wdir").value||0),ws2a,+($("wgst").value||15),state.letter,state.num);
-      const L2=rr&&rr.legs&&rr.legs[state.leg];
-      if(L2){
-        const ws2=+($("wspd").value||10);
-        if(L2.pos==="Beat")ang=Math.round(2*interp(P_TWS,P_UP.twa,ws2))+"\u00B0";
-        else if(L2.pos==="Run")ang=Math.round(2*(180-interp(P_TWS,P_DN.twa,ws2)))+"\u00B0";
+    // Big number: the angle from your TRACK to the mark. Bracket: the angle that number has
+    // to reach before a tack or gybe puts you on the mark, computed live from the water wind
+    // and the stream, not the flat-polar 2 x TWA it used to show. When the two are equal you
+    // are on the layline. See gybeCallInfo.
+    const lb=$("gTurnLabel");
+    const side=v=>(v<0?"L":"R");
+    // A rounded zero has no side, so do not claim one.
+    const fmtd=v=>{const a=Math.round(Math.abs(v)); return String(a).padStart(3,"0")+"°"+(a===0?"":side(v));};
+    if(!gc||gc.state==="nofix"||gc.state==="slow"||gc.state==="noleg"){
+      tc.textContent="–";
+      tc.style.color="";
+      if(lb)lb.textContent="To Mark";
+    } else if(gc.state==="reach"||gc.state==="offboard"){
+      tc.textContent=fmtd(gc.delta);
+      tc.style.color="";
+      if(lb)lb.textContent="To Mark";
+    } else {
+      const d=fmtd(gc.delta);
+      const n=Math.round(Math.abs(gc.need))+"°";
+      if(lb)lb.textContent="To Mark ("+gc.verb+")";
+      if(gc.state==="wrongside"){
+        tc.textContent=d+" (–)";
+        tc.style.color="";
+      } else {
+        tc.textContent=d+" ("+n+")";
+        // Red once the gap has closed: at or past the layline, go now.
+        tc.style.color = gc.state==="now" ? "#C8102E" : (gc.room<5 ? "#C8551A" : "");
       }
-    }catch(e){}
-    if(courseVal!=null){
-      const turnRaw=((bd.brg-heading+540)%360)-180;
-      tc.textContent=String(Math.round(Math.abs(turnRaw))).padStart(3,"0")+"\u00B0"+(turnRaw<0?"L":"R")+" ("+ang+")";
-    } else tc.textContent="\u2013 ("+ang+")";
+    }
+  }
+  // Dist to Tack (Time): how far and how long until the two numbers in the tile above meet.
+  // Same gybeCallInfo call, so this can never disagree with the angle tile. Time uses the
+  // ACTUAL SOG, not the polar, so it responds to genuinely going slowly.
+  {
+    const tg=$("gTackGybe"), tgl=$("gTackGybeLabel");
+    if(tg){
+      const verb=(gc&&gc.verb)?gc.verb:"tack";
+      if(tgl)tgl.textContent="Dist to "+(verb==="gybe"?"Gybe":"Tack")+" (Time)";
+      const st=gc&&gc.state;
+      if(st==="now"){
+        tg.textContent="NOW"; tg.style.color="#C8102E";
+      } else if(st==="run"&&gc.dist!=null){
+        const m=gc.dist*M_PER_NM;
+        const dTxt = m<0.2*M_PER_NM ? Math.round(m)+" m" : gc.dist.toFixed(2)+"\u2032";
+        let tTxt="";
+        if(gc.mins!=null&&isFinite(gc.mins)){
+          const secs=Math.max(0,Math.round(gc.mins*60));
+          tTxt=" ("+String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0")+")";
+        }
+        tg.textContent=dTxt+tTxt;
+        tg.style.color = gc.room<5 ? "#C8551A" : "";
+      } else {
+        tg.textContent="\u2013"; tg.style.color="";
+      }
+    }
   }
   // Off Course: perpendicular (cross-track) distance from the current position to the leg's
   // own rhumb line (the straight line from the leg's start mark to this target), not just total
@@ -4804,7 +4901,18 @@ function beatSolve(){
   const S=BEAT.stbd, P=BEAT.port;
   if(!S||!P)return null;
   const wspd=+($("wspd").value||10);
-  const th=interp(P_TWS,P_UP.twa,wspd), Vb=interp(P_TWS,P_UP.vel,wspd);
+  const th=interp(P_TWS,P_UP.twa,wspd), Vpolar=interp(P_TWS,P_UP.vel,wspd);
+  // Measured speed through the water, if the log was entered. This is the whole point: the
+  // wind below comes from the DIRECTION of the difference between the two ground tracks and is
+  // immune to boat speed (verified: assumed speeds 2.0 to 5.0 kt all return the same wind),
+  // but the tide is Gs minus the boat's own vector, so it is only as good as the speed used.
+  const logs=[S.log,P.log].filter(v=>v!=null&&isFinite(v)&&v>0.2);
+  const Vmeas=logs.length?logs.reduce((a,b)=>a+b,0)/logs.length:null;
+  const Vb=Vmeas!=null?Vmeas:Vpolar;
+  const pct=Vmeas!=null&&Vpolar>0?Vmeas/Vpolar:null;
+  // Two logs that disagree badly mean one board was not sailed properly, and the mean is then
+  // meaningless. Flagged rather than silently averaged.
+  const logSplit=(logs.length===2&&Math.max(...logs)>0)?Math.abs(logs[0]-logs[1])/Math.max(...logs):null;
   const Gs=beatVec(S), Gp=beatVec(P);
   const De=Gs[0]-Gp[0], Dn=Gs[1]-Gp[1];
   const span=Math.hypot(De,Dn);
@@ -4812,16 +4920,41 @@ function beatSolve(){
   const wind=norm(Math.atan2(Dn,-De)*180/Math.PI);
   const Ts=[Gs[0]-Vb*Math.sin(rad(wind-th)), Gs[1]-Vb*Math.cos(rad(wind-th))];
   const tideKt=Math.hypot(Ts[0],Ts[1]), tideDir=norm(Math.atan2(Ts[0],Ts[1])*180/Math.PI);
+  // Compass error, when a steering-compass heading was entered on BOTH tacks. The tide cancels
+  // in the difference of the two ground vectors, so the offset is determined by that difference
+  // alone. Verified against synthetic truth (2.0 kt/318 with a 15 degree error) to a residual
+  // of zero. This is what separates "the tide is enormous" from "the compass is lying".
+  let compassErr=null;
+  if(S.hdg!=null&&P.hdg!=null){
+    const vs=(S.log!=null?S.log:Vb), vp=(P.log!=null?P.log:Vb);
+    const resid=e=>{
+      const a=[vs*Math.sin(rad(S.hdg+e)), vs*Math.cos(rad(S.hdg+e))];
+      const b=[vp*Math.sin(rad(P.hdg+e)), vp*Math.cos(rad(P.hdg+e))];
+      return Math.hypot((a[0]-b[0])-De,(a[1]-b[1])-Dn);
+    };
+    let best=null;
+    for(let e=-180;e<180;e+=0.5){ const r=resid(e); if(best===null||r<best.r)best={e,r}; }
+    for(const step of [0.05,0.005]){
+      let cur=best;
+      for(let k=-20;k<=20;k++){ const e=best.e+k*step, r=resid(e); if(r<cur.r)cur={e,r}; }
+      best=cur;
+    }
+    // Only believable if the geometry actually fits; a poor fit means a board was sailed badly.
+    if(best.r<0.35)compassErr=((best.e+540)%360)-180;
+  }
   // How far the two tracks separated, against what the polar says they should. A clear
   // deviation means a beat was not sailed properly; agreement does NOT prove it was, since
   // sailing low and slow can cancel out.
+  // With a measured speed this ratio becomes a pure check on the ANGLE you sailed. Without one
+  // it conflates angle and speed, which is how a slow boat gets its solve rejected: on 13 Aug
+  // 2026, 2.75 kt against a polar 3.89 reads as 71% and looks like bad sailing.
   const expect=2*Vb*Math.sin(rad(th));
   const ratio=expect>0?span/expect:0;
   // Weak beats must never be trusted, whatever the ratio says, and the ratio band is tight:
   // a 10-degree badly-sailed tack shows up at about 1.08, so 1.12 let it through.
   const trusted=!S.weak&&!P.weak&&ratio>0.94&&ratio<1.06
                 &&S.straightness>0.97&&P.straightness>0.97;
-  return {wind,tideDir,tideKt,ratio,trusted,th,Vb,
+  return {wind,tideDir,tideKt,ratio,trusted,th,Vb,Vpolar,Vmeas,pct,measured:Vmeas!=null,logSplit,compassErr,
           modelled:(()=>{ try{ const off=TIDECTX?TIDECTX.off:null;
             if(off==null||!GPS.last)return null;
             const st=streamAtPos([GPS.last.coords.latitude,GPS.last.coords.longitude],off,TIDECTX.range);
@@ -4831,6 +4964,10 @@ function beatApply(){
   const r=beatSolve(); if(!r)return;
   START.obsWind=r.wind; START.obsTack="both"; START.obsAt=Date.now();
   START.obsTrusted=r.trusted; START.obsTide={dir:r.tideDir,kt:r.tideKt};
+  // Held as a FRACTION of polar, not an absolute speed: the breeze moves during a race and
+  // "71% of polar" survives that, where "2.75 kt" does not.
+  START.polarPct=r.pct;
+  START.compassErr=r.compassErr;
   startSave();
 }
 // The live readout. While recording it must visibly change every second, so it is obvious the
@@ -4849,6 +4986,8 @@ function beatReadoutHTML(){
   const line=(t,label)=>{
     const b=BEAT[t]; if(!b)return `${label}: <span style="opacity:.6">not done</span>`;
     return `${label}: <b>${d3(b.brg)}\u00B0</b> \u00B7 ${Math.round(b.m)} m \u00B7 ${Math.round(b.secs)} s \u00B7 ${b.sog.toFixed(1)} kt`+
+           (b.log!=null?` \u00B7 log <b>${b.log.toFixed(1)}</b>`:``)+
+           (b.hdg!=null?` \u00B7 cmp ${d3(b.hdg)}\u00B0`:``)+
            (b.weak?` <span style="color:#FFD9A8">(weak)</span>`:``);
   };
   if(!BEAT.stbd&&!BEAT.port)
@@ -4861,18 +5000,50 @@ function beatReadoutHTML(){
   const cmp=(m&&m.dir!=null)
     ? `Atlas says ${d3(m.dir)}\u00B0 ${m.kt.toFixed(1)} kt \u00B7 ${Math.abs(((r.tideDir-m.dir+540)%360)-180)<35&&Math.abs(r.tideKt-m.kt)<0.5?"agrees":"<b>differs \u2014 trust what you measured</b>"}`
     : (m?`Atlas says slack`:``);
+  // Boat speed line. Measured turns the tide from an assumption into a measurement, so say
+  // plainly which one is in force.
+  const spdTxt = r.measured
+    ? `Boat <b>${r.Vmeas.toFixed(1)} kt</b> measured \u00B7 <b>${Math.round(r.pct*100)}%</b> of polar (${r.Vpolar.toFixed(1)})`+
+      (r.logSplit!=null&&r.logSplit>0.15?` <span style="color:#FFD9A8">\u00B7 the two logs differ by ${Math.round(r.logSplit*100)}%, re-sail if you can</span>`:``)
+    : `Boat speed <b>assumed</b> from the polar (${r.Vpolar.toFixed(1)} kt). Enter the log and the tide becomes measured instead.`;
+  const cmpErr = r.compassErr!=null
+    ? `<div style="margin-top:3px">Compass reads <b>${Math.abs(r.compassErr).toFixed(0)}\u00B0 ${r.compassErr<0?"high":"low"}</b> against your tracks \u00B7 set banner corrected</div>`
+    : ``;
   const verdict=r.trusted
     ? `<div style="color:#BFE8D4;font-weight:800;margin-top:4px">\u2713 Both beats agree. T line is now fixed and drawn solid.</div>`+
-      `<div style="font-size:10.5px;opacity:.75;margin-top:2px">Assumes you sailed the polar angle and speed on both tacks. Sailing low and slow on one can cancel out, so this checks consistency, not accuracy.</div>`
-    : `<div style="color:#FFD9A8;font-weight:800;margin-top:4px">Beats don't agree well enough (${(r.ratio*100).toFixed(0)}% of expected spread). Wind shown, but the T line stays dashed. Re-sail a beat if you can.</div>`;
+      `<div style="font-size:10.5px;opacity:.75;margin-top:2px">${r.measured
+        ? "Speed measured, so the spread check above tests the ANGLE you sailed, not your speed."
+        : "Assumes you sailed the polar angle and speed on both tacks. Sailing low and slow on one can cancel out, so this checks consistency, not accuracy."}</div>`
+    : `<div style="color:#FFD9A8;font-weight:800;margin-top:4px">Beats don't agree well enough (${(r.ratio*100).toFixed(0)}% of expected spread). Wind shown, but the T line stays dashed.</div>`+
+      (!r.measured&&r.ratio<0.9
+        ? `<div style="font-size:10.5px;opacity:.85;margin-top:2px">A low spread usually means you are slower than the polar, not that you sailed badly. Enter the log speed and re-check before re-sailing.</div>`
+        : `<div style="font-size:10.5px;opacity:.75;margin-top:2px">Re-sail a beat if you can.</div>`);
   return box(half+
     `<div style="margin-top:6px;border-top:1px solid rgba(255,255,255,.18);padding-top:6px">`+
-    `Wind <b style="font-size:14px">${d3(r.wind)}\u00B0</b> \u00B7 tide <b>${tideTxt}</b><br>${cmp}</div>`+verdict,
+    `Wind <b style="font-size:14px">${d3(r.wind)}\u00B0</b> \u00B7 tide <b>${tideTxt}</b><br>${cmp}`+
+    `<div style="margin-top:3px">${spdTxt}</div>${cmpErr}</div>`+verdict,
     r.trusted?"#2FA35C":"#E0A64A");
 }
 function beatPress(tack){
   if(BEAT.rec&&BEAT.rec.tack===tack){            // second press: stop and keep the result
     const st=beatStats(BEAT.rec.pts);
+    // Log speed and compass heading, read off the boat's own instruments. Log speed is what
+    // turns the tide from an assumption into a measurement: beatSolve otherwise has to assume
+    // you sailed the polar's speed, and on 13 Aug 2026 that assumption put the tide 0.65 kt
+    // and 23 degrees out, then rejected the whole solve for a spread ratio of 71%.
+    if(st){
+      const lg=$("beatLog"), hd=$("beatHdg");
+      const lv=lg&&lg.value!==""?+lg.value:null, hv=hd&&hd.value!==""?+hd.value:null;
+      st.log=(lv!=null&&isFinite(lv)&&lv>0.2)?lv:null;
+      st.hdg=(hv!=null&&isFinite(hv))?norm(hv):null;
+      if(lg)lg.value=""; if(hd)hd.value="";      // cleared ready for the other tack
+      const m=$("beatInMsg");
+      if(m)m.innerHTML=(st.log==null&&st.hdg==null)
+        ? "Nothing entered for that beat, so the tide falls back to the polar assumption."
+        : `Captured for the ${tack==="stbd"?"starboard":"port"} beat: `+
+          (st.log!=null?`log <b>${st.log.toFixed(1)} kt</b>`:"no log")+
+          (st.hdg!=null?` \u00B7 compass <b>${d3(st.hdg)}\u00B0</b>`:"")+".";
+    }
     BEAT[tack]=st; BEAT.rec=null;
     if(BEAT.stbd&&BEAT.port)beatApply();
     render(); return;
@@ -5177,6 +5348,7 @@ function drawStart(r,wdir,wspd){
 function startCtl(){
   const el=$("startCtl"); if(!el)return;
   el.style.display="block";
+  { const bi=$("beatIn"); if(bi)bi.style.display="block"; }
   const B=(id,txt,st)=>`<button class="pick" data-s="${id}" style="flex:1;${st||""}">${txt}</button>`;
   const L=startLine();
   const on="background:#12283A;color:#fff;border-color:#12283A";
