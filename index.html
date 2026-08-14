@@ -80,6 +80,13 @@ button.pick.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 button.pick.sug{border-color:var(--start);box-shadow:inset 0 0 0 2px var(--start)}
 /* black course button can also carry the orange "used wind" ring: outline sits outside */
 button.pick.on.sug{box-shadow:0 0 0 2px var(--start)}
+/* The six live readouts: same family as the tiles above, but denser, since they sit under the
+   mini chart and are read at a glance rather than studied. */
+#gSix .g6{background:#F4F6F8;border:1px solid #D6DEE5;border-radius:11px;padding:8px 6px;
+  text-align:center;min-height:54px;display:flex;flex-direction:column;justify-content:center;gap:1px}
+#gSix .g6 .l{font-size:9.5px;letter-spacing:.06em;color:#48627A;font-weight:800;line-height:1.1}
+#gSix .g6 .v{font-size:19px;font-weight:800;color:#12283A;line-height:1.2}
+#gSix .g6 .s{font-size:10px;color:#7C93A4;line-height:1.15}
 /* Ping entry rows. These sit in a dense panel, so the buttons are smaller than the Setup ones
    and every cell is the same width. (This block must stay AFTER the rules above: an earlier
    copy was silently overridden by them.) */
@@ -346,6 +353,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 </details>
 
 <details class="notes" id="garmintab" style="background:#3A4552;border:1px solid #2A323C"><summary style="color:#fff">GPS Display</summary>
+  </div>
   <div class="garmin-frame">
     <div class="garmin-tile">
       <div class="garmin-label">Heading</div>
@@ -398,14 +406,35 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
 
   <div class="garmin-compass-wrap">
-    <svg id="garminCompass" viewBox="0 0 300 300" style="width:100%;max-width:none;display:block;order:2;border:0;border-radius:0;background:none"></svg>
+    <svg id="garminCompass" viewBox="0 6 300 180" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;display:block;order:4;border:0;border-radius:0;background:none"></svg>
     <svg id="miniLegSvg" viewBox="0 0 360 360" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;height:100%;display:block;order:1;border:4px solid #12283A;border-radius:12px;background:#F2F7FA;box-shadow:inset 0 0 0 1.5px #B7C2CC;box-sizing:border-box"></svg>
     <!-- drawMiniLeg also writes a heading and a numbers block; on this tab only the chart is
          wanted, so they exist but stay hidden rather than forking the drawing code. -->
     <div id="miniLegHead" style="display:none"></div>
     <div id="miniLegInfo" style="display:none"></div>
+    <!-- Panel order: mini chart (1), set banner (2), six readouts (3), compass arc (4).
+         All span the full width. -->
+  <div id="gSetBox" style="grid-column:1/-1;order:2;margin-top:2px;padding:9px 11px;border-radius:11px;background:#F2F7FA;border:1.5px solid #B7C2CC">
+    <div style="font-size:9.5px;letter-spacing:.06em;color:#48627A;font-weight:800">POINTING v MAKING GOOD</div>
+    <div id="gSetMain" style="font-size:19px;font-weight:800;line-height:1.25;margin-top:2px"></div>
+    <div id="gSetNote" style="font-size:11.5px;line-height:1.4;margin-top:3px;color:#48627A"></div>
+  </div>
+    <div id="gSix" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;grid-column:1/-1;order:3"></div>
   </div>
   <div style="font-size:11px;color:#C9D3DC;margin-top:8px">Tracks whichever leg is selected in Course Analysis, pre-start or racing. Course-up: the ring turns to your current heading (GPS, or the compass when stationary), and the pointer shows the target relative to that. Not for navigation.</div>
+</details>
+
+<details class="notes" id="datatab" style="background:#E8E2F0;border:1px solid #C4B8D8"><summary style="color:#12283A">Data</summary>
+  <div style="font-size:12px;color:#48627A;line-height:1.5;margin-top:6px">
+    Saved races. Each holds the track, the course sailed and the conditions, so performance can be
+    worked out later. Nothing leaves the phone unless you export it.
+  </div>
+  <div style="display:flex;gap:8px;margin-top:10px;align-items:stretch">
+    <button class="rtbtn" id="raceSaveBtn" style="flex:1;min-height:46px;background:#2E6D96;border-color:#5090B8">Save race</button>
+    <button class="rtbtn" id="raceExportBtn" style="flex:1;min-height:46px;background:#2E6D96;border-color:#5090B8">Export all</button>
+  </div>
+  <div id="raceList" style="margin-top:10px"></div>
+  <div id="raceMsg" style="font-size:11.5px;color:#7C93A4;line-height:1.45;margin-top:8px"></div>
 </details>
 
 <details class="notes" id="windtab" style="background:var(--start);border:1px solid #E8892E"><summary style="color:#12283A">Weather settings</summary>
@@ -1448,6 +1477,19 @@ function compute(card,wdir,wspd,wgst,letter,num){
     start=[m1[1]+(MLADJ*Math.cos(dwn))/60, m1[2]+(MLADJ*Math.sin(dwn))/(60*Math.cos(rad(m1[1])))];
     startName="CV";
   }
+  // A pinged line beats the assumed start. Once an end has actually been recorded, use the
+  // middle of the real line, so leg 1's bearing, distance and beat geometry all follow the line
+  // you measured rather than a guess half a mile downwind of mark 1. Without this the pings
+  // only ever moved the Start panel and nothing else.
+  try{
+    if(typeof START!=="undefined"&&(START.cv||START.pin)){
+      const SL=startLine();
+      if(SL&&SL.cv&&SL.pin){
+        start=[(SL.cv[0]+SL.pin[0])/2,(SL.cv[1]+SL.pin[1])/2];
+        startName=SL.assumed?startName:"Line";
+      }
+    }
+  }catch(e){}
   const pts=[{name:startName+" start",pos:start,side:"",m:"",lbl:startName}].concat(
     seq.map(s=>({name:s.side==="F"?"Hut finish":MARKS[s.m][0],pos:[MARKS[s.m][1],MARKS[s.m][2]],side:s.side,m:s.m})));
   if(CARDS[card].start!=="hut"){                     // CV finish: 0.5 NM to windward of the last mark
@@ -1651,6 +1693,7 @@ function drawTideFlow(){
   s+=tideMarkArrows(px,off,range);
   s+=courseOverlay(px);
   s+=`</svg>`;
+  try{ s+=boatOverlaySVG(px,W,H,{r:7,track:false}); }catch(e){}   // boat only: the track would fight the stream arrows
   el.innerHTML=s;
   TIDEZ.apply();                                 // rebuilt each redraw: restore zoom and pan
 }
@@ -2870,6 +2913,51 @@ function gpsNextMark(){
 function garminStarted(){
   try{ const tgt=(typeof rtTarget==="function")?rtTarget():null; return tgt!=null&&Date.now()>=tgt; }catch(e){ return false; }
 }
+// ---------- set and leeway: what the water is actually doing to you ----------
+// Compass heading is where the boat is POINTING; GPS track is where it is GOING. The difference
+// is tide set plus leeway, and on a light day it can be enormous: a beat steered 070 making good
+// 026 is 44 degrees of it, which is the difference between laying the mark and not.
+//
+// A single sample is worthless -- the phone swings with the boat -- so both are averaged over a
+// short window and the reading is only called confident once it has settled.
+const SETW={hdg:[], cog:[], last:0};
+function setSample(){
+  const now=Date.now();
+  if(now-SETW.last<900)return;                    // ~1 Hz is plenty
+  SETW.last=now;
+  const compassOk=COMPASS.active&&COMPASS.heading!=null&&isFinite(COMPASS.heading);
+  const c=GPS.last&&GPS.last.coords;
+  const sog=c&&c.speed!=null?c.speed*1.94384:null;
+  const cog=c&&c.heading!=null&&isFinite(c.heading)?c.heading:null;
+  if(!compassOk||cog==null||sog==null||sog<1){    // below ~1 kt COG is noise
+    // Drop the window only after a real gap, and only if we ever had one: SETW.stamp is unset
+    // on the first pass, which was wiping each sample as fast as it arrived.
+    if(SETW.stamp&&now-SETW.stamp>8000){ SETW.hdg=[]; SETW.cog=[]; SETW.stamp=0; }
+    return;
+  }
+  if(SETW.stamp&&now-SETW.stamp>8000){ SETW.hdg=[]; SETW.cog=[]; }   // resumed after a gap
+  SETW.stamp=now;
+  SETW.hdg.push({v:COMPASS.heading,t:now});
+  SETW.cog.push({v:cog,t:now});
+  const cut=now-30000;                            // 30 s window
+  while(SETW.hdg.length&&SETW.hdg[0].t<cut)SETW.hdg.shift();
+  while(SETW.cog.length&&SETW.cog[0].t<cut)SETW.cog.shift();
+}
+function circMean(a){
+  if(!a.length)return null;
+  let x=0,y=0; a.forEach(p=>{ x+=Math.sin(rad(p.v)); y+=Math.cos(rad(p.v)); });
+  return {dir:norm(Math.atan2(x,y)*180/Math.PI), r:Math.hypot(x,y)/a.length};  // r = steadiness
+}
+function setInfo(){
+  const H=circMean(SETW.hdg), C=circMean(SETW.cog);
+  if(!H||!C||SETW.hdg.length<5)return null;
+  const secs=(SETW.hdg[SETW.hdg.length-1].t-SETW.hdg[0].t)/1000;
+  const diff=((C.dir-H.dir+540)%360)-180;         // + = pushed right of where you point
+  // Confident once both have been steady for long enough. A rolling boat, a tack, or a
+  // wandering helm all show up as a low r and keep this orange.
+  const conf=(secs>=15&&H.r>0.985&&C.r>0.97);
+  return {hdg:H.dir, cog:C.dir, diff, secs, steady:H.r, conf};
+}
 function garminTargetInfo(){
   const ctx=gpsNextMark(); if(!ctx)return null;
   // Always mirrors whatever leg is currently selected in Course Analysis (state.leg), pre-start
@@ -2991,6 +3079,8 @@ function trackAdd(pos){
   let twd=null,tws=null,twa=null;
   try{ twd=usedWind(); tws=usedSpd(); if(cog!=null)twa=angdiff(twd,cog); }catch(e){}
   TRACK.push({lat,lon,t:now,cog,sog,twd,tws,twa});
+  // a beat being recorded gets every fix, unthinned: the heading is fitted from these
+  if(typeof BEAT!=="undefined"&&BEAT.rec)BEAT.rec.pts.push({lat,lon,t:now});
   trackRedraw();
 }
 function trackRedraw(){
@@ -3057,6 +3147,8 @@ function gpsRender(pos){
   if(out)out.innerHTML=h;
   posUpdate(pos);
   try{garminRender(pos);}catch(e){}
+  try{setRender();}catch(e){}
+  try{sixRender();}catch(e){}
   // keep the map's boat and track current on every fix, rather than waiting for the throttled
   // full render below
   try{ if(MAP2&&$("gps2tab")&&$("gps2tab").open)gps2Render(); }catch(e){}
@@ -3266,9 +3358,15 @@ function gps2Render(){
   if(typeof GPS!=="undefined"&&GPS.last){
     const c=GPS.last.coords, me=[c.latitude,c.longitude];
     if(c.accuracy)L.circle(me,{radius:c.accuracy,color:"#0E7C94",weight:1,fillOpacity:.08}).addTo(MAP2LAYERS);
-    L.circleMarker(me,{radius:7,color:"#fff",weight:2,fillColor:"#0E7C94",fillOpacity:1}).addTo(MAP2LAYERS);
-    if(typeof TRACK!=="undefined"&&TRACK.length>1)
-      L.polyline(TRACK.map(t=>[t.lat,t.lon]),{color:"#FF6A13",weight:2.5,opacity:.85}).addTo(MAP2LAYERS);
+    // Track first, boat over it. Both get a white casing so they stay legible over land, water
+    // or the seamarks, and both are drawn large enough to find at a glance on a wet deck.
+    if(typeof TRACK!=="undefined"&&TRACK.length>1){
+      const pl=TRACK.map(t=>[t.lat,t.lon]);
+      L.polyline(pl,{color:"#fff",weight:8,opacity:.75}).addTo(MAP2LAYERS);
+      L.polyline(pl,{color:"#FF6A13",weight:4.5,opacity:1}).addTo(MAP2LAYERS);
+    }
+    L.circleMarker(me,{radius:12,color:"#fff",weight:4,fill:false,opacity:.9}).addTo(MAP2LAYERS);
+    L.circleMarker(me,{radius:9,color:"#12283A",weight:2,fillColor:"#0E7C94",fillOpacity:1}).addTo(MAP2LAYERS);
   }
   const st=$("gps2Stats");
   if(st)st.textContent=(r&&r.pts?r.pts.length+" marks":"no course")+(GPS.last?" \u00B7 live fix":" \u00B7 no fix");
@@ -3288,8 +3386,121 @@ function gps2Fit(){
 function garminCompassInit(){
   const tab=$("garmintab"); if(!tab)return;
   tab.addEventListener("toggle",()=>{
-    if(tab.open&&!COMPASS.active){ try{ compassStart(); }catch(e){} }
+    if(tab.open){
+      if(!COMPASS.active){ try{ compassStart(); }catch(e){} }
+      // These used to be painted only when a GPS fix arrived, so with no fix -- or before the
+      // first one -- the block was empty and looked missing entirely.
+      try{ sixRender(); }catch(e){}
+      try{ setRender(); }catch(e){}
+    }
   });
+  // and keep them alive while the tab is open, so they fill in as soon as data appears
+  setInterval(()=>{ try{ if(tab.open){ sixRender(); setRender(); } }catch(e){} },1000);
+}
+// ---------- saved races ----------
+// Stored in IndexedDB rather than localStorage: a season of tracks would not fit in the ~5 MB
+// localStorage cap, and this is meant to accumulate over years. Still on-device only, so the
+// export matters -- clearing Safari's data would take the lot.
+const RACEDB={name:"coursecalc",store:"races",db:null};
+function raceDB(){
+  return new Promise((res,rej)=>{
+    if(RACEDB.db)return res(RACEDB.db);
+    const rq=indexedDB.open(RACEDB.name,1);
+    rq.onupgradeneeded=()=>{ const db=rq.result;
+      if(!db.objectStoreNames.contains(RACEDB.store))db.createObjectStore(RACEDB.store,{keyPath:"id"}); };
+    rq.onsuccess=()=>{ RACEDB.db=rq.result; res(rq.result); };
+    rq.onerror=()=>rej(rq.error);
+  });
+}
+function raceTx(mode){ return raceDB().then(db=>db.transaction(RACEDB.store,mode).objectStore(RACEDB.store)); }
+function raceAll(){
+  return raceTx("readonly").then(st=>new Promise((res,rej)=>{
+    const rq=st.getAll(); rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error); }));
+}
+function raceMsg(t){ const el=$("raceMsg"); if(el)el.innerHTML=t; }
+// One fix every 5 s is plenty for working out performance afterwards, and keeps a two-hour
+// race to a sensible size.
+function raceThin(track,everyMs){
+  const out=[]; let last=-1e15;
+  track.forEach(p=>{ if(p.t-last>=everyMs){ out.push(p); last=p.t; } });
+  if(track.length&&out[out.length-1]!==track[track.length-1])out.push(track[track.length-1]);
+  return out;
+}
+function raceSave(){
+  if(typeof TRACK==="undefined"||TRACK.length<2){ raceMsg("No track to save yet. Turn GPS on and sail."); return; }
+  const pts=raceThin(TRACK,5000);
+  const t0=TRACK[0].t, t1=TRACK[TRACK.length-1].t;
+  let r=null; try{ r=compute(state.card,+($("wdir").value||0),+($("wspd").value||10),+($("wgst").value||15),state.letter,state.num); }catch(e){}
+  const rec={
+    id:"r"+t0,
+    saved:Date.now(),
+    start:t0, end:t1,
+    boat:state.boat, card:state.card, letter:state.letter, num:state.num,
+    courseName:(CARDS[state.card]&&CARDS[state.card].title)||state.card,
+    marks:(r&&r.pts)?r.pts.map(p=>({name:p.name,pos:p.pos,side:p.side,m:p.m})):[],
+    wind:{dir:+($("wdir").value||0), spd:+($("wspd").value||0), gust:+($("wgst").value||0), src:WIND.src},
+    tide:(typeof TIDECTX!=="undefined"&&TIDECTX)?{off:TIDECTX.off,range:TIDECTX.range}:null,
+    line:(START.cv||START.pin)?{cv:START.cv,pin:START.pin,obsWind:START.obsWind,obsTack:START.obsTack}:null,
+    n:pts.length,
+    track:pts
+  };
+  raceTx("readwrite").then(st=>{ st.put(rec);
+    raceMsg("Saved "+pts.length+" points from "+new Date(t0).toLocaleString()+".");
+    raceRender();
+  }).catch(e=>raceMsg("Could not save: "+e.message));
+}
+function raceRender(){
+  const el=$("raceList"); if(!el)return;
+  raceAll().then(list=>{
+    list.sort((a,b)=>b.start-a.start);
+    if(!list.length){ el.innerHTML=`<div style="font-size:12px;color:#7C93A4">No races saved yet.</div>`; return; }
+    const mins=r=>Math.max(1,Math.round((r.end-r.start)/60000));
+    el.innerHTML=list.map(r=>{
+      const d=new Date(r.start);
+      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.12)">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:13px;color:#12283A">${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})} \u00B7 ${r.letter||"?"}${r.num||""}</div>
+          <div style="font-size:11px;color:#48627A">${r.courseName||""} \u00B7 ${mins(r)} min \u00B7 ${r.n} pts \u00B7 wind ${d3(r.wind&&r.wind.dir||0)}\u00B0/${Math.round((r.wind&&r.wind.spd)||0)}kt</div>
+        </div>
+        <button class="pick" data-race="${r.id}" style="min-height:32px;font-size:11.5px;padding:0 10px;width:auto">Export</button>
+        <button class="pick" data-racedel="${r.id}" style="min-height:32px;font-size:11.5px;padding:0 9px;width:auto">Delete</button>
+      </div>`;
+    }).join("");
+    el.querySelectorAll("[data-race]").forEach(b=>b.onclick=()=>raceExport(b.getAttribute("data-race")));
+    el.querySelectorAll("[data-racedel]").forEach(b=>b.onclick=()=>raceDelete(b.getAttribute("data-racedel")));
+  }).catch(e=>{ el.innerHTML=""; raceMsg("Could not read saved races: "+e.message); });
+}
+function raceDownload(name,text,type){
+  const blob=new Blob([text],{type:type||"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function raceStamp(ms){ const d=new Date(ms), p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
+function raceExport(id){
+  raceAll().then(list=>{
+    const r=list.find(x=>x.id===id); if(!r)return;
+    raceDownload(`race_${raceStamp(r.start)}.json`,JSON.stringify(r,null,1));
+    raceMsg("Exported one race.");
+  });
+}
+function raceExportAll(){
+  raceAll().then(list=>{
+    if(!list.length){ raceMsg("Nothing to export."); return; }
+    raceDownload(`courseCalc_races_${raceStamp(Date.now())}.json`,JSON.stringify(list,null,1));
+    raceMsg("Exported "+list.length+" race"+(list.length>1?"s":"")+".");
+  });
+}
+function raceDelete(id){
+  raceTx("readwrite").then(st=>{ st.delete(id); raceMsg("Deleted."); setTimeout(raceRender,80); });
+}
+function raceInit(){
+  const s1=$("raceSaveBtn"); if(s1)s1.onclick=raceSave;
+  const s2=$("raceExportBtn"); if(s2)s2.onclick=raceExportAll;
+  const tab=$("datatab");
+  if(tab)tab.addEventListener("toggle",()=>{ if(tab.open)raceRender(); });
 }
 function gps2Init(){
   const tab=$("gps2tab");
@@ -3307,33 +3518,31 @@ function gpsToggle(){
 function garminCompassBuild(){
   const svg=$("garminCompass"); if(!svg||svg.dataset.built)return;
   svg.dataset.built="1";
-  // Laid out like a printed compass card: degree numbers OUTSIDE the tick ring, cardinal and
-  // intercardinal letters inside it. The dial is drawn smaller than the viewBox so the numbers
-  // have room outside it without being clipped.
-  const cx=150,cy=150,R=104;                       // R = the tick ring
+  // A 180-degree arc across the top rather than a full rose. The mark is ahead on any normal
+  // leg, so half the circle was wasted space; the same width now carries twice the angular
+  // resolution. When the mark IS behind -- just after a rounding, or having overstood -- the
+  // pointer clamps to the end of the arc and a caret shows which way it lies.
+  const cx=150, cy=150, R=118;
   let s="";
-  s+=`<circle cx="${cx}" cy="${cy}" r="142" fill="#fff" stroke="#B7C2CC" stroke-width="4"/>`;
+  s+=`<path d="M${cx-R-14},${cy} A${R+14},${R+14} 0 0 1 ${cx+R+14},${cy}" fill="#fff" stroke="#B7C2CC" stroke-width="3"/>`;
   s+=`<g id="garminRing" transform="rotate(0 ${cx} ${cy})">`;
-  s+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#12283A" stroke-width="2"/>`;
-  // ticks every 5 degrees, longer every 15 where a number sits
-  for(let d=0;d<360;d+=5){
-    const a=rad(d), major=d%15===0;
-    const r1=major?R-13:R-7, r2=R;
-    s+=`<line x1="${(cx+r1*Math.sin(a)).toFixed(1)}" y1="${(cy-r1*Math.cos(a)).toFixed(1)}" x2="${(cx+r2*Math.sin(a)).toFixed(1)}" y2="${(cy-r2*Math.cos(a)).toFixed(1)}" stroke="#8A97A3" stroke-width="${major?2:1}"/>`;
+  s+=`<path d="M${cx-R},${cy} A${R},${R} 0 0 1 ${cx+R},${cy}" fill="none" stroke="#12283A" stroke-width="2"/>`;
+  // ticks every 5, longer every 15, only across the visible half plus a little overlap
+  for(let d=-100;d<=100;d+=5){
+    const a=rad(d), major=Math.abs(d)%15===0;
+    const r1=major?R-13:R-7;
+    s+=`<line x1="${(cx+r1*Math.sin(a)).toFixed(1)}" y1="${(cy-r1*Math.cos(a)).toFixed(1)}" x2="${(cx+R*Math.sin(a)).toFixed(1)}" y2="${(cy-R*Math.cos(a)).toFixed(1)}" stroke="#8A97A3" stroke-width="${major?2:1}"/>`;
   }
-  // degree numbers outside the ring, every 15 degrees; the four cardinals larger, as on a card
-  for(let d=0;d<360;d+=15){
-    const a=rad(d), r=R+18, big=(d%90===0);
-    const x=cx+r*Math.sin(a), y=cy-r*Math.cos(a)+(big?6:4.5);
-    s+=`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${big?17:12}" font-weight="${big?800:700}" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="3" paint-order="stroke">${d}\u00B0</text>`;
+  for(let d=-90;d<=90;d+=15){
+    const a=rad(d), rr=R+17, big=(d%45===0);
+    s+=`<text x="${(cx+rr*Math.sin(a)).toFixed(1)}" y="${(cy-rr*Math.cos(a)+(big?6:4.5)).toFixed(1)}" font-size="${big?16:11.5}" font-weight="${big?800:700}" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="3" paint-order="stroke" data-deg="${d}">${d}</text>`;
   }
   s+=`</g>`;
   s+=`<circle cx="${cx}" cy="${cy}" r="5" fill="#12283A"/>`;
-  // pointer, rotated per-fix relative to the ring
   s+=`<g id="garminPtr" transform="rotate(0 ${cx} ${cy})">
-      <polygon points="${cx-11},${cy} ${cx+11},${cy} ${cx},${cy-R+14}" fill="#B4232F" stroke="#fff" stroke-width="2"/>
-      <polygon points="${cx-11},${cy} ${cx+11},${cy} ${cx},${cy+28}" fill="#7A1620"/>
+      <polygon points="${cx-10},${cy} ${cx+10},${cy} ${cx},${cy-R+18}" fill="#B4232F" stroke="#fff" stroke-width="2"/>
     </g>`;
+  s+=`<text id="garminBehind" x="${cx}" y="${cy+26}" font-size="12" font-weight="800" text-anchor="middle" fill="#B4232F" style="display:none">mark astern</text>`;
   svg.innerHTML=s;
 }
 function garminFmtClock(ms){
@@ -3427,6 +3636,171 @@ function garminLabelsSync(){
     tg.textContent=txt;
   }
 }
+// The banner. Always shows the raw difference; the colour says whether to act on it. Orange
+// while the compass and track are still settling, dark once both have been steady long enough.
+// ---------- the funnel: how far off the rhumb line to go before tacking ----------
+// The app used to advise two boards to the layline, which is the geometric minimum and close to
+// the worst tactic: on the layline a shift can only hurt you, dirty air has no escape, and a
+// foul tide is unrecoverable. This keeps you in a band around the rhumb line that narrows as you
+// approach, so you converge on the layline near the mark instead of starting there.
+const FUNNEL_FRAC=0.34;                            // half-width as a fraction of the distance to run
+function funnelInfo(){
+  try{
+    if(!GPS.last||GPS.watch==null)return null;
+    const wdir=+($("wdir").value||0), wspd=+($("wspd").value||10);
+    const r=compute(state.card,wdir,wspd,+($("wgst").value||15),state.letter,state.num);
+    const L=r&&r.legs&&r.legs[state.leg];
+    if(!L||L.pos!=="Beat"||!L.to||!L.to.pos)return null;
+    const me=[GPS.last.coords.latitude,GPS.last.coords.longitude];
+    const bd=brgDist(me,L.to.pos);                  // straight line to the mark
+    const D=bd.dist;
+    if(!(D>0.01))return null;
+    // Cross-track: how far you are off the direct line to the mark, and which side.
+    const off=((bd.brg-L.co+540)%360)-180;
+    const across=D*Math.sin(rad(off));              // NM, + = right of the rhumb line
+    const half=Math.max(0.02, D*FUNNEL_FRAC);       // the band narrows as D shrinks
+    const target=interp(P_TWS,P_UP.twa,wspd);
+    // Where the laylines are, so the band can never be wider than them.
+    const layHalf=D*Math.tan(rad(Math.min(target,80)))/2;
+    const halfUse=Math.min(half,layHalf);
+    return {D, across:-across, half:halfUse, layHalf,
+            outside:Math.abs(across)>halfUse,
+            frac:halfUse>0?Math.abs(across)/halfUse:0,
+            mark:L.to.name||"the mark"};
+  }catch(e){ return null; }
+}
+// Lift and header: your heading now against the average you have held on this tack.
+const TACKAVG={tack:null, sum:0, n:0, base:null};
+function shiftInfo(){
+  const si=setInfo(); if(!si)return null;
+  const wdir=+($("wdir").value||0);
+  const rel=((si.hdg-wdir+540)%360)-180;
+  const tack=rel<0?"stbd":"port";
+  if(TACKAVG.tack!==tack){ TACKAVG.tack=tack; TACKAVG.sum=0; TACKAVG.n=0; TACKAVG.base=null; }
+  TACKAVG.sum+=((si.hdg-(TACKAVG.base==null?si.hdg:TACKAVG.base)+540)%360)-180;
+  TACKAVG.n++;
+  if(TACKAVG.base==null)TACKAVG.base=si.hdg;
+  const mean=norm(TACKAVG.base+TACKAVG.sum/Math.max(1,TACKAVG.n));
+  const d=((si.hdg-mean+540)%360)-180;
+  // On starboard a heading shift to the right is a lift; on port it is a header.
+  const lifted = tack==="stbd" ? d>0 : d<0;
+  return {deg:Math.abs(d), lifted, tack, n:TACKAVG.n, hdg:si.hdg};
+}
+function setRender(){
+  const box=$("gSetBox"); if(!box)return;
+  setSample();
+  const si=setInfo();
+  // Always visible, and says what it is waiting for. Hiding it entirely meant that sitting at
+  // the pontoon, or before the compass had been allowed, the whole thing looked missing.
+  box.style.display="block";
+  if(!si){
+    const compassOk=COMPASS.active&&COMPASS.heading!=null&&isFinite(COMPASS.heading);
+    const c=GPS.last&&GPS.last.coords;
+    const sog=c&&c.speed!=null?c.speed*1.94384:null;
+    const cog=c&&c.heading!=null&&isFinite(c.heading)?c.heading:null;
+    const need = !GPS.last||GPS.watch==null ? "waiting for GPS"
+               : !compassOk                 ? "waiting for the compass \u2014 allow it when asked"
+               : (sog==null||sog<1)         ? "waiting for boat speed (over 1 kt)"
+               : cog==null                  ? "waiting for a course over ground"
+               : "settling \u2014 hold a steady course for a few seconds";
+    $("gSetMain").innerHTML=`<span style="color:#7C93A4;font-size:15px">\u2013</span>`;
+    $("gSetNote").innerHTML=need;
+    return;
+  }
+  const col=si.conf?"#12283A":"#C8551A";
+  const side=si.diff>0?"right":"left";
+  const mag=Math.abs(si.diff);
+  $("gSetMain").innerHTML=
+    `<span style="color:${col}">${d3(si.hdg)}\u00B0 \u2192 ${d3(si.cog)}\u00B0`+
+    `<span style="font-size:15px"> &nbsp;set ${mag.toFixed(0)}\u00B0 ${side}</span></span>`;
+  // What it means for the mark ahead: are you laying it on this board?
+  let note=si.conf?"":"settling \u2014 hold a steady course";
+  try{
+    const tgt=garminTargetInfo();
+    if(tgt&&tgt.pos&&GPS.last){
+      const me=[GPS.last.coords.latitude,GPS.last.coords.longitude];
+      const bd=brgDist(me,tgt.pos);
+      const short=((bd.brg-si.cog+540)%360)-180;   // + = the mark is right of your track
+      const nm=bd.dist;
+      const txt=nm<0.2?Math.round(nm*M_PER_NM)+" m":nm.toFixed(2)+"\u2032";
+      if(Math.abs(short)<4)
+        note=`Laying ${tgt.name||"the mark"} \u00B7 ${txt} to run`;
+      else
+        note=`<b>Not laying ${tgt.name||"the mark"}</b> \u00B7 it bears ${d3(bd.brg)}\u00B0, you are making good ${d3(si.cog)}\u00B0 \u00B7 ${Math.abs(short).toFixed(0)}\u00B0 ${short>0?"right":"left"} of your track \u00B7 ${txt} away`;
+    }
+  }catch(e){}
+  $("gSetNote").innerHTML=note;
+}
+// The six readouts under the mini chart. Each answers a question you would otherwise be doing
+// in your head: which way is the shift, what is the tide doing, when do I tack, am I sailing the
+// boat properly, and which tack is quicker to the mark.
+function sixRender(){
+  const el=$("gSix"); if(!el)return;
+  el.style.display="grid";
+  const cell=(label,val,sub,col)=>`<div class="g6"><div class="l">${label}</div>`+
+    `<div class="v"${col?` style="color:${col}"`:``}>${val}</div>`+(sub?`<div class="s">${sub}</div>`:``)+`</div>`;
+  const dash="\u2013";
+  const si=setInfo(), fn=funnelInfo(), sh=shiftInfo();
+  // 1 lift or header
+  let c1=cell("SHIFT",dash,"");
+  if(sh&&sh.n>6)
+    c1=cell("SHIFT",(sh.deg<2?"steady":(sh.lifted?"Lift":"Head")),
+      sh.deg<2?"on "+(sh.tack==="stbd"?"stbd":"port"):sh.deg.toFixed(0)+"\u00B0 on "+(sh.tack==="stbd"?"stbd":"port"),
+      sh.deg<2?null:(sh.lifted?"#007A33":"#C8102E"));
+  // 2 set and drift, measured
+  let c2=cell("TIDE",dash,"");
+  if(START.obsTide)
+    c2=cell("TIDE",d3(START.obsTide.dir)+"\u00B0",START.obsTide.kt.toFixed(1)+" kt \u00B7 measured");
+  else if(si)
+    c2=cell("SET",Math.abs(si.diff).toFixed(0)+"\u00B0"+(si.diff>0?"R":"L"),
+      si.conf?"steady":"settling",si.conf?null:"#C8551A");
+  // 3 to the corridor edge
+  let c3=cell("TACK IN",dash,"stay mid-course");
+  if(fn){
+    const room=Math.max(0,fn.half-Math.abs(fn.across));
+    const m=room*M_PER_NM;
+    c3=fn.outside
+      ? cell("TACK","NOW","past the band","#C8102E")
+      : cell("TACK IN",m<200?Math.round(m)+" m":room.toFixed(2)+"\u2032",
+             (fn.frac*100).toFixed(0)+"% of band");
+  }
+  // 4 to the layline, kept separate: the band is where to tack, the layline is the limit
+  let c4=cell("LAYLINE",dash,"");
+  if(fn){
+    const toLay=Math.max(0,fn.layHalf-Math.abs(fn.across));
+    const m=toLay*M_PER_NM;
+    c4=cell("LAYLINE",m<200?Math.round(m)+" m":toLay.toFixed(2)+"\u2032",
+      toLay<0.02?"on it \u2014 do not overstand":"room to the limit",toLay<0.02?"#C8102E":null);
+  }
+  // 5 How your VMG compares with the polar. The raw VMG is already one of the twelve tiles
+  //   above, so repeating it here would waste a box: what it does not tell you is whether you
+  //   are pinching or footing, which is what this percentage says.
+  let c5=cell("POLAR",dash,"");
+  try{
+    const c=GPS.last&&GPS.last.coords, sog=c&&c.speed!=null?c.speed*1.94384:null;
+    const wspd=+($("wspd").value||10), wdir=+($("wdir").value||0);
+    if(sog!=null&&sog>0.5&&c.heading!=null){
+      const twa=Math.abs(((c.heading-wdir+540)%360)-180);
+      const vmg=sog*Math.cos(rad(twa));
+      const tgt=twa<90?interp(P_TWS,P_UP.vmg,wspd):interp(P_TWS,P_DN.vmg,wspd);
+      const pct=tgt>0?Math.abs(vmg)/tgt*100:0;
+      c5=cell("POLAR",pct.toFixed(0)+"%",
+        pct>102?"footing":pct<90?"pinching or slow":"on the number",
+        pct>95?"#007A33":pct>85?null:"#C8551A");
+    }
+  }catch(e){}
+  // 6 which tack gets there sooner
+  let c6=cell("FAVOURED",dash,"");
+  try{
+    const tp=tackPointInfo();
+    if(fn&&si){
+      const nowSide=fn.across>0?"right":"left";
+      c6=cell("FAVOURED",fn.across>0?"Port":"Stbd",
+        "you are "+nowSide+" of rhumb");
+    }
+  }catch(e){}
+  el.innerHTML=c1+c2+c3+c4+c5+c6;
+}
 function garminRender(pos){
   garminCompassBuild();
   const co=$("gCourse"),sp=$("gSpeed"),br=$("gBrg"),ds=$("gDist"),vg=$("gVmg"),vc=$("gVmc"),et=$("gEta"),tm=$("gTime"),
@@ -3445,7 +3819,10 @@ function garminRender(pos){
   // Course tile above (GPS course-over-ground, falling back to the magnetic compass when
   // stationary). Falls back to north-up (0) only when neither heading source is available at all.
   const heading=courseVal!=null?courseVal:0;
-  if(ring)ring.setAttribute("transform",`rotate(${(-heading).toFixed(1)} 150 150)`);
+  // The arc is marked in degrees RELATIVE to the bow, so it does not rotate: the boat is always
+  // at 0 in the middle. Only the pointer moves, and it clamps at the ends when the mark is
+  // behind, with a note saying so rather than silently pointing at the edge.
+  if(ring)ring.setAttribute("transform","rotate(0 150 150)");
   sp.innerHTML = sog!=null ? `${sog.toFixed(1)}<span class="garmin-unit">kt</span>` : `&ndash;<span class="garmin-unit">kt</span>`;
   // VMG: speed made good along the wind axis (signed, negative when running/reaching away from it)
   if(vg){
@@ -3511,7 +3888,18 @@ function garminRender(pos){
     if(tm)tm.textContent = `${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
     if(et)et.textContent = garminFmtClock(Date.now()+totalSec*1000);
   } else { if(tm)tm.textContent="\u2013"; if(et)et.textContent="\u2013"; }
-  if(ptr)ptr.setAttribute("transform",`rotate(${(bd.brg-heading).toFixed(1)} 150 150)`);
+  // Pointer: bearing to the mark relative to the bow, clamped to the ends of the arc, with a
+  // note when the mark is actually behind -- just after a rounding, or having overstood.
+  {
+    const behind=$("garminBehind");
+    let rel=0, isBehind=false;
+    rel=((bd.brg-heading+540)%360)-180;
+    if(rel>95){ isBehind=true; rel=95; }
+    if(rel<-95){ isBehind=true; rel=-95; }
+    if(ptr)ptr.setAttribute("transform",`rotate(${rel.toFixed(1)} 150 150)`);
+    if(behind){ behind.style.display=isBehind?"":"none";
+      behind.textContent=rel>0?"mark astern \u2192":"\u2190 mark astern"; }
+  }
 }
 function garminInit(){ const b=$("garminBtn"); if(b)b.onclick=gpsToggle; garminCompassBuild(); }
 // Header GO button: a real on/off toggle for location. ON starts location tracking (which is
@@ -3633,6 +4021,8 @@ function rtClaimTime(){
 // Wrapping rtTick keeps the two in step whichever of its several early returns is taken.
 function rtTick(){
   rtTick0();
+  // keep the beat readout ticking while a run is being recorded, so it visibly counts up
+  try{ if(BEAT.rec&&$("starttab")&&$("starttab").open)startCtl(); }catch(e){}
   const big=$("rtBig"), rb=$("startRepeatBig"), rl=$("startRepeatLab"), lab=$("rtLabel");
   if(big&&rb){
     rb.textContent=big.textContent;
@@ -3889,6 +4279,7 @@ function buildPickers(){
   garminInit();
   goBtnInit();
   gps2Init();
+  raceInit();
   garminCompassInit();
   legSwipeInit();
   startLoad();
@@ -4233,6 +4624,37 @@ function posBtns(){
   dim($("posOut"), POSVIEW.z<=1.001); dim($("posIn"), POSVIEW.z>=7.999);
 }
 
+// Boat, accuracy ring and (optionally) the track sailed, for any chart that can project a
+// lat/lon to its own pixels. Off-frame points are dropped rather than clamped, so a line is
+// never drawn to a position the boat was not in.
+function boatOverlaySVG(px,W,H,opts){
+  if(typeof GPS==="undefined"||!GPS.last||GPS.watch==null)return "";
+  const o=opts||{}, c=GPS.last.coords, me=[c.latitude,c.longitude];
+  const inFrame=q=>q[0]>=2&&q[0]<=W-2&&q[1]>=2&&q[1]<=H-2;
+  let s="";
+  if(o.track!==false&&typeof TRACK!=="undefined"&&TRACK.length>1){
+    let seg=[];
+    const flush=()=>{ if(seg.length>1)s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="#FF6A13" stroke-width="${o.tw||2.5}" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>`; seg=[]; };
+    for(const t of TRACK){ const q=px([t.lat,t.lon]);
+      if(inFrame(q))seg.push(q[0].toFixed(1)+","+q[1].toFixed(1)); else flush(); }
+    flush();
+  }
+  const q=px(me);
+  if(!inFrame(q))return s;
+  const r=o.r||6;
+  if(c.accuracy&&o.acc!==false){
+    const q2=px(offsetPos(me,90,(c.accuracy/M_PER_NM)));
+    const rad=Math.abs(q2[0]-q[0]);
+    if(rad>r)s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${rad.toFixed(1)}" fill="#0E7C94" fill-opacity=".08" stroke="#0E7C94" stroke-width="1" opacity=".5"/>`;
+  }
+  const cg=c.heading, sp=c.speed;
+  if(cg!=null&&isFinite(cg)&&sp!=null&&sp>0.5){
+    const th=rad(cg);          // these charts are north-up
+    s+=`<line x1="${q[0].toFixed(1)}" y1="${q[1].toFixed(1)}" x2="${(q[0]+16*Math.sin(th)).toFixed(1)}" y2="${(q[1]-16*Math.cos(th)).toFixed(1)}" stroke="#0E7C94" stroke-width="2.5"/>`;
+  }
+  s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${r}" fill="#0E7C94" stroke="#fff" stroke-width="2"/>`;
+  return s;
+}
 function drawMap(r,wdir){
   const svg=$("map"); const W=710,H=1008;
   const LA=[[53.30,749],[53.31667,498],[53.33333,271],[53.35,66]];
@@ -4287,6 +4709,7 @@ function drawMap(r,wdir){
   s+=`<rect x="${sq[0]-8}" y="${sq[1]-8}" width="16" height="16" fill="#FF6A13" stroke="#fff" stroke-width="2" transform="rotate(45 ${sq[0]} ${sq[1]})"/>`;
   s+=`<text x="${sq[0]+13}" y="${sq[1]+5}" font-size="14" font-weight="800" fill="#FF6A13" stroke="#fff" stroke-width="3" paint-order="stroke">${r.pts[0].lbl}</text>`;
   }
+  try{ s+=boatOverlaySVG(px,W,H,{r:7}); }catch(e){}
   svg.innerHTML=s;
   mapApply();                                  // the chart is rebuilt each render: restore zoom, pan and label sizes
 }
@@ -4321,7 +4744,7 @@ function buoySVG(x,y,pt,above){
 // lies back toward the other one. The line direction needed to apply that comes from the
 // two raw fixes, so it is solved twice: rough bearing first, then again once corrected.
 const M_PER_NM=1852;
-const START={cv:null,pin:null,entering:null,target:null,obsWind:null,obsTack:null,obsAt:0};
+const START={cv:null,pin:null,entering:null,target:null,obsWind:null,obsTack:null,obsAt:0,obsTrusted:false,obsTide:null};
 let PING_MSG=null;                              // why the last Pin/CV press did not produce a fix
 let WINDPRESS={tack:null,ok:null};              // last Wind-beat press: which tack, and whether it took
 let PING_STATE={cv:null,pin:null};   // 'ok' | 'fail' | null (never tried), per end, for the Pin/CV button colour
@@ -4347,34 +4770,126 @@ const DEFLINE=250;                              // metres, the assumed line's le
 // at the polar's target upwind angle; COG then fixes the wind, since wind = heading +/- target.
 // COG is over the ground, so the tidal set is removed first: sailing through a cross-tide the
 // track differs from the heading by the drift angle, which would otherwise bias the answer.
-function windFromBeat(tack){
-  if(!GPS.last||!GPS.last.coords)return null;
-  const c=GPS.last.coords;
-  const cog=c.heading, sog=c.speed!=null?c.speed*1.94384:null;   // m/s -> kt
-  if(cog==null||!isFinite(cog)||sog==null||!(sog>0.5))return null;
-  const wspd=+($("wspd").value||10);
-  // ground track -> water track: subtract the tide vector, leaving the boat's own motion
-  let hdg=cog, spd=sog;
-  try{
-    const off=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off:null;
-    if(off!==null){
-      const st=streamAtPos([c.latitude,c.longitude],off,TIDECTX.range);
-      if(st&&!st.slack&&st.kt>0){
-        const gx=sog*Math.sin(rad(cog)), gy=sog*Math.cos(rad(cog));
-        const tx=st.kt*Math.sin(rad(st.dir)), ty=st.kt*Math.cos(rad(st.dir));
-        const bx=gx-tx, by=gy-ty;                 // boat through the water
-        const bs=Math.hypot(bx,by);
-        if(bs>0.3){ hdg=norm(Math.atan2(bx,by)*180/Math.PI); spd=bs; }
-      }
-    }
-  }catch(e){}
-  const target=interp(P_TWS,P_UP.twa,wspd);       // the angle you are assumed to be sailing
-  // On starboard tack the wind is off the starboard bow, so it lies target degrees clockwise
-  // of the heading; on port it is the same amount anticlockwise.
-  return {wind:norm(tack==="stbd"?hdg+target:hdg-target), hdg, spd, target, tack};
+// ---------- wind and tide from two beats ----------
+// Sail a beat on each tack and press the button at each end of the run. Each beat gives a
+// ground track; the pair gives wind AND tide together, because the tide is common to both and
+// the wind is what makes them symmetric. That is better than correcting one tack with a modelled
+// tide, which inherits every error in the model.
+//
+// Headings come from the positions, not from GPS course-over-ground: iOS often leaves
+// coords.heading null, which is why the old single-press version silently did nothing.
+const BEAT={stbd:null, port:null, rec:null};     // rec = {tack, pts:[...]} while recording
+function beatBrg(pts){                            // straight-line bearing over the run
+  if(!pts||pts.length<2)return null;
+  return brgDist([pts[0].lat,pts[0].lon],[pts[pts.length-1].lat,pts[pts.length-1].lon]).brg;
 }
-// The wind the assumed line is squared to. A beat-derived wind takes precedence here and here
-// only: it does not touch the app's wind source, so forecast/buoy/manual are unaffected.
+function beatStats(pts){
+  if(!pts||pts.length<2)return null;
+  const a=pts[0], b=pts[pts.length-1];
+  const straight=brgDist([a.lat,a.lon],[b.lat,b.lon]).dist;      // NM
+  let path=0;
+  for(let i=1;i<pts.length;i++)path+=brgDist([pts[i-1].lat,pts[i-1].lon],[pts[i].lat,pts[i].lon]).dist;
+  const secs=(b.t-a.t)/1000;
+  return {brg:beatBrg(pts), nm:straight, m:straight*M_PER_NM, secs,
+          sog:secs>0?straight/(secs/3600):0,
+          straightness:path>0?straight/path:0,                   // 1 = dead straight
+          weak:(secs<20||straight*M_PER_NM<50)};
+}
+function beatVec(st){                             // ground velocity as [E,N] in knots
+  return [st.sog*Math.sin(rad(st.brg)), st.sog*Math.cos(rad(st.brg))];
+}
+// Wind and tide from the two ground tracks. Assumes you sailed the polar's target angle at the
+// polar's speed on both tacks -- that assumption is the weak point, not the arithmetic.
+function beatSolve(){
+  const S=BEAT.stbd, P=BEAT.port;
+  if(!S||!P)return null;
+  const wspd=+($("wspd").value||10);
+  const th=interp(P_TWS,P_UP.twa,wspd), Vb=interp(P_TWS,P_UP.vel,wspd);
+  const Gs=beatVec(S), Gp=beatVec(P);
+  const De=Gs[0]-Gp[0], Dn=Gs[1]-Gp[1];
+  const span=Math.hypot(De,Dn);
+  if(!(span>0.05))return null;
+  const wind=norm(Math.atan2(Dn,-De)*180/Math.PI);
+  const Ts=[Gs[0]-Vb*Math.sin(rad(wind-th)), Gs[1]-Vb*Math.cos(rad(wind-th))];
+  const tideKt=Math.hypot(Ts[0],Ts[1]), tideDir=norm(Math.atan2(Ts[0],Ts[1])*180/Math.PI);
+  // How far the two tracks separated, against what the polar says they should. A clear
+  // deviation means a beat was not sailed properly; agreement does NOT prove it was, since
+  // sailing low and slow can cancel out.
+  const expect=2*Vb*Math.sin(rad(th));
+  const ratio=expect>0?span/expect:0;
+  // Weak beats must never be trusted, whatever the ratio says, and the ratio band is tight:
+  // a 10-degree badly-sailed tack shows up at about 1.08, so 1.12 let it through.
+  const trusted=!S.weak&&!P.weak&&ratio>0.94&&ratio<1.06
+                &&S.straightness>0.97&&P.straightness>0.97;
+  return {wind,tideDir,tideKt,ratio,trusted,th,Vb,
+          modelled:(()=>{ try{ const off=TIDECTX?TIDECTX.off:null;
+            if(off==null||!GPS.last)return null;
+            const st=streamAtPos([GPS.last.coords.latitude,GPS.last.coords.longitude],off,TIDECTX.range);
+            return st&&!st.slack?{dir:st.dir,kt:st.kt}:{dir:null,kt:0}; }catch(e){ return null; } })()};
+}
+function beatApply(){
+  const r=beatSolve(); if(!r)return;
+  START.obsWind=r.wind; START.obsTack="both"; START.obsAt=Date.now();
+  START.obsTrusted=r.trusted; START.obsTide={dir:r.tideDir,kt:r.tideKt};
+  startSave();
+}
+// The live readout. While recording it must visibly change every second, so it is obvious the
+// app is doing something; afterwards it reports what each beat gave and what the pair solved to.
+function beatReadoutHTML(){
+  const box=(inner,col)=>`<div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid ${col||"rgba(255,255,255,.18)"};font-size:11.5px;line-height:1.5;color:#DCEAF4">${inner}</div>`;
+  if(BEAT.rec){
+    const st=beatStats(BEAT.rec.pts);
+    const n=BEAT.rec.pts.length;
+    if(!st)return box(`<b>Recording ${BEAT.rec.tack==="stbd"?"starboard":"port"} beat\u2026</b><br>Waiting for the first fixes. Sail straight on the beat.`,"#E08A2B");
+    const q=st.straightness>0.985?"straight":st.straightness>0.95?"slight wander":"wandering \u2014 sail straighter";
+    return box(`<b>Recording ${BEAT.rec.tack==="stbd"?"starboard":"port"} beat\u2026</b> tap the button again to stop.<br>`+
+      `${Math.round(st.secs)} s \u00B7 ${Math.round(st.m)} m \u00B7 heading <b>${d3(st.brg)}\u00B0</b> \u00B7 ${st.sog.toFixed(1)} kt<br>`+
+      `<span style="color:#FFD9A8">${q}${st.weak?" \u00B7 keep going, under 20 s or 50 m is unreliable":""}</span> \u00B7 ${n} fixes`,"#E08A2B");
+  }
+  const line=(t,label)=>{
+    const b=BEAT[t]; if(!b)return `${label}: <span style="opacity:.6">not done</span>`;
+    return `${label}: <b>${d3(b.brg)}\u00B0</b> \u00B7 ${Math.round(b.m)} m \u00B7 ${Math.round(b.secs)} s \u00B7 ${b.sog.toFixed(1)} kt`+
+           (b.weak?` <span style="color:#FFD9A8">(weak)</span>`:``);
+  };
+  if(!BEAT.stbd&&!BEAT.port)
+    return box(`Sail a beat on each tack and tap the matching button at the start and end of each run. Two beats give the wind <i>and</i> the tide, measured on the day.`);
+  const half=`${line("stbd","Starboard")}<br>${line("port","Port")}`;
+  const r=beatSolve();
+  if(!r)return box(half+`<br><span style="opacity:.75">One more beat on the other tack to solve.</span>`);
+  const tideTxt=`${d3(r.tideDir)}\u00B0 at ${r.tideKt.toFixed(1)} kt`;
+  const m=r.modelled;
+  const cmp=(m&&m.dir!=null)
+    ? `Atlas says ${d3(m.dir)}\u00B0 ${m.kt.toFixed(1)} kt \u00B7 ${Math.abs(((r.tideDir-m.dir+540)%360)-180)<35&&Math.abs(r.tideKt-m.kt)<0.5?"agrees":"<b>differs \u2014 trust what you measured</b>"}`
+    : (m?`Atlas says slack`:``);
+  const verdict=r.trusted
+    ? `<div style="color:#BFE8D4;font-weight:800;margin-top:4px">\u2713 Both beats agree. T line is now fixed and drawn solid.</div>`+
+      `<div style="font-size:10.5px;opacity:.75;margin-top:2px">Assumes you sailed the polar angle and speed on both tacks. Sailing low and slow on one can cancel out, so this checks consistency, not accuracy.</div>`
+    : `<div style="color:#FFD9A8;font-weight:800;margin-top:4px">Beats don't agree well enough (${(r.ratio*100).toFixed(0)}% of expected spread). Wind shown, but the T line stays dashed. Re-sail a beat if you can.</div>`;
+  return box(half+
+    `<div style="margin-top:6px;border-top:1px solid rgba(255,255,255,.18);padding-top:6px">`+
+    `Wind <b style="font-size:14px">${d3(r.wind)}\u00B0</b> \u00B7 tide <b>${tideTxt}</b><br>${cmp}</div>`+verdict,
+    r.trusted?"#2FA35C":"#E0A64A");
+}
+function beatPress(tack){
+  if(BEAT.rec&&BEAT.rec.tack===tack){            // second press: stop and keep the result
+    const st=beatStats(BEAT.rec.pts);
+    BEAT[tack]=st; BEAT.rec=null;
+    if(BEAT.stbd&&BEAT.port)beatApply();
+    render(); return;
+  }
+  if(!GPS.last||GPS.watch==null){
+    PING_MSG="Turn GPS on first: the heading comes from your track, so it needs a live fix.";
+    startCtl(); return;
+  }
+  BEAT.rec={tack, pts:[]};                        // first press: start recording this tack
+  BEAT[tack]=null; PING_MSG=null;
+  render();
+}
+function beatReset(){ BEAT.stbd=null; BEAT.port=null; BEAT.rec=null;
+  START.obsWind=null; START.obsTack=null; START.obsTrusted=false; START.obsTide=null; startSave(); }
+
+// The wind the assumed line is squared to: a beat-derived wind when there is one, otherwise
+// the card's. Deliberately does not touch WIND, so forecast/buoy/manual are unaffected.
 function startWind(){
   return (START.obsWind!=null&&isFinite(START.obsWind)) ? START.obsWind : (+($("wdir").value||0));
 }
@@ -4557,7 +5072,7 @@ function drawStart(r,wdir,wspd){
     // angle between them is the bias, but that only means anything once BOTH are solid: an
     // assumed end is placed perpendicular to the wind, so comparing it with T is circular.
     const aSolid = !L.assumed;                    // both ends pinged
-    const tSolid = (START.obsWind!=null);         // wind fixed off a beat
+    const tSolid = (START.obsWind!=null&&START.obsTrusted===true);   // fixed off two agreeing beats
     const failed = PING_STATE.cv==="fail"||PING_STATE.pin==="fail";
     const A_COL = failed&&!aSolid ? "#C8551A" : "#1E8449", T_COL="#2E6D96";
     // T line: same length, centred on the A line's midpoint so they cross there
@@ -4609,6 +5124,15 @@ function drawStart(r,wdir,wspd){
     // ---- the run-in ----
     if(me){
       const q=F(me);
+      // Track sailed, so the approach can be seen. Same rule as elsewhere: points outside the
+      // frame are dropped, never clamped.
+      if(typeof TRACK!=="undefined"&&TRACK.length>1){
+        let seg=[];
+        const flush=()=>{ if(seg.length>1)s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="${ORANGE}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity=".8"/>`; seg=[]; };
+        for(const t of TRACK){ const p2=F([t.lat,t.lon]);
+          if(p2[0]>=4&&p2[0]<=W-4&&p2[1]>=4&&p2[1]<=H-4)seg.push(p2[0].toFixed(1)+","+p2[1].toFixed(1)); else flush(); }
+        flush();
+      }
       const tgtPos=tgt==="cv"?L.cv:L.pin;
       const off=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off:null;
       const tide=off!==null?streamAtPos(me,off,TIDECTX.range):null;
@@ -4621,8 +5145,9 @@ function drawStart(r,wdir,wspd){
       s+=`<line x1="${q[0].toFixed(1)}" y1="${q[1].toFixed(1)}" x2="${t2[0].toFixed(1)}" y2="${t2[1].toFixed(1)}" stroke="${ORANGE}" stroke-width="2" stroke-dasharray="5 4" opacity=".9"/>`;
       if(acc!=null)s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${Math.max(3,acc*sc).toFixed(1)}" fill="${ORANGE}" opacity=".14"/>`;
       s+= live
-        ? `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="6" fill="${ORANGE}" stroke="#fff" stroke-width="2"/>`
-        : `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="7" fill="#fff" stroke="${ORANGE}" stroke-width="3" stroke-dasharray="3.5 3"/>`;
+        ? `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="11" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>`+
+          `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="8" fill="${ORANGE}" stroke="#12283A" stroke-width="2"/>`
+        : `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="9" fill="#fff" stroke="${ORANGE}" stroke-width="3.5" stroke-dasharray="3.5 3"/>`;
       const dtxt = dl>0 ? `${Math.round(dl)} m OVER` : `${Math.round(-dl)} m to line`;
       s+=`<text x="8" y="${H-26}" font-size="11" text-anchor="start" fill="#48627A">${dtxt} \u00B7 ${tt.lay?"laying "+tgt.toUpperCase():"needs a tack"}</text>`;
       if(toGun!==null){
@@ -4639,7 +5164,8 @@ function drawStart(r,wdir,wspd){
     }
   } else if(me){
     const q=[W/2,H/2+16];
-    s+=`<circle cx="${q[0]}" cy="${q[1]}" r="6" fill="${ORANGE}" stroke="#fff" stroke-width="2"/>`;
+    s+=`<circle cx="${q[0]}" cy="${q[1]}" r="11" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>`+
+         `<circle cx="${q[0]}" cy="${q[1]}" r="8" fill="${ORANGE}" stroke="#12283A" stroke-width="2"/>`;
     s+=`<text x="${W/2}" y="${H/2+52}" font-size="12" text-anchor="middle" fill="#7C93A4">Ping the CV, then the pin.</text>`;
   }
   if(sub)s+=`<text x="${W-8}" y="${H-10}" font-size="11" text-anchor="end" fill="#0E7C94">${sub}</text>`;
@@ -4701,21 +5227,25 @@ function startCtl(){
     h+=`<div style="text-align:right;margin-top:6px">`+
        `<button class="pick" data-s="clearline" style="min-height:30px;font-size:11.5px;padding:0 10px;width:auto">Clear line</button></div>`;
   // wind check, always available
-  // Same three-state colouring as Pin and CV: green it took, orange the last press could not
-  // read a heading, blue not tried. Without this a press with no fix looked like a dead button.
+  // Amber while that tack is being recorded, green once it is in, blue not done. The live
+  // readout underneath is the point: without it a press looked like nothing had happened.
   const wStyle=t=>{
-    const took=START.obsTack===t;
-    const failed=!took&&WINDPRESS.tack===t&&WINDPRESS.ok===false;
-    return "flex:1;min-height:40px;font-size:13px;"+(took?"background:#1E8449;border-color:#2FA35C"
-      :failed?"background:#C8551A;border-color:#E07A3C":"");
+    const recording=BEAT.rec&&BEAT.rec.tack===t;
+    const done=!!BEAT[t];
+    return "flex:1;min-height:44px;font-size:13px;"+(recording?"background:#E08A2B;border-color:#F0A950"
+      :done?"background:#1E8449;border-color:#2FA35C":"");
+  };
+  const wLabel=(t,txt)=>{
+    if(BEAT.rec&&BEAT.rec.tack===t)return txt+"<br><span style='font-size:10.5px;font-weight:600'>recording \u00B7 tap to stop</span>";
+    if(BEAT[t])return txt+" \u2713"+(BEAT[t].weak?"<br><span style='font-size:10.5px;font-weight:600'>weak</span>":"");
+    return txt;
   };
   h+=`<div style="display:flex;gap:8px;margin-top:8px;align-items:stretch">`+
-    `<button class="rtbtn" data-s="wport" style="${wStyle("port")}">Wind: port beat${START.obsTack==="port"?" \u2713":""}</button>`+
-    `<button class="rtbtn" data-s="wstbd" style="${wStyle("stbd")}">Wind: stbd beat${START.obsTack==="stbd"?" \u2713":""}</button>`+
-    (START.obsWind!=null?`<button class="rtbtn" data-s="wclear" style="flex:0.5;min-height:40px;font-size:13px">Clear</button>`:``)+
+    `<button class="rtbtn" data-s="wport" style="${wStyle("port")}">${wLabel("port","Port beat")}</button>`+
+    `<button class="rtbtn" data-s="wstbd" style="${wStyle("stbd")}">${wLabel("stbd","Stbd beat")}</button>`+
+    ((BEAT.stbd||BEAT.port||START.obsWind!=null)?`<button class="rtbtn" data-s="wclear" style="flex:0.5;min-height:44px;font-size:13px">Clear</button>`:``)+
     `</div>`;
-  if(START.obsWind!=null)
-    h+=`<div style="font-size:11px;line-height:1.4;color:#BFE8D4;margin-top:6px">Wind from your ${START.obsTack==="stbd"?"starboard":"port"} beat: <b>${d3(START.obsWind)}\u00B0</b> \u00B7 T line squared to it. Card wind unchanged.</div>`;
+  h+=beatReadoutHTML();
   if(PING_MSG)
     h+=`<div style="font-size:11px;line-height:1.4;color:#FFD9C2;margin-top:6px">${PING_MSG}</div>`;
   el.innerHTML=h;
@@ -4756,14 +5286,8 @@ function startClick(ev){
       return;                                  // async: the callbacks above trigger their own re-render
     }
   }
-  else if(k==="wport"||k==="wstbd"){
-    const tk=k==="wstbd"?"stbd":"port";
-    const res=windFromBeat(tk);
-    WINDPRESS={tack:tk, ok:!!res};
-    if(!res){ PING_MSG="Need a live GPS fix and some boat speed: start the timer's GPS, get sailing on the beat, then press this."; }
-    else { START.obsWind=res.wind; START.obsTack=res.tack; START.obsAt=Date.now(); PING_MSG=null; startSave(); }
-  }
-  else if(k==="wclear"){ START.obsWind=null; START.obsTack=null; START.obsAt=0; WINDPRESS={tack:null,ok:null}; startSave(); }
+  else if(k==="wport"||k==="wstbd"){ beatPress(k==="wstbd"?"stbd":"port"); return; }
+  else if(k==="wclear"){ beatReset(); }
   else if(k==="in"||k==="out"){ START.entering.side=k; }
   else if(/^d\d+$/.test(k)&&START.entering){ START.entering.d=k.slice(1); }
   else if(k==="clearline"){ START.cv=null; START.pin=null; START.target=null;
@@ -5144,7 +5668,9 @@ function drawLeg(r,idx,wdir,wspd){
     // position; the path simply starts where it enters the diagram.
     if(typeof TRACK!=="undefined"&&TRACK.length>1){
       let seg=[];
-      const flush=()=>{ if(seg.length>1)s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="#FF6A13" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>`; seg=[]; };
+      const flush=()=>{ if(seg.length>1){
+        s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="#fff" stroke-width="7" stroke-linejoin="round" stroke-linecap="round" opacity=".75"/>`;
+        s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="#FF6A13" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`; } seg=[]; };
       for(const pt of TRACK){
         const tb=brgDist(L.from.pos,[pt.lat,pt.lon]);
         const tp=F(tb.dist*Math.sin(rad(tb.brg-co)), tb.dist*Math.cos(rad(tb.brg-co)));
@@ -5162,7 +5688,10 @@ function drawLeg(r,idx,wdir,wspd){
         const th=rad(fr(cg));
         s+=`<line x1="${bp[0].toFixed(1)}" y1="${bp[1].toFixed(1)}" x2="${(bp[0]+18*Math.sin(th)).toFixed(1)}" y2="${(bp[1]-18*Math.cos(th)).toFixed(1)}" stroke="#0E7C94" stroke-width="3"/>`;
       }
-      s+=`<circle cx="${bp[0].toFixed(1)}" cy="${bp[1].toFixed(1)}" r="6" fill="#0E7C94" stroke="#fff" stroke-width="2.5"/>`;
+      // Read at arm's length on a wet deck, so the boat is deliberately large and high-contrast:
+      // a white halo, then a dark ring, then the fill, so it stands out over any background.
+      s+=`<circle cx="${bp[0].toFixed(1)}" cy="${bp[1].toFixed(1)}" r="12" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>`;
+      s+=`<circle cx="${bp[0].toFixed(1)}" cy="${bp[1].toFixed(1)}" r="9" fill="#0E7C94" stroke="#12283A" stroke-width="2"/>`;
     }
   }
   svg.innerHTML=s;
@@ -5788,7 +6317,9 @@ function drawMiniLeg(r,idx,wdir,wspd){
     const inFrame=q=>q[0]>=8&&q[0]<=W-8&&q[1]>=8&&q[1]<=H-8;
     if(typeof TRACK!=="undefined"&&TRACK.length>1){
       let seg=[];
-      const flush=()=>{ if(seg.length>1)s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="#FF6A13" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>`; seg=[]; };
+      const flush=()=>{ if(seg.length>1){
+        s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" opacity=".75"/>`;
+        s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="#FF6A13" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>`; } seg=[]; };
       for(const pt of TRACK){
         const tb=brgDist(L.from.pos,[pt.lat,pt.lon]);
         const q=F(tb.dist*Math.sin(rad(tb.brg-co)), tb.dist*Math.cos(rad(tb.brg-co)));
@@ -5804,7 +6335,8 @@ function drawMiniLeg(r,idx,wdir,wspd){
         const th=rad(fr(cg));
         s+=`<line x1="${q[0].toFixed(1)}" y1="${q[1].toFixed(1)}" x2="${(q[0]+14*Math.sin(th)).toFixed(1)}" y2="${(q[1]-14*Math.cos(th)).toFixed(1)}" stroke="#0E7C94" stroke-width="2.5"/>`;
       }
-      s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="5" fill="#0E7C94" stroke="#fff" stroke-width="2"/>`;
+      s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="10" fill="none" stroke="#fff" stroke-width="3.5" opacity=".9"/>`;
+      s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="7.5" fill="#0E7C94" stroke="#12283A" stroke-width="1.8"/>`;
     }
   }
   svg.innerHTML=s;
