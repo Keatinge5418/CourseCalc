@@ -144,13 +144,42 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   border:0;border-radius:0;background:none}
 .note{font-size:11.5px;color:var(--ink2);line-height:1.45;margin-top:10px}
 .warn{color:var(--port);font-weight:600}
-/* Page-by-page scrolling, GPS Display only. `proximity` not `mandatory`: mandatory refuses to
-   let you rest between snap points, which fights any page taller than the screen. The snap
-   container is the page itself, and the rule is scoped to #garmintab so every other tab keeps
-   the free scrolling it has now. */
-#garmintab .gpage{scroll-snap-align:start;scroll-snap-stop:normal}
-html{scroll-snap-type:none}
-html:has(#garmintab[open]){scroll-snap-type:y proximity}
+/* Page-by-page scrolling, GPS Display only.
+   The GPS Display is its own scroller rather than snapping against the document. Two reasons.
+   Snapping on the document is shared with every other open tab, so a second open tab could put
+   snap points where you did not want them. And on iOS the page scroller's height moves as the
+   URL bar comes and goes, which is what broke the first attempt.
+   `dvh` not `vh`: Safari resolves `vh` against the LARGE viewport, the one with the URL bar
+   hidden, ignoring the bar actually on screen. On a 375x812 phone that over-measured by about
+   150px and both pages overflowed. `dvh` tracks the visible area. --gpsoff is measured in JS
+   because the summary bar's height is not knowable from CSS.
+   `mandatory` not `proximity`: proximity was the right call while a page could be taller than
+   the screen. Now each page IS exactly one screen, so mandatory is correct and is what makes it
+   land page by page instead of resting anywhere. */
+#gpsScroll{height:calc(100dvh - var(--gpsoff, 96px));overflow-y:auto;overflow-x:hidden;
+  scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#gpsScroll .gpage{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
+  display:flex;flex-direction:column;justify-content:flex-start;box-sizing:border-box}
+/* The charts take whatever is left after the fixed-height blocks, so a page is always exactly
+   full and never overflows, on any device, without a pixel guess. */
+#gpsScroll .garmin-compass-wrap{display:flex;flex-direction:column;min-height:0}
+#gpsScroll .gpage > .garmin-compass-wrap{flex:1 1 auto}
+/* One elastic element per page, so a page is exactly one screen on any device without a pixel
+   guess. Page 1: the compass arc. Page 2: the leg chart. Everything else keeps its natural
+   height. min-height:0 is required or a flex child refuses to shrink below its content. */
+#gpsScroll #garminCompass{flex:1 1 auto;min-height:90px}
+/* On a very short screen the fixed blocks alone exceed the page, so the arc collapses to nothing
+   and the page still overflows. Give the arc no floor there and let the six readouts tighten:
+   a small arc beats a page you have to scroll inside. */
+@media (max-height:620px){
+  #gpsScroll #garminCompass{min-height:0}
+  #gpsScroll #gSix .g6{padding:2px 5px}
+  #gpsScroll #gSix .g6 .v{font-size:16px}
+  #gpsScroll .garmin-tile{min-height:26px;padding:2px 5px}
+  #gpsScroll .garmin-value{font-size:16px}
+}
+#gpage2{display:flex;flex-direction:column;min-height:0}
+#gpage2 #legview{flex:1 1 auto;min-height:0;height:auto}
 .garmin-frame{background:#FBEEB0;border-radius:14px;padding:7px;display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
 .garmin-tile{background:#F4F6F8;border:1px solid #D6DEE5;border-radius:11px;padding:8px 6px;text-align:center;min-height:44px;display:flex;flex-direction:column;justify-content:center}
 .garmin-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:#48627A;font-weight:800;line-height:1.1}
@@ -183,6 +212,11 @@ html:has(#garmintab[open]){scroll-snap-type:y proximity}
   #gSix .g6{padding:3px 5px}
   #gSetBox{padding:5px 8px !important}
 }
+/* The two beat inputs take a long prompt now ("Course from Compass"), which the input's own
+   large face would clip. Shrink the PLACEHOLDER only; a typed number keeps full size. Must sit
+   after the input rules above, or it loses to them. */
+#beatLog::placeholder,#beatHdg::placeholder{font-size:11px;letter-spacing:0;opacity:.75}
+
 </style>
 </head>
 <body>
@@ -279,8 +313,8 @@ html:has(#garmintab[open]){scroll-snap-type:y proximity}
   <div id="beatIn" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18)">
     <div style="font-size:10px;letter-spacing:.06em;color:#C6E4D3;font-weight:800">READ OFF THE BOAT, BEFORE YOU TAP TO STOP</div>
     <div style="display:flex;gap:8px;margin-top:5px">
-      <div style="flex:1"><label style="color:#C6E4D3">Log kt</label><input id="beatLog" type="number" inputmode="decimal" step="0.1" placeholder="paddlewheel" style="width:100%;box-sizing:border-box"></div>
-      <div style="flex:1"><label style="color:#C6E4D3">Compass &deg;</label><input id="beatHdg" type="number" inputmode="numeric" placeholder="steering" style="width:100%;box-sizing:border-box"></div>
+      <div style="flex:1"><label style="color:#C6E4D3">Log kt</label><input id="beatLog" type="number" inputmode="decimal" step="0.1" placeholder="Speed from Log" style="width:100%;box-sizing:border-box"></div>
+      <div style="flex:1"><label style="color:#C6E4D3">Compass &deg;</label><input id="beatHdg" type="number" inputmode="numeric" placeholder="Course from Compass" style="width:100%;box-sizing:border-box"></div>
     </div>
     <div id="beatInMsg" style="font-size:11px;color:#C6E4D3;line-height:1.4;margin-top:5px">Log speed is the one that matters: it turns the tide from an assumption into a measurement. Compass is optional and calibrates the set banner.</div>
   </div>
@@ -354,25 +388,15 @@ html:has(#garmintab[open]){scroll-snap-type:y proximity}
   </div>
 </details>
 
-<details class="notes" id="diagramtab"><summary>Course Analysis</summary>
-  <div style="display:flex;justify-content:space-between;align-items:center">
-    <div id="legHead" style="font-size:12.5px;font-weight:800;color:#12283A"></div>
-    <div style="font-size:10.5px;color:#7C93A4">swipe ← →</div>
-  </div>
-  <div style="margin-top:6px;margin-bottom:-4px;display:flex;justify-content:space-between;align-items:center">
-    <div id="viewbtns" style="display:flex;gap:6px">
-      <button class="pick" data-vm="tide" style="padding:8px 10px;font-size:13px">Tide</button>
-      <button class="pick" data-vm="wind" style="padding:8px 10px;font-size:13px">Wind</button>
-      <button class="pick" data-vm="both" style="padding:8px 10px;font-size:13px">Both</button>
-    </div>
-    <button class="pick" id="orientBtn" style="min-width:110px">Course-up</button>
-  </div>
-  <svg id="legview" viewBox="0 0 360 688" preserveAspectRatio="xMidYMid meet" style="margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA;touch-action:pan-y"></svg>
-  <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
-    <label style="white-space:nowrap;margin:0">Wind <span id="wslideLbl" class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
-    <input id="wslide" class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
-    <button class="wslideR" aria-label="Restore forecast wind" title="hand the wind back to the forecast" style="flex:0 0 auto;width:30px;height:30px;border-radius:8px;border:1.5px solid #12283A;background:#fff;color:#12283A;font-weight:800;font-size:13px;padding:0">R</button>
-  </div>
+
+<!-- The GPS Display mini chart, kept but hidden. The Course Analysis chart moved into the GPS
+     Display as page 2 in v403 and replaced this, but it is left here intact rather than deleted
+     so it can be brought back by removing the display:none below, nothing else. It still draws
+     when visible; miniLegRender skips the work while it is hidden. -->
+<details class="notes" id="minitab" style="display:none"><summary>Leg mini chart</summary>
+  <svg id="miniLegSvg" viewBox="0 0 360 360" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;display:block;border:4px solid #12283A;border-radius:12px;background:#F2F7FA;box-shadow:inset 0 0 0 1.5px #B7C2CC;box-sizing:border-box"></svg>
+  <div id="miniLegHead" style="margin-top:6px"></div>
+  <div id="miniLegInfo" style="margin-top:4px"></div>
 </details>
 
 <details class="notes legpanel" id="tacticstab"><summary>Course Tactics</summary>
@@ -397,6 +421,9 @@ html:has(#garmintab[open]){scroll-snap-type:y proximity}
 </details>
 
 <details class="notes" id="garmintab" style="background:#3A4552;border:1px solid #2A323C"><summary style="color:#fff">GPS Display</summary>
+  <div id="gpsScroll">
+
+  <!-- PAGE 1: the numbers. -->
   <div class="gpage">
   <div class="garmin-frame">
     <div class="garmin-tile">
@@ -449,31 +476,46 @@ html:has(#garmintab[open]){scroll-snap-type:y proximity}
     </div>
   </div>
 
-  <!-- Two snap pages. The four blocks below used to live in ONE grid sequenced by CSS `order`
-       (chart 1, set banner 2, six readouts 3, compass arc 4), which cannot be split into page
-       containers. They are now in real document order, so what you read is what is drawn.
-       The mini chart appears on BOTH pages: #miniLegSvg is the drawn one, #miniLegSvg2 is a
-       copy synced from it after every render. -->
-  <div class="garmin-compass-wrap">
-    <svg id="miniLegSvg" viewBox="0 0 360 360" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;height:min(326px,38vh);display:block;border:4px solid #12283A;border-radius:12px;background:#F2F7FA;box-shadow:inset 0 0 0 1.5px #B7C2CC;box-sizing:border-box"></svg>
-    <!-- drawMiniLeg also writes a heading and a numbers block; on this tab only the chart is
-         wanted, so they exist but stay hidden rather than forking the drawing code. -->
-    <div id="miniLegHead" style="display:none"></div>
-    <div id="miniLegInfo" style="display:none"></div>
-  </div>
-  </div>
-
-  <div class="gpage">
-  <div class="garmin-compass-wrap">
-    <svg id="miniLegSvg2" viewBox="0 0 360 360" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;height:min(265px,30vh);display:block;border:4px solid #12283A;border-radius:12px;background:#F2F7FA;box-shadow:inset 0 0 0 1.5px #B7C2CC;box-sizing:border-box"></svg>
-    <div id="gSetBox" style="margin-top:2px;padding:9px 11px;border-radius:11px;background:#F2F7FA;border:1.5px solid #B7C2CC">
+  <!-- These blocks used to live in ONE grid sequenced by CSS `order` (chart 1, set banner 2,
+       six readouts 3, compass arc 4), which cannot be split into page containers. They are now
+       in real document order, so what you read is what is drawn. The compass arc is the elastic
+       one (flex:1) so page 1 fills exactly one screen on any device. -->
+  <div class="garmin-compass-wrap" id="gpage1wrap">
+    <div id="gSetBox" style="padding:9px 11px;border-radius:11px;background:#F2F7FA;border:1.5px solid #B7C2CC">
       <div style="font-size:9.5px;letter-spacing:.06em;color:#48627A;font-weight:800">POINTING v MAKING GOOD</div>
       <div id="gSetMain" style="font-size:19px;font-weight:800;line-height:1.25;margin-top:2px"></div>
       <div id="gSetNote" style="font-size:11.5px;line-height:1.4;margin-top:3px;color:#48627A"></div>
     </div>
     <div id="gSix" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
-    <svg id="garminCompass" viewBox="0 6 300 180" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;max-height:min(196px,21vh);display:block;border:0;border-radius:0;background:none"></svg>
+    <svg id="garminCompass" viewBox="0 6 300 180" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;display:block;flex:1 1 auto;min-height:0;border:0;border-radius:0;background:none"></svg>
   </div>
+  </div>
+
+  <!-- PAGE 2: the whole of what used to be the Course Analysis tab, moved here rather than
+       copied. Its controls (Tide/Wind/Both, orientation, the wind slider and the restore R)
+       drive global state, so they act on the entire app from wherever they live. The two mini
+       charts are gone: this chart is the same picture, larger. -->
+  <div class="gpage" id="gpage2">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div id="legHead" style="font-size:12.5px;font-weight:800;color:#12283A"></div>
+    <div style="font-size:10.5px;color:#7C93A4">swipe ← →</div>
+  </div>
+  <div style="margin-top:6px;margin-bottom:-4px;display:flex;justify-content:space-between;align-items:center">
+    <div id="viewbtns" style="display:flex;gap:6px">
+      <button class="pick" data-vm="tide" style="padding:8px 10px;font-size:13px">Tide</button>
+      <button class="pick" data-vm="wind" style="padding:8px 10px;font-size:13px">Wind</button>
+      <button class="pick" data-vm="both" style="padding:8px 10px;font-size:13px">Both</button>
+    </div>
+    <button class="pick" id="orientBtn" style="min-width:110px">Course-up</button>
+  </div>
+  <svg id="legview" viewBox="0 0 360 688" preserveAspectRatio="xMidYMid meet" style="margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA;touch-action:pan-y"></svg>
+  <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
+    <label style="white-space:nowrap;margin:0">Wind <span id="wslideLbl" class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
+    <input id="wslide" class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
+    <button class="wslideR" aria-label="Restore forecast wind" title="hand the wind back to the forecast" style="flex:0 0 auto;width:30px;height:30px;border-radius:8px;border:1.5px solid #12283A;background:#fff;color:#12283A;font-weight:800;font-size:13px;padding:0">R</button>
+  </div>
+  </div>
+
   </div>
 </details>
 
@@ -3569,12 +3611,42 @@ function raceInit(){
   const tab=$("datatab");
   if(tab)tab.addEventListener("toggle",()=>{ if(tab.open)raceRender(); });
 }
+// The scroller's height is the visible viewport minus whatever sits above it (the summary bar
+// and the details padding). CSS cannot measure that, and on iOS the visible viewport is NOT
+// window.innerHeight: visualViewport.height is the one that tracks the URL bar. Recomputed on
+// open, on resize, and when the bar slides.
+function gpsFitPages(){
+  const tab=$("garmintab"), sc=$("gpsScroll");
+  if(!tab||!sc||!tab.open)return;
+  const vh=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;
+  const top=sc.getBoundingClientRect().top;
+  const off=Math.max(0,Math.round(top))+10;
+  document.documentElement.style.setProperty("--gpsoff",off+"px");
+  // guard against a silly value if the tab is scrolled far off screen
+  if(vh-off<260)document.documentElement.style.setProperty("--gpsoff","96px");
+}
+function gpsPagesInit(){
+  const tab=$("garmintab"); if(!tab)return;
+  tab.addEventListener("toggle",()=>{
+    if(!tab.open)return;
+    // bring the tab to the top first, so the measured offset is the one that will apply
+    tab.scrollIntoView({block:"start"});
+    setTimeout(gpsFitPages,60); setTimeout(gpsFitPages,320);
+  });
+  window.addEventListener("resize",gpsFitPages);
+  window.addEventListener("orientationchange",()=>setTimeout(gpsFitPages,250));
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize",gpsFitPages);
+    window.visualViewport.addEventListener("scroll",gpsFitPages);
+  }
+}
 function gps2Init(){
   const tab=$("gps2tab");
   if(tab)tab.addEventListener("toggle",()=>{ if(tab.open){ gps2Render(); setTimeout(()=>{ if(MAP2)MAP2.invalidateSize(); gps2Fit(); },60); } });
   const b=$("gps2Fit"); if(b)b.onclick=gps2Fit;
   const c=$("gps2Clear"); if(c)c.onclick=()=>{ try{trackClear();}catch(e){} gps2Render(); };
   const dl=$("gps2Dl");   if(dl)dl.onclick=()=>{ try{trackDownloadCSV();}catch(e){} };
+  try{gpsPagesInit();}catch(e){}
   // trackRedraw is what greys Download, and it otherwise only runs when a fix arrives. Call it
   // once here so the button starts greyed rather than looking live with nothing to download.
   try{trackRedraw();}catch(e){}
@@ -4949,13 +5021,16 @@ function arrowAt(x1,y1,x2,y2,f,col,sz){
   return `<polygon points="${p(s,0)} ${p(-s*0.6,s*0.6)} ${p(-s*0.6,-s*0.6)}" fill="${col}"/>`;
 }
 function buoySVG(x,y,pt,above){
-  const lx=Math.max(56,Math.min(304,x));   // keep labels inside the panel
+  let ly0=0;
+  let lx=Math.max(56,Math.min(304,x));     // keep labels inside the panel (reassigned by lblPlace)
   // pt: {m,side,lbl,name}; draws chip-style buoy + label
   let s="";
   const ring=pt.side==="P"?"#C8102E":pt.side==="S"?"#007A33":"#FF6A13";
   if(!pt.m){ // start (CV/Hut)
     s+=`<rect x="${x-5}" y="${y-5}" width="10" height="10" fill="#FF6A13" stroke="#fff" stroke-width="2.5" transform="rotate(45 ${x} ${y})"/>`;
-    s+=`<text x="${lx}" y="${y+(above?-11:17)}" font-size="14" font-weight="800" text-anchor="middle" fill="#FF6A13">${pt.lbl==="Fin"?"Finish":(pt.lbl||"CV")+" start"}</text>`;
+    { const t=pt.lbl==="Fin"?"Finish":(pt.lbl||"CV")+" start";
+      const [px,py]=lblPlace(lx,y+(above?-11:17),t.length*6.2,12); lx=px; ly0=py; }
+    s+=`<text x="${lx}" y="${ly0}" font-size="10" font-weight="800" text-anchor="middle" fill="#FF6A13">${pt.lbl==="Fin"?"Finish":(pt.lbl||"CV")+" start"}</text>`;
     return s;
   }
   const cols=(CHIP[MARKS[pt.m][3]]||["#8aa"]);
@@ -4963,7 +5038,8 @@ function buoySVG(x,y,pt,above){
   s+=`<circle cx="${x}" cy="${y}" r="13" fill="none" stroke="${ring}" stroke-width="2"/>`;
   cols.forEach((c,i)=>{s+=`<rect x="${x-bw/2}" y="${y-bh/2+i*seg}" width="${bw}" height="${seg}" fill="${c}" stroke="#123" stroke-width="0.3"/>`;});
   const lbl=`${pt.side==="F"?"Hut finish":pt.name}${pt.side==="P"?" (P)":pt.side==="S"?" (S)":""}`;
-  s+=`<text x="${lx}" y="${y+(above?-17:22)}" font-size="14" font-weight="800" text-anchor="middle" fill="${ring}">${lbl}</text>`;
+  { const [px,py]=lblPlace(lx,y+(above?-17:22),lbl.length*6.2,13); lx=px; ly0=py; }
+  s+=`<text x="${lx}" y="${ly0}" font-size="10" font-weight="800" text-anchor="middle" fill="${ring}">${lbl}</text>`;
   return s;
 }
 // ---------- start line: ping the two ends, then time the run-in ----------
@@ -5847,6 +5923,7 @@ function startClick(ev){
 }
 
 function drawLeg(r,idx,wdir,wspd){
+  lblReset();   // Course Analysis: boxes are per-chart, not cumulative across redraws
   const L=r.legs[idx];
   const elapsed=r.legs.slice(0,idx).reduce((s,x)=>s+x.time,0);
   const svg=$("legview"); const W=360,H=688,cx=W/2;   // v402: 60% taller than the original 430
@@ -5975,23 +6052,25 @@ function drawLeg(r,idx,wdir,wspd){
     const tc=((((wdir-steerTh+540)%360)-180)>0)?"#007A33":"#C8102E";
     const boxScale=Math.min(1,clearSpan/118);
     const bw=118*boxScale, bh=54*boxScale, f1=16*boxScale, f2=12.5*boxScale;
+    lblHold(mlx,mly,bw,bh);
     s+=`<rect x="${mlx-bw/2}" y="${mly-bh/2}" width="${bw}" height="${bh}" rx="${7*boxScale}" fill="#fff" opacity="0.97" stroke="${tc}" stroke-width="2"/>`+
        `<text x="${mlx}" y="${mly-3*boxScale}" font-size="${f1}" font-weight="800" text-anchor="middle" fill="${tc}" class="mono">${String(Math.round(steerTh)).padStart(3,"0")}\u00B0</text>`+
        `<text x="${mlx}" y="${mly+17*boxScale}" font-size="${f2}" font-weight="700" text-anchor="middle" fill="#48627A" class="mono">${rhumbTxt}</text>`;
   } else {
     const boxScale=Math.min(1,clearSpan/110);
     const bw=110*boxScale, bh=30*boxScale, f1=13.5*boxScale;
+    lblHold(mlx,mly,bw,bh);
     s+=`<rect x="${mlx-bw/2}" y="${mly-bh/2}" width="${bw}" height="${bh}" rx="${6*boxScale}" fill="#fff" opacity="0.97" stroke="#48627A" stroke-width="2"/>`+
        `<text x="${mlx}" y="${mly+5*boxScale}" font-size="${f1}" font-weight="700" text-anchor="middle" fill="#48627A" class="mono">${rhumbTxt}</text>`;
   }
   // wind icon in the reserved band: unified shape/size with N and tide, blue, label above, number below
   const windDegFrame=fr(wdir+180);
   const wIconX=0.10*W, wIconY=0.51*bandH, wR=23;
-  s+=`<text x="${wIconX}" y="${wIconY-33}" font-size="11" font-weight="800" fill="#12283A" text-anchor="middle">Wind</text>`;
+  s+=`<text x="${wIconX}" y="${wIconY-33}" font-size="10" font-weight="800" fill="#12283A" text-anchor="middle">Wind</text>`;
   s+=`<circle cx="${wIconX}" cy="${wIconY}" r="${wR}" fill="#FBEEB0"/>`;
   s+=`<g transform="translate(${wIconX} ${wIconY}) rotate(${windDegFrame})">`+
      `<polygon points="0,-14 8,9 0,3 -8,9" fill="#0074D9"/></g>`;
-  s+=`<text x="${wIconX}" y="${wIconY+40}" font-size="12" font-weight="800" fill="#12283A" text-anchor="middle">${d3(wdir)}\u00B0</text>`;
+  s+=`<text x="${wIconX}" y="${wIconY+40}" font-size="10" font-weight="800" fill="#12283A" text-anchor="middle">${d3(wdir)}\u00B0</text>`;
   // tidal stream arrow (leg frame), from atlas
   let pref=null, prefGain=0, prefPct=0, sideTxt="", verdictHTML="";
   if(TIDECTX){
@@ -6050,19 +6129,19 @@ function drawLeg(r,idx,wdir,wspd){
       }
     }
     const tIconX=0.90*W, tIconY=0.51*bandH, tR=23;
-    s+=`<text x="${tIconX}" y="${tIconY-33}" font-size="11" font-weight="800" fill="#7B2D8E" text-anchor="middle">Tide</text>`;
+    s+=`<text x="${tIconX}" y="${tIconY-33}" font-size="10" font-weight="800" fill="#7B2D8E" text-anchor="middle">Tide</text>`;
     s+=`<circle cx="${tIconX}" cy="${tIconY}" r="${tR}" fill="#FBEEB0"/>`;
     if(!st.slack){
       const tideDegFrame=fr(st.dir);                    // stream sets TOWARD st.dir (course-up frame)
       s+=`<g transform="translate(${tIconX} ${tIconY}) rotate(${tideDegFrame})">`+
          `<polygon points="0,-14 8,9 0,3 -8,9" fill="#A020D0"/></g>`;
-      s+=`<text x="${tIconX}" y="${tIconY+40}" font-size="12" font-weight="800" fill="#7B2D8E" text-anchor="middle">${fmtStream(st)}</text>`;
+      s+=`<text x="${tIconX}" y="${tIconY+40}" font-size="10" font-weight="800" fill="#7B2D8E" text-anchor="middle">${fmtStream(st)}</text>`;
     } else {
-      s+=`<text x="${tIconX}" y="${tIconY+40}" font-size="12" font-weight="800" fill="#7B2D8E" text-anchor="middle">slack</text>`;
+      s+=`<text x="${tIconX}" y="${tIconY+40}" font-size="10" font-weight="800" fill="#7B2D8E" text-anchor="middle">slack</text>`;
     }
     if(stL){
       const ck=clockAt(elapsed);
-      s+=`<text x="${W-8}" y="${H-10}" font-size="11" text-anchor="end" fill="#0E7C94">tide at ${ck?ck+" ":""}(HW${effOff>=0?"+":"\u2212"}${Math.abs(effOff).toFixed(1)})</text>`;
+      s+=`<text x="${W-8}" y="${H-10}" font-size="10" text-anchor="end" fill="#0E7C94">tide at ${ck?ck+" ":""}(HW${effOff>=0?"+":"\u2212"}${Math.abs(effOff).toFixed(1)})</text>`;
     }
   }
   // tacking / gybing routes (corners precomputed for the fit). Every 2-board route tacks or
@@ -6108,7 +6187,7 @@ function drawLeg(r,idx,wdir,wspd){
       const [f0x,f0y]=F(0,0), [f1x,f1y]=F(0,D);
       const mx=(f0x+px1)/2, my=(f0y+py1)/2, mx2=(px1+f1x)/2, my2=(py1+f1y)/2;
       for(const [gx,gy,gh] of [[mx,my,h1seg],[mx2,my2,h2seg]]){
-        s+=courseLabel(gx,gy,gh,tackCol0(gh),1.5);
+        s+=courseLabel(gx,gy,gh,tackCol0(gh));   // was 1.5x; both charts now use the same size
       }
     }
     if(em){
@@ -6123,10 +6202,10 @@ function drawLeg(r,idx,wdir,wspd){
       const anch=(fits?outward===1:outward===-1)?"start":"end";
       const nearTop=py1<150, nearBot=py1>H-150;
       const y1=nearTop?py1+20:nearBot?py1-14:py1+4;
-      s+=`<text x="${lx}" y="${y1}" font-size="13" font-weight="800" text-anchor="${anch}" fill="#0E7C94" stroke="#fff" stroke-width="3.5" paint-order="stroke">(−${prefGain.toFixed(1)}m ${prefPct.toFixed(1)}%)</text>`;
+      s+=`<text x="${lx}" y="${y1}" font-size="10" font-weight="800" text-anchor="${anch}" fill="#0E7C94" stroke="#fff" stroke-width="3.5" paint-order="stroke">(−${prefGain.toFixed(1)}m ${prefPct.toFixed(1)}%)</text>`;
     }
   }
-  if(target!==null)s+=`<text x="8" y="${H-10}" font-size="11" text-anchor="start" fill="#48627A">${L.pos==="Beat"?"tack":"gybe"} angle \u00B1${Math.round(target)}\u00B0 TWA</text>`;
+  if(target!==null)s+=`<text x="8" y="${H-10}" font-size="10" text-anchor="start" fill="#48627A">${L.pos==="Beat"?"tack":"gybe"} angle \u00B1${Math.round(target)}\u00B0 TWA</text>`;
   // approach: hatched line arriving at the from-buoy along the previous leg's course,
   // passing the mark on its rounding side, arrowhead clear of the buoy artwork
   if(idx>0){
@@ -6154,7 +6233,7 @@ function drawLeg(r,idx,wdir,wspd){
       s+=arrowAt(sx,sy,hx,hy,0.15,arrCol,11);
     }
     const pm=prev.from.m||prev.from.lbl||"CV";
-    s+=`<text x="${sx-11*tvx}" y="${sy-11*tvy+4}" font-size="11" font-weight="700" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="3" paint-order="stroke">fm ${pm}</text>`;
+    s+=`<text x="${sx-11*tvx}" y="${sy-11*tvy+4}" font-size="10" font-weight="700" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="3" paint-order="stroke">fm ${pm}</text>`;
   }
   // departure line: the FIRST board of the NEXT leg, shown at this leg's END mark -- the
   // counterpart to the arrival line above, same treatment (solid, bigger arrow, no number).
@@ -6190,7 +6269,7 @@ function drawLeg(r,idx,wdir,wspd){
   {
     const nDegFrame=fr(0);
     const nIconX=0.50*W, nIconY=0.51*bandH, nR=23;
-    s+=`<text x="${nIconX}" y="${nIconY-33}" font-size="11" font-weight="800" fill="#12283A" text-anchor="middle">N</text>`;
+    s+=`<text x="${nIconX}" y="${nIconY-33}" font-size="10" font-weight="800" fill="#12283A" text-anchor="middle">N</text>`;
     s+=`<circle cx="${nIconX}" cy="${nIconY}" r="${nR}" fill="#FBEEB0"/>`;
     s+=`<g transform="translate(${nIconX} ${nIconY}) rotate(${nDegFrame})">`+
        `<polygon points="0,-14 8,9 0,3 -8,9" fill="#fff" stroke="#000" stroke-width="1.5"/></g>`;
@@ -6314,8 +6393,37 @@ function drawLeg(r,idx,wdir,wspd){
 // diagram: an unrotated box with the heading in degrees, tack/context-coloured. scale lets
 // each panel size it appropriately (mini-chart uses the default 1; Course Analysis uses a
 // larger scale to match its bigger canvas).
+// ---------- label collision avoidance, shared by both charts ----------
+// Labels were placed at fixed offsets from whatever they annotate, so a bearing pill and a mark
+// name could land on the same spot and one number read as another. This keeps a list of boxes
+// already placed in the current chart and nudges a new one clear. Purely positional: nothing
+// is dropped, so a crowded chart gets shifted labels rather than missing ones.
+let LBLBOX=[];
+function lblReset(){ LBLBOX=[]; }
+// Register a box that must NOT move (the rhumb-line plate sits on the leg by definition), so
+// later labels dodge it instead of landing on it.
+function lblHold(x,y,w,h){ LBLBOX.push({x,y,w,h}); }
+function lblPlace(x,y,w,h){
+  const pad=2;
+  const hit=(bx,by)=>LBLBOX.some(b=>Math.abs(bx-b.x)*2<(w+b.w)+pad*2 && Math.abs(by-b.y)*2<(h+b.h)+pad*2);
+  let X=x,Y=y;
+  if(hit(X,Y)){
+    // try straight up/down first (labels read best directly above or below their subject),
+    // then diagonals, in growing steps
+    const dirs=[[0,-1],[0,1],[1,0],[-1,0],[1,-1],[-1,-1],[1,1],[-1,1]];
+    let done=false;
+    for(let step=1;step<=6&&!done;step++)
+      for(const [dx,dy] of dirs){
+        const nx=x+dx*step*(h+pad*2), ny=y+dy*step*(h+pad*2);
+        if(!hit(nx,ny)){ X=nx; Y=ny; done=true; break; }
+      }
+  }
+  LBLBOX.push({x:X,y:Y,w,h});
+  return [X,Y];
+}
 function courseLabel(x,y,h,col,scale){
   const s2=scale||1, w2=34*s2, h2=16*s2, fs=9.5*s2, ry=3*s2;
+  [x,y]=lblPlace(x,y,w2,h2);
   return `<g><rect x="${(x-w2/2).toFixed(1)}" y="${(y-h2/2).toFixed(1)}" width="${w2.toFixed(1)}" height="${h2.toFixed(1)}" rx="${ry.toFixed(1)}" fill="#fff" opacity="0.95" stroke="${col}" stroke-width="${(1*s2).toFixed(2)}"/><text x="${x.toFixed(1)}" y="${(y+3.3*s2).toFixed(1)}" font-size="${fs.toFixed(1)}" font-weight="800" text-anchor="middle" fill="${col}" class="mono">${String(Math.round(norm(h))).padStart(3,"0")}\u00B0</text></g>`;
 }
 function miniBuoySVG(x,y,pt,above){
@@ -6324,7 +6432,9 @@ function miniBuoySVG(x,y,pt,above){
   const ring=pt.side==="P"?"#C8102E":pt.side==="S"?"#007A33":"#FF6A13";
   if(!pt.m){
     s+=`<rect x="${(x-6).toFixed(1)}" y="${(y-6).toFixed(1)}" width="12" height="12" fill="#FF6A13" stroke="#fff" stroke-width="1.5" transform="rotate(45 ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
-    s+=`<text x="${lx.toFixed(1)}" y="${(y+(above?-11:19)).toFixed(1)}" font-size="9" font-weight="800" text-anchor="middle" fill="#FF6A13">${pt.lbl==="Fin"?"Finish":(pt.lbl||"CV")+" start"}</text>`;
+    { const t=pt.lbl==="Fin"?"Finish":(pt.lbl||"CV")+" start";
+      const [px,py]=lblPlace(lx,y+(above?-11:19),t.length*5.6,11);
+      s+=`<text x="${px.toFixed(1)}" y="${py.toFixed(1)}" font-size="9" font-weight="800" text-anchor="middle" fill="#FF6A13">${t}</text>`; }
     return s;
   }
   const cols=(CHIP[MARKS[pt.m][3]]||["#8aa"]);
@@ -6332,7 +6442,8 @@ function miniBuoySVG(x,y,pt,above){
   s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="15" fill="none" stroke="${ring}" stroke-width="2.2"/>`;
   cols.forEach((c,i)=>{s+=`<rect x="${(x-bw/2).toFixed(1)}" y="${(y-bh/2+i*seg).toFixed(1)}" width="${bw}" height="${seg.toFixed(1)}" fill="${c}" stroke="#123" stroke-width="0.4"/>`;});
   const lbl=`${pt.side==="F"?"Hut finish":pt.name}${pt.side==="P"?" (P)":pt.side==="S"?" (S)":""}`;
-  s+=`<text x="${lx.toFixed(1)}" y="${(y+(above?-19:25)).toFixed(1)}" font-size="9" font-weight="800" text-anchor="middle" fill="${ring}">${lbl}</text>`;
+  { const [px,py]=lblPlace(lx,y+(above?-19:25),lbl.length*5.6,11);
+    s+=`<text x="${px.toFixed(1)}" y="${py.toFixed(1)}" font-size="9" font-weight="800" text-anchor="middle" fill="${ring}">${lbl}</text>`; }
   return s;
 }
 // ---------- Shared tactical advice block: numeric breakdown + structured advice sentence ----------
@@ -6677,6 +6788,7 @@ function renderCoursePlan(){
   body.innerHTML=html;
 }
 function drawMiniLeg(r,idx,wdir,wspd){
+  lblReset();   // GPS Display mini chart: boxes are per-chart, not cumulative across redraws
   const svg=$("miniLegSvg"), infoEl=$("miniLegInfo"), headEl=$("miniLegHead");
   if(!svg||!infoEl)return;
   const L=r.legs[idx];
@@ -6920,21 +7032,15 @@ function drawMiniLeg(r,idx,wdir,wspd){
 // selected, so there is nothing to keep in sync and no second set of swipe/arrow-key handlers.
 function miniLegRender(){
   const svg=$("miniLegSvg"); if(!svg)return;
+  // Hidden by default since v403. Building the SVG for something nobody can see is pure cost on
+  // a phone, so bail early; unhide #minitab and it draws again on the next render.
+  const mt=$("minitab"); if(mt&&mt.style.display==="none")return;
   const haveCourse=WIND.chosen&&WIND.numChosen;
   let r=null;
   if(haveCourse){ try{ r=compute(state.card,+$("wdir").value||0,+$("wspd").value||10,+$("wgst").value||15,state.letter,state.num); }catch(e){ r=null; } }
-  if(!r||!r.legs||!r.legs.length){ svg.innerHTML=""; miniLegMirror(); return; }
+  if(!r||!r.legs||!r.legs.length){ svg.innerHTML=""; return; }
   const idx=Math.max(0,Math.min(state.leg,r.legs.length-1));
   try{ drawMiniLeg(r,idx,+$("wdir").value||0,+$("wspd").value||10); }catch(e){}
-  miniLegMirror();
-}
-// The mini chart is wanted on BOTH snap pages, and one element cannot be in two places. Rather
-// than draw it twice (two calls that could drift apart), draw once and copy. The copy is inert:
-// no swipe handler, no ids inside that anything looks up.
-function miniLegMirror(){
-  const a=$("miniLegSvg"), b=$("miniLegSvg2"); if(!a||!b)return;
-  if(b.innerHTML!==a.innerHTML)b.innerHTML=a.innerHTML;
-  const vb=a.getAttribute("viewBox"); if(vb&&b.getAttribute("viewBox")!==vb)b.setAttribute("viewBox",vb);
 }
 function legStep(dir){                             // dir: -1 previous leg, +1 next leg (Course Analysis)
   let r=null;
@@ -6965,7 +7071,7 @@ function legSwipeOn(id){
 }
 function legSwipeInit(){
   legSwipeOn("legview");                                        // Course Analysis
-  legSwipeOn("miniLegSvg");                                     // GPS Display mini chart
+  legSwipeOn("miniLegSvg");     // hidden #minitab, but wired so unhiding it just works
   document.addEventListener("keydown",e=>{
     if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;
     const dg=$("diagramtab"), gt=$("garmintab");                  // either chart's tab being open counts
