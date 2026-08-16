@@ -144,10 +144,17 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   border:0;border-radius:0;background:none}
 .note{font-size:11.5px;color:var(--ink2);line-height:1.45;margin-top:10px}
 .warn{color:var(--port);font-weight:600}
-.garmin-frame{background:#6B7684;border-radius:14px;padding:3px;display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:10px}
-.garmin-tile{background:#F4F6F8;border-radius:11px;padding:8px;text-align:center;min-height:54px;display:flex;flex-direction:column;justify-content:center}
-.garmin-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#5B6672;font-weight:800}
-.garmin-value{font-size:26px;font-weight:800;color:#12283A;margin-top:2px;font-family:ui-monospace,"SF Mono",Menlo,monospace;line-height:1.1}
+/* Page-by-page scrolling, GPS Display only. `proximity` not `mandatory`: mandatory refuses to
+   let you rest between snap points, which fights any page taller than the screen. The snap
+   container is the page itself, and the rule is scoped to #garmintab so every other tab keeps
+   the free scrolling it has now. */
+#garmintab .gpage{scroll-snap-align:start;scroll-snap-stop:normal}
+html{scroll-snap-type:none}
+html:has(#garmintab[open]){scroll-snap-type:y proximity}
+.garmin-frame{background:#FBEEB0;border-radius:14px;padding:7px;display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+.garmin-tile{background:#F4F6F8;border:1px solid #D6DEE5;border-radius:11px;padding:8px 6px;text-align:center;min-height:44px;display:flex;flex-direction:column;justify-content:center}
+.garmin-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:#48627A;font-weight:800;line-height:1.1}
+.garmin-value{font-size:19px;font-weight:800;color:#12283A;margin-top:1px;line-height:1.2}
 .garmin-unit{font-size:13px;font-weight:700;color:#5B6672;margin-left:3px}
 /* Same 2-column geometry as .garmin-frame, so the compass sits centred under the LEFT
    column of tiles rather than under the whole grid. */
@@ -157,6 +164,25 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 /* Stacked: mini chart on top, compass beneath. Both are square, so a single column keeps
    them the same width; padding and gap are the thin yellow sliver around them. */
 .garmin-compass-wrap{background:#FBEEB0;border-radius:14px;margin-top:8px;padding:7px;display:grid;grid-template-columns:1fr;gap:7px;justify-items:stretch;align-items:stretch}
+/* Short screens (iPhone SE and anything landscape-ish): the tiles and readouts are fixed-height
+   grids, so viewport caps on the charts alone could not bring both pages under the fold. Trim the
+   cell padding here instead of shrinking the charts further, which would cost more on the phone
+   this is actually used on. */
+@media (max-height:700px){
+  .garmin-frame{padding:5px;gap:5px}
+  .garmin-tile{min-height:36px;padding:5px 6px}
+  .garmin-compass-wrap{padding:5px;gap:5px}
+  #gSix{gap:5px !important}
+  #gSix .g6{padding:5px 6px}
+  #gSetBox{padding:6px 9px !important}
+}
+/* Tighter still. Must come AFTER the 700px block: on a 568px screen both queries match, so
+   whichever is written last wins. */
+@media (max-height:600px){
+  .garmin-tile{min-height:30px;padding:3px 5px}
+  #gSix .g6{padding:3px 5px}
+  #gSetBox{padding:5px 8px !important}
+}
 </style>
 </head>
 <body>
@@ -224,7 +250,6 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <div style="flex:1"><label>Avg speed (kt)</label><div class="buoytile" id="bdAvgSpd6">&ndash;</div></div>
     <div style="flex:1"><label>Max speed (kt)</label><div class="buoytile" id="bdMaxSpd6">&ndash;</div></div>
   </div>
-  <div style="font-size:11px;color:#3A7D5E;margin-top:6px">Average direction is a proper circular mean, not a plain average, so it handles the 360&deg;/0&deg; wrap correctly (e.g. readings of 350&deg; and 10&deg; average to about 0&deg;, not 180&deg;). The chart plots raw degrees, so a genuine wrap crossing (say 350&deg; to 10&deg;) will show as a jump top-to-bottom on the axis, rather than the short way round.</div>
 </details>
 
 <details class="notes" id="tidetab" style="background:#0B5D3C;color:#fff;border:1px solid #073F29">
@@ -342,7 +367,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     </div>
     <button class="pick" id="orientBtn" style="min-width:110px">Course-up</button>
   </div>
-  <svg id="legview" viewBox="0 0 360 430" preserveAspectRatio="xMidYMid meet" style="margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA;touch-action:pan-y"></svg>
+  <svg id="legview" viewBox="0 0 360 688" preserveAspectRatio="xMidYMid meet" style="margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA;touch-action:pan-y"></svg>
   <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
     <label style="white-space:nowrap;margin:0">Wind <span id="wslideLbl" class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
     <input id="wslide" class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
@@ -372,6 +397,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 </details>
 
 <details class="notes" id="garmintab" style="background:#3A4552;border:1px solid #2A323C"><summary style="color:#fff">GPS Display</summary>
+  <div class="gpage">
   <div class="garmin-frame">
     <div class="garmin-tile">
       <div class="garmin-label">Heading</div>
@@ -423,23 +449,32 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     </div>
   </div>
 
+  <!-- Two snap pages. The four blocks below used to live in ONE grid sequenced by CSS `order`
+       (chart 1, set banner 2, six readouts 3, compass arc 4), which cannot be split into page
+       containers. They are now in real document order, so what you read is what is drawn.
+       The mini chart appears on BOTH pages: #miniLegSvg is the drawn one, #miniLegSvg2 is a
+       copy synced from it after every render. -->
   <div class="garmin-compass-wrap">
-    <svg id="garminCompass" viewBox="0 6 300 180" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;display:block;order:4;border:0;border-radius:0;background:none"></svg>
-    <svg id="miniLegSvg" viewBox="0 0 360 360" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;height:100%;display:block;order:1;border:4px solid #12283A;border-radius:12px;background:#F2F7FA;box-shadow:inset 0 0 0 1.5px #B7C2CC;box-sizing:border-box"></svg>
+    <svg id="miniLegSvg" viewBox="0 0 360 360" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;height:min(326px,38vh);display:block;border:4px solid #12283A;border-radius:12px;background:#F2F7FA;box-shadow:inset 0 0 0 1.5px #B7C2CC;box-sizing:border-box"></svg>
     <!-- drawMiniLeg also writes a heading and a numbers block; on this tab only the chart is
          wanted, so they exist but stay hidden rather than forking the drawing code. -->
     <div id="miniLegHead" style="display:none"></div>
     <div id="miniLegInfo" style="display:none"></div>
-    <!-- Panel order: mini chart (1), set banner (2), six readouts (3), compass arc (4).
-         All span the full width. -->
-  <div id="gSetBox" style="grid-column:1/-1;order:2;margin-top:2px;padding:9px 11px;border-radius:11px;background:#F2F7FA;border:1.5px solid #B7C2CC">
-    <div style="font-size:9.5px;letter-spacing:.06em;color:#48627A;font-weight:800">POINTING v MAKING GOOD</div>
-    <div id="gSetMain" style="font-size:19px;font-weight:800;line-height:1.25;margin-top:2px"></div>
-    <div id="gSetNote" style="font-size:11.5px;line-height:1.4;margin-top:3px;color:#48627A"></div>
   </div>
-    <div id="gSix" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;grid-column:1/-1;order:3"></div>
   </div>
-  <div style="font-size:11px;color:#C9D3DC;margin-top:8px">Tracks whichever leg is selected in Course Analysis, pre-start or racing. Course-up: the ring turns to your current heading (GPS, or the compass when stationary), and the pointer shows the target relative to that. Not for navigation.</div>
+
+  <div class="gpage">
+  <div class="garmin-compass-wrap">
+    <svg id="miniLegSvg2" viewBox="0 0 360 360" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;height:min(265px,30vh);display:block;border:4px solid #12283A;border-radius:12px;background:#F2F7FA;box-shadow:inset 0 0 0 1.5px #B7C2CC;box-sizing:border-box"></svg>
+    <div id="gSetBox" style="margin-top:2px;padding:9px 11px;border-radius:11px;background:#F2F7FA;border:1.5px solid #B7C2CC">
+      <div style="font-size:9.5px;letter-spacing:.06em;color:#48627A;font-weight:800">POINTING v MAKING GOOD</div>
+      <div id="gSetMain" style="font-size:19px;font-weight:800;line-height:1.25;margin-top:2px"></div>
+      <div id="gSetNote" style="font-size:11.5px;line-height:1.4;margin-top:3px;color:#48627A"></div>
+    </div>
+    <div id="gSix" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+    <svg id="garminCompass" viewBox="0 6 300 180" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;max-height:min(196px,21vh);display:block;border:0;border-radius:0;background:none"></svg>
+  </div>
+  </div>
 </details>
 
 <details class="notes" id="datatab" style="background:#E8E2F0;border:1px solid #C4B8D8"><summary style="color:#12283A">Data</summary>
@@ -5337,6 +5372,30 @@ function drawStart(r,wdir,wspd){
       F=p=>{const q=F0(p);return [q[0], q[1]+dy];};
     }
   }
+  // The framing above centres on the mid-point of boat AND line, and the MIN_LINE_PX floor then
+  // stops the view zooming out to accommodate both. With the boat off to one side that pushed the
+  // line clean off the edge: the rungs, wind arrow and run-in still drew, so the panel looked
+  // populated while the one thing it exists to show was outside the frame. Clamp so both ends of
+  // the line are always visible, and let the boat leave the frame instead, which is the same
+  // trade-off the vertical pin above already makes.
+  if(L){
+    const MARG=30;
+    const clamp=(get,lo_,hi_,axis)=>{
+      const p1=F(L.cv)[axis], p2=F(L.pin)[axis];
+      const lo=Math.min(p1,p2), hi=Math.max(p1,p2);
+      let d=0;
+      if(hi-lo>hi_-lo_)      d=(lo_+hi_)/2-(lo+hi)/2;   // longer than the frame: centre it
+      else if(lo<lo_)        d=lo_-lo;
+      else if(hi>hi_)        d=hi_-hi;
+      return d;
+    };
+    const dx=clamp(0,MARG,W-MARG,0);
+    if(dx){ const Fx=F; F=p=>{const q=Fx(p); return [q[0]+dx,q[1]];}; }
+    // Vertical too, so a line above the boat cannot escape off the top. Kept below the wind
+    // arrow's slot so the two do not overlap.
+    const dy2=clamp(0,H*0.16,H-MARG,1);
+    if(dy2){ const Fy=F; F=p=>{const q=Fy(p); return [q[0],q[1]+dy2];}; }
+  }
   // ---- wind arrow, same slot as every other leg ----
   // Wind arrow centred above the line. The panel is always wind-up, so this points straight
   // down the screen; it is here to say which wind the T line is squared to, and how it is known.
@@ -5387,12 +5446,90 @@ function drawStart(r,wdir,wspd){
         s+=`</g>`;
       }
     }
+    // ---- two-board run-in to the middle of the line ----
+    // Same solve as the Course Analysis leg diagram, target = the point where A and T cross,
+    // which is the mid-point of the line by construction. Lifted out here rather than reusing
+    // drawLeg directly, because that function builds its own leg-frame rotation while this panel
+    // is wind-up with its own F(). Corners are computed in a leg frame and mapped back to
+    // lat/lon, so the projection stays whatever F() is and cannot drift out of step with it.
+    //
+    // The wind used is startWind(), matching the T line and the wind arrow, so the boards square
+    // to the same wind the rest of the panel is drawn to. Tide is streamAtPos at the boat, which
+    // is the ATLAS until a beat test is accepted on the Tuning tab: on 13 August that was wrong
+    // by a factor of seven, and these boards would have been wrong with it.
+    if(me){
+      const wB=startWind();
+      const tgtTwa=interp(P_TWS,P_UP.twa,wspd), Vb=interp(P_TWS,P_UP.vel,wspd);
+      const midLL2=[(L.cv[0]+L.pin[0])/2,(L.cv[1]+L.pin[1])/2];
+      const bd=brgDist(me,midLL2), co2=bd.brg, D2=bd.dist;
+      let Tv=[0,0];
+      try{
+        if(typeof TIDECTX!=="undefined"&&TIDECTX){
+          const st2=streamAtPos(me,TIDECTX.off,TIDECTX.range);
+          if(st2&&!st2.slack)Tv=[st2.kt*Math.sin(rad(st2.dir-co2)),st2.kt*Math.cos(rad(st2.dir-co2))];
+        }
+      }catch(e){}
+      // leg frame (x across, y along the bearing to the mid) -> lat/lon -> screen
+      const LL=(x,y)=>{const d=Math.hypot(x,y); return d<1e-9?me:offsetPos(me,norm(co2+Math.atan2(x,y)*180/Math.PI),d);};
+      const dirs=[], corners2=[];
+      for(const sgn of [1,-1]){
+        const h1=norm(wB+sgn*tgtTwa)-co2, h2=norm(wB-sgn*tgtTwa)-co2;
+        const g1=[Vb*Math.sin(rad(h1))+Tv[0],Vb*Math.cos(rad(h1))+Tv[1]];
+        const g2=[Vb*Math.sin(rad(h2))+Tv[0],Vb*Math.cos(rad(h2))+Tv[1]];
+        if(sgn===1)dirs.push(g1,g2);
+        const den=g1[0]*g2[1]-g1[1]*g2[0];
+        if(Math.abs(den)>1e-9){
+          const tt=(0*g2[1]-D2*g2[0])/den, ss=(D2*g1[0])/den;
+          if(tt>0&&ss>0&&tt*Vb<10*D2)corners2.push([sgn,tt*g1[0],tt*g1[1],norm(wB+sgn*tgtTwa),norm(wB-sgn*tgtTwa)]);
+        }
+      }
+      const tackCol=h=>((((wB-h+540)%360)-180)>0)?"#007A33":"#C8102E";   // stbd green, port red
+      // Board-parallel lattice, in the boards' own colours, kept very light so it reads as
+      // texture under the grey line-parallel rungs rather than competing with them.
+      if(corners2.length){
+        const o=F(me);
+        s+=`<g clip-path="url(#startLadderClip)">`;
+        for(const g of dirs){
+          const gp=F(LL(g[0]*0.02,g[1]*0.02));          // F is affine, so this is the screen direction
+          let dxs=gp[0]-o[0], dys=gp[1]-o[1];
+          const ln=Math.hypot(dxs,dys); if(ln<1e-6)continue;
+          const ux2=dxs/ln, uy2=dys/ln, nx2=-uy2, ny2=ux2, diag2=Math.hypot(W,H), SP2=26;
+          const col=tackCol(norm(co2+Math.atan2(g[0],g[1])*180/Math.PI));
+          const n2=Math.ceil(diag2/SP2);
+          for(let k=-n2;k<=n2;k++){
+            const ox=o[0]+nx2*k*SP2, oy=o[1]+ny2*k*SP2;
+            s+=`<line x1="${(ox-ux2*diag2).toFixed(1)}" y1="${(oy-uy2*diag2).toFixed(1)}" x2="${(ox+ux2*diag2).toFixed(1)}" y2="${(oy+uy2*diag2).toFixed(1)}" stroke="${col}" stroke-width="0.8" opacity="0.16"/>`;
+          }
+        }
+        s+=`</g>`;
+      }
+      // the two candidate routes: boat -> corner -> middle of the line
+      for(const [sgn,nx3,ny3,h1seg,h2seg] of corners2){
+        const c=F(LL(nx3,ny3)), f0=F(me), f1=F(midLL2);
+        s+=`<line x1="${f0[0].toFixed(1)}" y1="${f0[1].toFixed(1)}" x2="${c[0].toFixed(1)}" y2="${c[1].toFixed(1)}" stroke="${tackCol(h1seg)}" stroke-width="2.4" opacity="0.75" stroke-linecap="round"/>`;
+        s+=`<line x1="${c[0].toFixed(1)}" y1="${c[1].toFixed(1)}" x2="${f1[0].toFixed(1)}" y2="${f1[1].toFixed(1)}" stroke="${tackCol(h2seg)}" stroke-width="2.4" opacity="0.75" stroke-linecap="round" stroke-dasharray="6 4"/>`;
+      }
+    }
+    // While both are assumed the two lines are geometrically identical: the assumed A is placed
+    // square to the wind, which is the definition of T. Drawn separately, the second simply hid
+    // the first and you saw one line of one colour. So when they coincide, draw ONE line with
+    // the two colours alternating along it: same dash pattern, offset by one dash. Green dash,
+    // blue dash, green dash. That says "both, and both assumed" without pretending to a
+    // separation that does not exist.
+    const coincide = Math.hypot(a[0]-tc[0],a[1]-tc[1])<1.5 && Math.hypot(b[0]-tp[0],b[1]-tp[1])<1.5;
+    if(coincide){
+      const D=7;                                  // dash length; gap is the other colour's dash
+      s+=`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity=".85"/>`;
+      s+=`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${A_COL}" stroke-width="3.4" stroke-dasharray="${D} ${D}"/>`;
+      s+=`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${T_COL}" stroke-width="3.4" stroke-dasharray="${D} ${D}" stroke-dashoffset="${D}"/>`;
+    } else {
     // T line
     s+=`<line x1="${tc[0].toFixed(1)}" y1="${tc[1].toFixed(1)}" x2="${tp[0].toFixed(1)}" y2="${tp[1].toFixed(1)}" stroke="#fff" stroke-width="${tSolid?7:6}" stroke-linecap="round" opacity=".8"/>`;
     s+=`<line x1="${tc[0].toFixed(1)}" y1="${tc[1].toFixed(1)}" x2="${tp[0].toFixed(1)}" y2="${tp[1].toFixed(1)}" stroke="${T_COL}" stroke-width="${tSolid?3:2}" stroke-linecap="round"${tSolid?"":' stroke-dasharray="5 5"'}/>`;
     // A line, drawn over T so the marks stay readable
     s+=`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="#fff" stroke-width="${aSolid?8:7}" stroke-linecap="round" opacity=".85"/>`;
     s+=`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${A_COL}" stroke-width="${aSolid?4:3}" stroke-linecap="round"${aSolid?"":' stroke-dasharray="6 5"'}/>`;
+    }
     // End symbols, drawn last so they sit over both lines. The target end is highlighted in
     // orange; the CV hull is yellow with the highlight on its outline.
     {
@@ -5437,6 +5574,33 @@ function drawStart(r,wdir,wspd){
         ? `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="11" fill="none" stroke="#fff" stroke-width="4" opacity=".9"/>`+
           `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="8" fill="${ORANGE}" stroke="#12283A" stroke-width="2"/>`
         : `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="9" fill="#fff" stroke="${ORANGE}" stroke-width="3.5" stroke-dasharray="3.5 3"/>`;
+      // Beyond roughly 475 m the MIN_LINE_PX floor stops the view zooming out far enough to hold
+      // both, so the boat leaves the frame rather than the line shrinking to an illegible stub.
+      // Losing the boat entirely is worse than losing its scale, so mark it on the edge: a
+      // chevron pointing at where you actually are, with the range. The run-in line is left to
+      // clip at the viewBox, which draws the direction of the approach for free.
+      {
+        const outside = q[0]<6||q[0]>W-6||q[1]<6||q[1]>H-6;
+        if(outside){
+          const m2=F([(L.cv[0]+L.pin[0])/2,(L.cv[1]+L.pin[1])/2]);
+          let dx=q[0]-m2[0], dy=q[1]-m2[1];
+          const len=Math.hypot(dx,dy)||1; dx/=len; dy/=len;
+          const MG=22;
+          let t=Infinity;
+          if(dx>1e-9)t=Math.min(t,(W-MG-m2[0])/dx); else if(dx<-1e-9)t=Math.min(t,(MG-m2[0])/dx);
+          if(dy>1e-9)t=Math.min(t,(H-MG-m2[1])/dy); else if(dy<-1e-9)t=Math.min(t,(MG-m2[1])/dy);
+          if(isFinite(t)&&t>0){
+            const ex=m2[0]+t*dx, ey=m2[1]+t*dy, nx=-dy, ny=dx;
+            const P=(a,b)=>a.toFixed(1)+","+b.toFixed(1);
+            const tip=P(ex+12*dx,ey+12*dy), c1=P(ex-7*dx+9*nx,ey-7*dy+9*ny), c2=P(ex-7*dx-9*nx,ey-7*dy-9*ny);
+            s+=`<polygon points="${tip} ${c1} ${c2}" fill="${ORANGE}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>`;
+            const rng=brgDist(me,[(L.cv[0]+L.pin[0])/2,(L.cv[1]+L.pin[1])/2]).dist*1852;
+            const rtxt = rng<1000 ? `${Math.round(rng)} m` : `${(rng/1852).toFixed(2)} NM`;
+            const lx=Math.max(30,Math.min(W-30,ex-26*dx)), ly=Math.max(24,Math.min(H-10,ey-26*dy));
+            s+=`<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="10.5" font-weight="700" text-anchor="middle" fill="#12283A" stroke="#F2F7FA" stroke-width="3" paint-order="stroke">you ${rtxt}</text>`;
+          }
+        }
+      }
       const dtxt = dl>0 ? `${Math.round(dl)} m OVER` : `${Math.round(-dl)} m to line`;
       s+=`<text x="8" y="${H-26}" font-size="11" text-anchor="start" fill="#48627A">${dtxt} \u00B7 ${tt.lay?"laying "+tgt.toUpperCase():"needs a tack"}</text>`;
       if(toGun!==null){
@@ -5685,7 +5849,7 @@ function startClick(ev){
 function drawLeg(r,idx,wdir,wspd){
   const L=r.legs[idx];
   const elapsed=r.legs.slice(0,idx).reduce((s,x)=>s+x.time,0);
-  const svg=$("legview"); const W=360,H=430,cx=W/2;
+  const svg=$("legview"); const W=360,H=688,cx=W/2;   // v402: 60% taller than the original 430
   const bandH=Math.round(W*0.25);   // reserved top band for wind/N/tide, 25% of the diagram width
   const yB=H-20,yT=bandH+20;        // main diagram: from just below the band to near the bottom
   const co=L.co;
@@ -6759,9 +6923,18 @@ function miniLegRender(){
   const haveCourse=WIND.chosen&&WIND.numChosen;
   let r=null;
   if(haveCourse){ try{ r=compute(state.card,+$("wdir").value||0,+$("wspd").value||10,+$("wgst").value||15,state.letter,state.num); }catch(e){ r=null; } }
-  if(!r||!r.legs||!r.legs.length){ svg.innerHTML=""; return; }
+  if(!r||!r.legs||!r.legs.length){ svg.innerHTML=""; miniLegMirror(); return; }
   const idx=Math.max(0,Math.min(state.leg,r.legs.length-1));
   try{ drawMiniLeg(r,idx,+$("wdir").value||0,+$("wspd").value||10); }catch(e){}
+  miniLegMirror();
+}
+// The mini chart is wanted on BOTH snap pages, and one element cannot be in two places. Rather
+// than draw it twice (two calls that could drift apart), draw once and copy. The copy is inert:
+// no swipe handler, no ids inside that anything looks up.
+function miniLegMirror(){
+  const a=$("miniLegSvg"), b=$("miniLegSvg2"); if(!a||!b)return;
+  if(b.innerHTML!==a.innerHTML)b.innerHTML=a.innerHTML;
+  const vb=a.getAttribute("viewBox"); if(vb&&b.getAttribute("viewBox")!==vb)b.setAttribute("viewBox",vb);
 }
 function legStep(dir){                             // dir: -1 previous leg, +1 next leg (Course Analysis)
   let r=null;
