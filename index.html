@@ -192,12 +192,12 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 </details>
 
 
-<details class="notes" id="buoytab" style="background:#DCF0F8;border:1px solid #8FCBE0">
-  <summary style="color:#0B4A63">Dublin Bay Buoy</summary>
+<details class="notes" id="buoytab" style="background:#E2F4E9;border:1px solid #A6D9BC">
+  <summary style="color:#0B5138">Wind (Dublin Bay Buoy)</summary>
   <div class="inrow" style="margin-bottom:8px;align-items:flex-end">
     <div style="flex:1"><button class="pick" id="bdRefresh" style="width:100%">Refresh</button></div>
   </div>
-  <div id="dbbStat2" style="font-size:12px;color:#3A6A7D;margin:-2px 0 10px">Tap Refresh to pull the latest buoy reading. Last updated: <span id="bdAge">no reading yet</span>.</div>
+  <div id="dbbStat2" style="font-size:12px;color:#3A7D5E;margin:-2px 0 10px">Tap Refresh to pull the latest buoy reading. Last updated: <span id="bdAge">no reading yet</span>.</div>
   <div class="inrow" style="margin-bottom:8px">
     <div style="flex:1"><label>Wind from</label><div class="buoytile" id="bdWind">&ndash;</div></div>
     <div style="flex:1"><label>Gusts from</label><div class="buoytile" id="bdGust">&ndash;</div></div>
@@ -213,18 +213,18 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div class="inrow" style="margin-bottom:4px">
     <div style="flex:1"><label>Sea state (Douglas)</label><div class="buoytile" id="bdSea" style="font-size:17px">&ndash;</div></div>
   </div>
-  <div style="font-size:11px;color:#3A6A7D;margin-top:6px">Wind and gusts are the compass bearing each is coming from. Sea state uses the standard Douglas Scale, worked out here from wave height (dublinbaybuoy.com's own reading uses the same scale). Not for navigation.</div>
-  <div style="border-top:1px solid #8FCBE0;margin:14px 0 10px"></div>
-  <div style="font-weight:800;color:#0B4A63;font-size:14px;margin-bottom:6px">6-hour Trends</div>
-  <div id="dbbTrendStat" style="font-size:12px;color:#3A6A7D;margin-bottom:8px">Tap Refresh above to pull the last 6 hours.</div>
-  <div style="font-weight:700;color:#0B4A63;font-size:12.5px;margin-bottom:2px">Wind Direction</div>
+  <div style="font-size:11px;color:#3A7D5E;margin-top:6px">Wind and gusts are the compass bearing each is coming from. Sea state uses the standard Douglas Scale, worked out here from wave height (dublinbaybuoy.com's own reading uses the same scale). Not for navigation.</div>
+  <div style="border-top:1px solid #A6D9BC;margin:14px 0 10px"></div>
+  <div style="font-weight:800;color:#0B5138;font-size:14px;margin-bottom:6px">6-hour Trends</div>
+  <div id="dbbTrendStat" style="font-size:12px;color:#3A7D5E;margin-bottom:8px">Tap Refresh above to pull the last 6 hours.</div>
+  <div style="font-weight:700;color:#0B5138;font-size:12.5px;margin-bottom:2px">Wind Direction</div>
   <div id="dbbDirChart" style="background:#fff;border-radius:10px;padding:8px 4px;margin-bottom:10px"></div>
   <div class="inrow" style="margin-bottom:4px">
     <div style="flex:1"><label>Avg direction</label><div class="buoytile" id="bdAvgDir6">&ndash;</div></div>
     <div style="flex:1"><label>Avg speed (kt)</label><div class="buoytile" id="bdAvgSpd6">&ndash;</div></div>
     <div style="flex:1"><label>Max speed (kt)</label><div class="buoytile" id="bdMaxSpd6">&ndash;</div></div>
   </div>
-  <div style="font-size:11px;color:#3A6A7D;margin-top:6px">Average direction is a proper circular mean, not a plain average, so it handles the 360&deg;/0&deg; wrap correctly (e.g. readings of 350&deg; and 10&deg; average to about 0&deg;, not 180&deg;). The chart plots raw degrees, so a genuine wrap crossing (say 350&deg; to 10&deg;) will show as a jump top-to-bottom on the axis, rather than the short way round.</div>
+  <div style="font-size:11px;color:#3A7D5E;margin-top:6px">Average direction is a proper circular mean, not a plain average, so it handles the 360&deg;/0&deg; wrap correctly (e.g. readings of 350&deg; and 10&deg; average to about 0&deg;, not 180&deg;). The chart plots raw degrees, so a genuine wrap crossing (say 350&deg; to 10&deg;) will show as a jump top-to-bottom on the axis, rather than the short way round.</div>
 </details>
 
 <details class="notes" id="tidetab" style="background:#0B5D3C;color:#fff;border:1px solid #073F29">
@@ -242,6 +242,25 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div style="font-weight:800;color:#fff;font-size:14px;margin-bottom:6px">Tide Curve</div>
   <div id="tideCurve" style="background:rgba(0,0,0,.12);border-radius:10px;padding:8px 4px"></div>
   <div style="font-size:11px;color:#BFE8D4;margin-top:6px">Height at Dun Laoghaire (North Wall), from the same Dublin Port Company tide tables. The orange dot tracks the slider above; drag it and the dot moves with it.</div>
+</details>
+
+<!-- Tuning: the two-beat test, moved off the Start tab in v400 so it has room to show what it
+     measured against what the app was predicting. Top captures, middle compares, bottom decides. -->
+<details class="notes" id="tuningtab" style="background:#17754B;color:#fff;border:1px solid #0E5837">
+  <summary style="color:#fff">Tuning</summary>
+  <div id="tuneCap" style="margin-top:6px"></div>
+  <!-- Lives outside #tuneCap deliberately: that div's innerHTML is rebuilt on every render,
+       which would blow away half-typed numbers and steal focus mid-entry. -->
+  <div id="beatIn" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18)">
+    <div style="font-size:10px;letter-spacing:.06em;color:#C6E4D3;font-weight:800">READ OFF THE BOAT, BEFORE YOU TAP TO STOP</div>
+    <div style="display:flex;gap:8px;margin-top:5px">
+      <div style="flex:1"><label style="color:#C6E4D3">Log kt</label><input id="beatLog" type="number" inputmode="decimal" step="0.1" placeholder="paddlewheel" style="width:100%;box-sizing:border-box"></div>
+      <div style="flex:1"><label style="color:#C6E4D3">Compass &deg;</label><input id="beatHdg" type="number" inputmode="numeric" placeholder="steering" style="width:100%;box-sizing:border-box"></div>
+    </div>
+    <div id="beatInMsg" style="font-size:11px;color:#C6E4D3;line-height:1.4;margin-top:5px">Log speed is the one that matters: it turns the tide from an assumption into a measurement. Compass is optional and calibrates the set banner.</div>
+  </div>
+  <div id="tuneCmp" style="margin-top:8px"></div>
+  <div id="tuneAct" style="margin-top:8px"></div>
 </details>
 
 <details class="notes" id="timertab" style="background:#2A6285;color:#fff;border:1px solid #1C4E6D">
@@ -287,16 +306,6 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div id="startWrap" style="margin-top:8px">
     <svg id="startView" viewBox="0 0 360 420" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;border-radius:12px;background:#F2F7FA"></svg>
     <div id="startCtl" style="display:none;margin-top:8px"></div>
-    <!-- Lives outside #startCtl deliberately: that div's innerHTML is rebuilt on every render,
-         which would blow away half-typed numbers and steal focus mid-entry. -->
-    <div id="beatIn" style="display:none;margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18)">
-      <div style="font-size:10px;letter-spacing:.06em;color:#C9DFEC;font-weight:800">READ OFF THE BOAT, BEFORE YOU TAP TO STOP</div>
-      <div style="display:flex;gap:8px;margin-top:5px">
-        <div style="flex:1"><label style="color:#C9DFEC">Log kt</label><input id="beatLog" type="number" inputmode="decimal" step="0.1" placeholder="paddlewheel" style="width:100%;box-sizing:border-box"></div>
-        <div style="flex:1"><label style="color:#C9DFEC">Compass &deg;</label><input id="beatHdg" type="number" inputmode="numeric" placeholder="steering" style="width:100%;box-sizing:border-box"></div>
-      </div>
-      <div id="beatInMsg" style="font-size:11px;color:#C9DFEC;line-height:1.4;margin-top:5px">Log speed is the one that matters: it turns the tide from an assumption into a measurement. Compass is optional and calibrates the set banner.</div>
-    </div>
   </div>
 </details>
 
@@ -2402,7 +2411,7 @@ function drawWindDirChart(){
   // their order of arrival further below, rather than showing nothing at all.
   const tsOk = obs.length>0 && obs.every(p=>isFinite(p.t));
   if(!obs.length&&!fc.length){
-    host.innerHTML=`<div style="font-size:12px;color:#3A6A7D;padding:10px 0">No direction history yet \u2014 tap Refresh above, and fetch a forecast from Weather settings, to see the trend.</div>`;
+    host.innerHTML=`<div style="font-size:12px;color:#3A7D5E;padding:10px 0">No direction history yet \u2014 tap Refresh above, and fetch a forecast from Weather settings, to see the trend.</div>`;
     return;
   }
   const W=320,H=170,L=34,R=10,T=10,B=24, PW=W-L-R, PH=H-T-B;
@@ -2425,7 +2434,7 @@ function drawWindDirChart(){
     obs.forEach((p,i)=>{ g+=`<circle cx="${Xi(i).toFixed(1)}" cy="${Y(p.dir).toFixed(1)}" r="2.5" fill="#0E7C94"/>`; });
     obs.forEach((p,i)=>{ if(n<=8||i%Math.ceil(n/8)===0)g+=`<text x="${Xi(i).toFixed(1)}" y="${H-8}" font-size="9" text-anchor="middle" fill="#48627A">${i+1}</text>`; });
     g+=`<line x1="${L}" y1="${T+PH}" x2="${W-R}" y2="${T+PH}" stroke="#48627A" stroke-width="1"/></svg>`;
-    g+=`<div style="font-size:11px;color:#3A6A7D;text-align:center;margin-top:2px">Readings in order (oldest to newest), not to time scale.</div>`;
+    g+=`<div style="font-size:11px;color:#3A7D5E;text-align:center;margin-top:2px">Readings in order (oldest to newest), not to time scale.</div>`;
     host.innerHTML=g;
     return;
   }
@@ -2452,7 +2461,7 @@ function drawWindDirChart(){
   obs.forEach(p=>{ g+=`<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.dir).toFixed(1)}" r="2.5" fill="#0E7C94"/>`; });
   g+=`<line x1="${L}" y1="${T+PH}" x2="${W-R}" y2="${T+PH}" stroke="#48627A" stroke-width="1"/>`;
   g+=`</svg>`;
-  g+=`<div style="display:flex;gap:14px;justify-content:center;font-size:11px;color:#3A6A7D;margin-top:2px">
+  g+=`<div style="display:flex;gap:14px;justify-content:center;font-size:11px;color:#3A7D5E;margin-top:2px">
     <span><span style="display:inline-block;width:14px;height:2px;background:#0E7C94;vertical-align:middle;margin-right:4px"></span>Observed (from)</span>
     <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #12283A;vertical-align:middle;margin-right:4px"></span>Forecast</span>
   </div>`;
@@ -3068,7 +3077,8 @@ function posUpdate(pos){
     cl.setAttribute("x1",x);cl.setAttribute("y1",y);cl.setAttribute("x2",x+L*Math.sin(th));cl.setAttribute("y2",y-L*Math.cos(th));cl.style.display="";
   } else cl.style.display="none";
   g.style.display="";
-  trackAdd(pos);
+  // trackAdd is called by gpsFix, not here: this function returns early when the old GPS tab's
+  // SVG is absent, which is why the track and the beat capture were starved.
   if(POSVIEW.z>1&&POSVIEW.follow){POSVIEW.cx=x;POSVIEW.cy=y;posApply();}else posScale();
 }
 // ---------- track sailed: recorded from live fixes, drawn on the GPS tab chart ----------
@@ -3093,10 +3103,17 @@ function trackAdd(pos){
   trackRedraw();
 }
 function trackRedraw(){
-  const tk=$("posTrack"); if(!tk)return;
-  tk.setAttribute("points", TRACK.map(pt=>{const q=ll2pos(pt.lat,pt.lon); return q[0].toFixed(1)+","+q[1].toFixed(1);}).join(" "));
+  // Each of these elements is optional. #posTrack and #trackStats belonged to the old GPS tab
+  // deleted in v365, so guarding with an early return here meant the Download button was never
+  // greyed. Test each one on its own instead.
+  const tk=$("posTrack");
+  if(tk)tk.setAttribute("points", TRACK.map(pt=>{const q=ll2pos(pt.lat,pt.lon); return q[0].toFixed(1)+","+q[1].toFixed(1);}).join(" "));
+  // Download lives on the GPS tab as #gps2Dl now. #trackDlBtn is kept as a fallback in case the
+  // old markup ever returns.
+  const dl=$("gps2Dl")||$("trackDlBtn");
+  if(dl){ const empty=TRACK.length<1;
+    dl.disabled=empty; dl.style.opacity=empty?"0.4":"1"; dl.style.cursor=empty?"default":"pointer"; }
   const st=$("trackStats"); if(!st)return;
-  const dl=$("trackDlBtn"); if(dl){ dl.disabled=TRACK.length<1; dl.style.opacity=TRACK.length<1?"0.4":"1"; dl.style.cursor=TRACK.length<1?"default":"pointer"; }
   if(TRACK.length<2){ st.textContent=TRACK.length?"Track: 1 point recorded":""; return; }
   let nm=0; for(let i=1;i<TRACK.length;i++)nm+=brgDist([TRACK[i-1].lat,TRACK[i-1].lon],[TRACK[i].lat,TRACK[i].lon]).dist;
   const mins=(TRACK[TRACK.length-1].t-TRACK[0].t)/60000;
@@ -3154,6 +3171,12 @@ function gpsRender(pos){
   if(sc.length)h+=`<div style="margin-top:8px;font-size:13px">${sc.join(" \u00B7 ")}</div>`;
   h+=`<div style="font-size:11px;color:#7C93A4;margin-top:6px">Fix \u00B1${acc!=null?acc+" m":"?"} \u00B7 updated ${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>`;
   if(out)out.innerHTML=h;
+  // Track and beat capture are fed from here, not from posUpdate. posUpdate begins with
+  // posMapInit(), which returns at its first line because #posMap belonged to the old GPS tab
+  // deleted in v365; posUpdate then hits its own #posDotG guard and returns before ever
+  // reaching trackAdd. That left TRACK empty for the whole session, so nothing drew a track
+  // and BEAT.rec collected no points for the two-beat solve.
+  try{trackAdd(pos);}catch(e){}
   posUpdate(pos);
   try{garminRender(pos);}catch(e){}
   try{setRender();}catch(e){}
@@ -3517,6 +3540,9 @@ function gps2Init(){
   const b=$("gps2Fit"); if(b)b.onclick=gps2Fit;
   const c=$("gps2Clear"); if(c)c.onclick=()=>{ try{trackClear();}catch(e){} gps2Render(); };
   const dl=$("gps2Dl");   if(dl)dl.onclick=()=>{ try{trackDownloadCSV();}catch(e){} };
+  // trackRedraw is what greys Download, and it otherwise only runs when a fix arrives. Call it
+  // once here so the button starts greyed rather than looking live with nothing to download.
+  try{trackRedraw();}catch(e){}
 }
 function gpsToggle(){
   if(GPS.watch!=null){ navigator.geolocation.clearWatch(GPS.watch); GPS.watch=null; gpsSay("Stopped. Tap to resume."); }
@@ -3571,6 +3597,65 @@ function climatologySync(wspd){
 // The corner is where the two boards cross: sail board one until the mark bears board two.
 // Recomputed from the boat's ACTUAL position rather than the leg's start, so it counts down as
 // you sail, and returns null once the corner is behind you or there is no corner to make.
+// ---------- the no-go zone, drawn from the boat ----------
+// Two rays from the boat marking the edges of the sector you cannot sail through: on a beat
+// the close-hauled angles either side of the wind, on a run the two gybing angles either side
+// of dead downwind. Port edge red, starboard edge green, matching the tack you would be on.
+// A mark sitting inside the wedge cannot be sailed straight to, which is the whole point.
+// Reaches have no target angle so nothing is drawn, which is correct: you can point at the mark.
+function nogoRayEnd(x,y,thDeg,x0,y0,x1,y1){
+  // Ray from (x,y) at screen angle thDeg (0 = up the screen, clockwise), clipped to the frame.
+  const sx=Math.sin(rad(thDeg)), sy=-Math.cos(rad(thDeg));
+  let t=Infinity;
+  if(sx>1e-9)t=Math.min(t,(x1-x)/sx); else if(sx<-1e-9)t=Math.min(t,(x0-x)/sx);
+  if(sy>1e-9)t=Math.min(t,(y1-y)/sy); else if(sy<-1e-9)t=Math.min(t,(y0-y)/sy);
+  if(!(t>0)||!isFinite(t))return null;
+  return [x+sx*t, y+sy*t];
+}
+function nogoSVG(bx,by,wdir,target,frFn,box,wide){
+  // target is the polar's target TWA for the leg type: upwind on a beat, downwind on a run.
+  // Heading = wdir + target is port tack in both cases (wind over the port side), so the sign
+  // convention carries straight through from beat to run with no special case.
+  if(target==null||!isFinite(target))return "";
+  const [x0,y0,x1,y1]=box;
+  const pEnd=nogoRayEnd(bx,by,frFn(wdir+target),x0,y0,x1,y1);   // port edge, red
+  const sEnd=nogoRayEnd(bx,by,frFn(wdir-target),x0,y0,x1,y1);   // starboard edge, green
+  let out="";
+  // Shade the wedge between them, so it reads as an area you cannot sail into rather than as
+  // two more route lines: the diagram already draws candidate routes in the same two colours at
+  // these same angles, because a route IS sailed at the close-hauled angle.
+  // The two rays usually leave through different edges, so the fill has to walk the frame
+  // boundary between them and pick up any corners on the way, or the wedge cuts the corner off.
+  if(pEnd&&sEnd){
+    const per=q=>{                                   // clockwise perimeter parameter, 0..4
+      const ex=1e-6;
+      if(Math.abs(q[1]-y0)<ex)return (q[0]-x0)/(x1-x0);
+      if(Math.abs(q[0]-x1)<ex)return 1+(q[1]-y0)/(y1-y0);
+      if(Math.abs(q[1]-y1)<ex)return 2+(x1-q[0])/(x1-x0);
+      return 3+(y1-q[1])/(y1-y0);
+    };
+    const cor=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]];     // corners at t = 0,1,2,3
+    // Bearings increase clockwise on screen, and so does this parameter, so walking forward
+    // from the starboard edge to the port edge sweeps the no-go side.
+    let t=per(sEnd); const tEnd=per(pEnd);
+    let span=tEnd-t; if(span<0)span+=4;
+    const pts=[[bx,by],sEnd];
+    for(let k=1;k<=4;k++){
+      const ck=(Math.floor(t)+k)%4;
+      let dt=ck-t; if(dt<0)dt+=4;
+      if(dt<span-1e-9)pts.push(cor[ck]); else break;
+    }
+    pts.push(pEnd);
+    out+=`<polygon points="${pts.map(q=>q[0].toFixed(1)+","+q[1].toFixed(1)).join(" ")}" fill="#12283A" opacity=".07"/>`;
+  }
+  for(const b of [{e:pEnd,col:"#C8102E"},{e:sEnd,col:"#007A33"}]){
+    if(!b.e)continue;
+    const w=wide?2.6:2.0;
+    out+=`<line x1="${bx.toFixed(1)}" y1="${by.toFixed(1)}" x2="${b.e[0].toFixed(1)}" y2="${b.e[1].toFixed(1)}" stroke="#fff" stroke-width="${(w+2.4).toFixed(1)}" stroke-linecap="round" opacity=".65"/>`;
+    out+=`<line x1="${bx.toFixed(1)}" y1="${by.toFixed(1)}" x2="${b.e[0].toFixed(1)}" y2="${b.e[1].toFixed(1)}" stroke="${b.col}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="2 5" opacity=".9"/>`;
+  }
+  return out;
+}
 // ---------- the gybe / tack call ----------
 // Answers one question: how far short of the layline am I, in degrees?
 //   big number = angle from your ground track to the mark
@@ -4118,8 +4203,11 @@ function rtClaimTime(){
 // Wrapping rtTick keeps the two in step whichever of its several early returns is taken.
 function rtTick(){
   rtTick0();
-  // keep the beat readout ticking while a run is being recorded, so it visibly counts up
-  try{ if(BEAT.rec&&$("starttab")&&$("starttab").open)startCtl(); }catch(e){}
+  // Keep the beat readout ticking while a run is being recorded, so it visibly counts up.
+  // The beat test moved to the Tuning tab in v400, so this follows it. Only the capture box is
+  // repainted: the comparison and the buttons cannot change mid-run, and repainting them every
+  // second would fight the Log/Compass inputs for focus.
+  try{ if(BEAT.rec&&$("tuningtab")&&$("tuningtab").open){ const c=$("tuneCap"); if(c)c.innerHTML=tuneCapHTML(); } }catch(e){}
   const big=$("rtBig"), rb=$("startRepeatBig"), rl=$("startRepeatLab"), lab=$("rtLabel");
   if(big&&rb){
     rb.textContent=big.textContent;
@@ -4382,6 +4470,12 @@ function buildPickers(){
   startLoad();
   {const el=$("startCtl"); if(el)el.addEventListener("click",startClick);
    }
+  // Tuning tab. Three containers, one listener each, because the Log/Compass inputs sit
+  // between them and must not be inside anything that gets re-rendered while you type.
+  ["tuneCap","tuneCmp","tuneAct"].forEach(id=>{
+    const el=$(id); if(el)el.addEventListener("click",tuningClick);
+  });
+  try{tuningCtl();}catch(e){}
   // Wind sliders: one under the leg diagram, one under the course chart. Both drive the
   // app's wind, so whichever you reach for, everything re-renders together.
   document.querySelectorAll("input.wslide").forEach(sl=>{
@@ -4524,6 +4618,7 @@ function render(){
     $("totDist").textContent=$("totSail").textContent=$("totTime").textContent=$("totHoist").textContent="\u2013";
     drawStart(r,wdir,wspd);
     try{startCtl();}catch(e){}
+    try{tuningCtl();}catch(e){}
     drawMap(null,wdir);
     try{renderCoursePlan();}catch(e){}
     try{garminLabelsSync();}catch(e){}
@@ -4596,6 +4691,7 @@ function render(){
   drawLeg(r,state.leg,wdir,wspd);
   drawStart(r,wdir,wspd);
   startCtl();
+  try{tuningCtl();}catch(e){}
 }
 let CURROUTE=null;
 const TIDECOL="#123C69";     // dark navy: the tidal stream, on every view that draws it
@@ -4876,6 +4972,7 @@ const DEFLINE=250;                              // metres, the assumed line's le
 // Headings come from the positions, not from GPS course-over-ground: iOS often leaves
 // coords.heading null, which is why the old single-press version silently did nothing.
 const BEAT={stbd:null, port:null, rec:null};     // rec = {tack, pts:[...]} while recording
+let BEAT_MSG=null;                               // shown on the Tuning tab, where the buttons are
 function beatBrg(pts){                            // straight-line bearing over the run
   if(!pts||pts.length<2)return null;
   return brgDist([pts[0].lat,pts[0].lon],[pts[pts.length-1].lat,pts[pts.length-1].lon]).brg;
@@ -5031,33 +5128,54 @@ function beatPress(tack){
     // turns the tide from an assumption into a measurement: beatSolve otherwise has to assume
     // you sailed the polar's speed, and on 13 Aug 2026 that assumption put the tide 0.65 kt
     // and 23 degrees out, then rejected the whole solve for a spread ratio of 71%.
+    //
+    // Read and CLEAR on every stop press, including when the run was too short for beatStats
+    // to return anything. Doing this inside an "if(st)" left the boxes populated on a short
+    // run, so the next beat silently inherited the previous tack's numbers.
+    const lg=$("beatLog"), hd=$("beatHdg"), msg=$("beatInMsg");
+    const lv=lg&&lg.value!==""?+lg.value:null, hv=hd&&hd.value!==""?+hd.value:null;
+    const logV=(lv!=null&&isFinite(lv)&&lv>0.2)?lv:null;
+    const hdgV=(hv!=null&&isFinite(hv))?norm(hv):null;
+    if(lg)lg.value=""; if(hd)hd.value="";
+    const tackName=tack==="stbd"?"starboard":"port";
     if(st){
-      const lg=$("beatLog"), hd=$("beatHdg");
-      const lv=lg&&lg.value!==""?+lg.value:null, hv=hd&&hd.value!==""?+hd.value:null;
-      st.log=(lv!=null&&isFinite(lv)&&lv>0.2)?lv:null;
-      st.hdg=(hv!=null&&isFinite(hv))?norm(hv):null;
-      if(lg)lg.value=""; if(hd)hd.value="";      // cleared ready for the other tack
-      const m=$("beatInMsg");
-      if(m)m.innerHTML=(st.log==null&&st.hdg==null)
-        ? "Nothing entered for that beat, so the tide falls back to the polar assumption."
-        : `Captured for the ${tack==="stbd"?"starboard":"port"} beat: `+
-          (st.log!=null?`log <b>${st.log.toFixed(1)} kt</b>`:"no log")+
-          (st.hdg!=null?` \u00B7 compass <b>${d3(st.hdg)}\u00B0</b>`:"")+".";
+      st.log=logV; st.hdg=hdgV;
+      if(msg)msg.innerHTML=(logV==null&&hdgV==null)
+        ? `Nothing entered for the ${tackName} beat, so the tide falls back to the polar assumption.`
+        : `Captured for the ${tackName} beat: `+
+          (logV!=null?`log <b>${logV.toFixed(1)} kt</b>`:"no log")+
+          (hdgV!=null?` \u00B7 compass <b>${d3(hdgV)}\u00B0</b>`:"")+".";
+    } else if(msg){
+      msg.innerHTML=`That ${tackName} run was too short to use: it needs a few fixes, so sail `+
+        `at least 20 seconds and 50 m between the two taps. Boxes cleared, nothing recorded.`;
     }
-    BEAT[tack]=st; BEAT.rec=null;
-    if(BEAT.stbd&&BEAT.port)beatApply();
+    BEAT[tack]=st; BEAT.rec=null; BEAT_MSG=null;
+    // v400: no longer applied automatically. The point of the Tuning tab is to see the
+    // measurement against the prediction BEFORE the app swallows it, so adopting is now the
+    // "Use measured" press at the bottom of that tab.
     render(); return;
   }
   if(!GPS.last||GPS.watch==null){
-    PING_MSG="Turn GPS on first: the heading comes from your track, so it needs a live fix.";
-    startCtl(); return;
+    // The message must appear where the button is. This used to set PING_MSG, which is painted
+    // by the Start panel, so after the move it would have been written to a tab you were not
+    // looking at.
+    BEAT_MSG="Turn GPS on first: the heading comes from your track, so it needs a live fix. Anything typed in the log and compass boxes is kept.";
+    try{tuningCtl();}catch(e){}
+    return;
   }
   BEAT.rec={tack, pts:[]};                        // first press: start recording this tack
-  BEAT[tack]=null; PING_MSG=null;
+  BEAT[tack]=null; BEAT_MSG=null;
   render();
 }
 function beatReset(){ BEAT.stbd=null; BEAT.port=null; BEAT.rec=null;
-  START.obsWind=null; START.obsTack=null; START.obsTrusted=false; START.obsTide=null; startSave(); }
+  START.obsWind=null; START.obsTack=null; START.obsTrusted=false; START.obsTide=null;
+  START.polarPct=null; START.compassErr=null; startSave(); }
+// Hand the app back to the forecast wind and the tide atlas, but KEEP the two beats and the
+// comparison on screen so they can be looked at again and re-accepted. Clear is what wipes them.
+function beatUnapply(){
+  START.obsWind=null; START.obsTack=null; START.obsTrusted=false; START.obsTide=null;
+  START.polarPct=null; START.compassErr=null; startSave();
+}
 
 // The wind the assumed line is squared to: a beat-derived wind when there is one, otherwise
 // the card's. Deliberately does not touch WIND, so forecast/buoy/manual are unaffected.
@@ -5348,7 +5466,6 @@ function drawStart(r,wdir,wspd){
 function startCtl(){
   const el=$("startCtl"); if(!el)return;
   el.style.display="block";
-  { const bi=$("beatIn"); if(bi)bi.style.display="block"; }
   const B=(id,txt,st)=>`<button class="pick" data-s="${id}" style="flex:1;${st||""}">${txt}</button>`;
   const L=startLine();
   const on="background:#12283A;color:#fff;border-color:#12283A";
@@ -5398,7 +5515,20 @@ function startCtl(){
   if(START.cv||START.pin)
     h+=`<div style="text-align:right;margin-top:6px">`+
        `<button class="pick" data-s="clearline" style="min-height:30px;font-size:11.5px;padding:0 10px;width:auto">Clear line</button></div>`;
-  // wind check, always available
+  // The two-beat wind and tide test used to live here. It moved to the Tuning tab in v400,
+  // where it has room to show the measurement against the prediction and to be accepted or
+  // rejected deliberately. Nothing about the solve itself changed.
+  if(PING_MSG)
+    h+=`<div style="font-size:11px;line-height:1.4;color:#FFD9C2;margin-top:6px">${PING_MSG}</div>`;
+  el.innerHTML=h;
+}
+// ---------- Tuning tab ----------
+// Top captures the two beats, middle compares what you measured against what the app was
+// predicting, bottom decides whether to adopt it. The solve is unchanged: this is presentation
+// plus one behavioural change, that adopting is now a deliberate press rather than automatic.
+// Split into three containers so the Log/Compass inputs between them are never re-rendered
+// while you are typing into them.
+function tuneCapHTML(){
   // Amber while that tack is being recorded, green once it is in, blue not done. The live
   // readout underneath is the point: without it a press looked like nothing had happened.
   const wStyle=t=>{
@@ -5412,15 +5542,93 @@ function startCtl(){
     if(BEAT[t])return txt+" \u2713"+(BEAT[t].weak?"<br><span style='font-size:10.5px;font-weight:600'>weak</span>":"");
     return txt;
   };
-  h+=`<div style="display:flex;gap:8px;margin-top:8px;align-items:stretch">`+
-    `<button class="rtbtn" data-s="wport" style="${wStyle("port")}">${wLabel("port","Port beat")}</button>`+
-    `<button class="rtbtn" data-s="wstbd" style="${wStyle("stbd")}">${wLabel("stbd","Stbd beat")}</button>`+
-    ((BEAT.stbd||BEAT.port||START.obsWind!=null)?`<button class="rtbtn" data-s="wclear" style="flex:0.5;min-height:44px;font-size:13px">Clear</button>`:``)+
-    `</div>`;
-  h+=beatReadoutHTML();
-  if(PING_MSG)
-    h+=`<div style="font-size:11px;line-height:1.4;color:#FFD9C2;margin-top:6px">${PING_MSG}</div>`;
-  el.innerHTML=h;
+  return `<div style="display:flex;gap:8px;align-items:stretch">`+
+    `<button class="rtbtn" data-t="wport" style="${wStyle("port")}">${wLabel("port","Port beat")}</button>`+
+    `<button class="rtbtn" data-t="wstbd" style="${wStyle("stbd")}">${wLabel("stbd","Stbd beat")}</button>`+
+    ((BEAT.stbd||BEAT.port)?`<button class="rtbtn" data-t="wclear" style="flex:0.5;min-height:44px;font-size:13px">Clear</button>`:``)+
+    `</div>`+
+    (BEAT_MSG?`<div style="font-size:11px;line-height:1.4;color:#FFE3C7;margin-top:6px">${BEAT_MSG}</div>`:``)+
+    beatReadoutHTML();
+}
+// The comparison. Four rows, each one "what the app was using" against "what you measured".
+// The wind row is the one that did not exist before: the app would quietly swallow a solved
+// wind without ever saying how far off the forecast had been.
+function tuneCmpHTML(){
+  const wrap=(inner,col)=>`<div style="padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid ${col||"rgba(255,255,255,.18)"};font-size:11.5px;line-height:1.45">${inner}</div>`;
+  const r=beatSolve();
+  if(!r)return wrap(`<div style="font-size:10px;letter-spacing:.06em;color:#C6E4D3;font-weight:800">MEASURED AGAINST PREDICTED</div>`+
+    `<div style="margin-top:5px;opacity:.75">Sail a beat on each tack and the comparison appears here.</div>`);
+  const dAng=(a,b)=>Math.abs(((a-b+540)%360)-180);
+  // Rows are [label, what the app had, what you measured, difference, agreed?]. A null "app"
+  // value means there was nothing to compare against, which is itself worth saying.
+  const rows=[];
+  const fc=+($("wdir").value||0);
+  rows.push(["Wind", `${d3(fc)}\u00B0 forecast`, `<b>${d3(r.wind)}\u00B0</b>`,
+             `${Math.round(dAng(r.wind,fc))}\u00B0`, dAng(r.wind,fc)<10]);
+  const m=r.modelled;
+  if(m&&m.dir!=null)
+    rows.push(["Tide", `${d3(m.dir)}\u00B0 ${m.kt.toFixed(1)} kt atlas`,
+               `<b>${d3(r.tideDir)}\u00B0 ${r.tideKt.toFixed(1)} kt</b>`,
+               `${Math.round(dAng(r.tideDir,m.dir))}\u00B0 \u00B7 ${Math.abs(r.tideKt-m.kt).toFixed(1)} kt`,
+               dAng(r.tideDir,m.dir)<35&&Math.abs(r.tideKt-m.kt)<0.5]);
+  else
+    rows.push(["Tide", m?`slack, per atlas`:`no atlas figure`,
+               `<b>${d3(r.tideDir)}\u00B0 ${r.tideKt.toFixed(1)} kt</b>`, ``, null]);
+  rows.push(["Boat speed", `${r.Vpolar.toFixed(1)} kt polar`,
+             r.measured?`<b>${r.Vmeas.toFixed(1)} kt log</b>`:`<span style="opacity:.7">no log entered</span>`,
+             r.measured?`${Math.round(r.pct*100)}% of polar`:``,
+             r.measured?(r.pct>0.9&&r.pct<1.1):null]);
+  rows.push(["Compass", `steering`, r.compassErr!=null?`<b>${Math.abs(r.compassErr).toFixed(0)}\u00B0 ${r.compassErr<0?"high":"low"}</b> vs track`:`<span style="opacity:.7">enter it on both tacks</span>`,
+             ``, r.compassErr!=null?(Math.abs(r.compassErr)<5):null]);
+  const tick=v=>v===null?`<span style="opacity:.5">\u2013</span>`
+    :v?`<span style="color:#BFE8D4">\u2713</span>`:`<span style="color:#FFD9A8">\u26A0</span>`;
+  const body=rows.map(([lab,app,meas,diff,ok])=>
+    `<div style="display:grid;grid-template-columns:64px 1fr 1fr 16px;gap:6px;align-items:baseline;padding:4px 0;border-top:1px solid rgba(255,255,255,.14)">`+
+    `<div style="font-weight:800;color:#C6E4D3">${lab}</div>`+
+    `<div style="opacity:.8">${app}</div>`+
+    `<div>${meas}${diff?`<div style="font-size:10.5px;opacity:.7">${diff}</div>`:``}</div>`+
+    `<div style="text-align:right">${tick(ok)}</div></div>`).join("");
+  const head=`<div style="display:grid;grid-template-columns:64px 1fr 1fr 16px;gap:6px;font-size:10px;letter-spacing:.05em;color:#C6E4D3;font-weight:800">`+
+    `<div></div><div>APP</div><div>MEASURED</div><div></div></div>`;
+  const note=r.trusted
+    ? `<div style="color:#BFE8D4;font-weight:800;margin-top:6px">\u2713 Both beats agree. Safe to accept.</div>`
+    : `<div style="color:#FFD9A8;font-weight:800;margin-top:6px">Beats don't agree well enough (${(r.ratio*100).toFixed(0)}% of expected spread).</div>`+
+      (!r.measured&&r.ratio<0.9
+        ? `<div style="font-size:10.5px;opacity:.85;margin-top:2px">A low spread usually means you are slower than the polar, not that you sailed badly. Enter the log speed and re-check before re-sailing.</div>`
+        : `<div style="font-size:10.5px;opacity:.75;margin-top:2px">You can still accept it, but re-sail a beat if you can.</div>`);
+  return wrap(head+body+note, r.trusted?"#2FA35C":"#E0A64A");
+}
+// Accept adopts the measurement; Revert hands the app back to the buoy wind and the tide atlas.
+// Revert deliberately leaves the beats and the comparison on screen, so you can look again and
+// re-accept. Clear, at the top, is what wipes the beats.
+function tuneActHTML(){
+  const r=beatSolve();
+  const live=START.obsWind!=null;
+  const acc=r?``:` disabled`;
+  return `<div style="display:flex;gap:8px;align-items:stretch">`+
+    `<button class="rtbtn" data-t="wuse"${acc} style="flex:1;min-height:46px;font-size:13px;${r&&!live?"background:#1E8449;border-color:#2FA35C":""}${r?"":"opacity:.4"}">`+
+      `${live?"Re-apply measured":"Use measured"}</button>`+
+    `<button class="rtbtn" data-t="wrevert"${live?"":" disabled"} style="flex:1;min-height:46px;font-size:13px;${live?"":"opacity:.4"}">Back to forecast</button>`+
+    `</div>`+
+    `<div style="font-size:11px;line-height:1.4;color:#C6E4D3;margin-top:6px">`+
+    (live
+      ? `The app is running on <b>your measured</b> wind and tide.`
+      : `The app is running on the <b>forecast</b> wind and the tide atlas.`)+
+    ` Clear, above, wipes the beats themselves.</div>`;
+}
+function tuningCtl(){
+  const cap=$("tuneCap"); if(cap)cap.innerHTML=tuneCapHTML();
+  const cmp=$("tuneCmp"); if(cmp)cmp.innerHTML=tuneCmpHTML();
+  const act=$("tuneAct"); if(act)act.innerHTML=tuneActHTML();
+}
+function tuningClick(ev){
+  const b=ev.target.closest?ev.target.closest("[data-t]"):null; if(!b)return;
+  const k=b.dataset.t;
+  if(k==="wport"||k==="wstbd"){ beatPress(k==="wstbd"?"stbd":"port"); return; }
+  if(k==="wclear"){ beatReset(); }
+  else if(k==="wuse"){ beatApply(); }
+  else if(k==="wrevert"){ beatUnapply(); }
+  render();
 }
 function startClick(ev){
   const b=ev.target.closest?ev.target.closest("[data-s]"):null; if(!b)return;
@@ -5458,8 +5666,6 @@ function startClick(ev){
       return;                                  // async: the callbacks above trigger their own re-render
     }
   }
-  else if(k==="wport"||k==="wstbd"){ beatPress(k==="wstbd"?"stbd":"port"); return; }
-  else if(k==="wclear"){ beatReset(); }
   else if(k==="in"||k==="out"){ START.entering.side=k; }
   else if(/^d\d+$/.test(k)&&START.entering){ START.entering.d=k.slice(1); }
   else if(k==="clearline"){ START.cv=null; START.pin=null; START.target=null;
@@ -5855,6 +6061,7 @@ function drawLeg(r,idx,wdir,wspd){
     const bnx=bd.dist*Math.sin(rad(bd.brg-co)), bny=bd.dist*Math.cos(rad(bd.brg-co));  // leg frame, NM
     const bp=F(bnx,bny);
     if(bp[0]>=14&&bp[0]<=W-14&&bp[1]>=28&&bp[1]<=H-28){                // inside the frame, or not at all
+      s+=nogoSVG(bp[0],bp[1],wdir,target,fr,[14,28,W-14,H-28],true);
       const cg=GPS.last.coords.heading, sp=GPS.last.coords.speed;
       if(cg!=null&&isFinite(cg)&&sp!=null&&sp>0.5){
         const th=rad(fr(cg));
@@ -6502,6 +6709,7 @@ function drawMiniLeg(r,idx,wdir,wspd){
     const bd=brgDist(L.from.pos,me);
     const q=F(bd.dist*Math.sin(rad(bd.brg-co)), bd.dist*Math.cos(rad(bd.brg-co)));
     if(inFrame(q)){
+      s+=nogoSVG(q[0],q[1],wdir,target,fr,[8,8,W-8,H-8],false);
       const cg=GPS.last.coords.heading, sp2=GPS.last.coords.speed;
       if(cg!=null&&isFinite(cg)&&sp2!=null&&sp2>0.5){
         const th=rad(fr(cg));
