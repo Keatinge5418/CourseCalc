@@ -191,10 +191,19 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 /* The summary row inherits .tot, which is built for a light tab: ink2 labels and near-black
    values disappear on the GPS Display's dark ground. Give it the same light card the tiles use,
    and four equal columns so Leg / TWA-AW / Sail / Est sit on one line instead of wrapping. */
-#legRow1{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:7px 9px;
+#legRow1{display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between;gap:8px;padding:7px 9px;
   background:#F2F7FA;border:1.5px solid #B7C2CC;border-radius:11px;font-size:11px;
   color:#48627A;flex:0 0 auto;text-align:center}
-#legRow1 b{font-size:15px;color:#12283A}
+#legRow1 b{font-size:14px;color:#12283A;white-space:nowrap}
+/* On a 320px screen the widest case (Brd Rch, 146 P119, Genoa full) still overran. Step the row
+   down there rather than abbreviating further: the words are already as short as they can be and
+   stay readable. */
+@media (max-width:360px){
+  #legRow1{gap:5px;padding:6px 7px}
+  #legRow1 b{font-size:12.5px}
+  #legRow1{font-size:10px}
+}
+#legRow1 > div{min-width:0;overflow:hidden}
 /* Four equal buttons across the top of page 2. Grid rather than flex so every column is exactly
    1fr regardless of label length ("Course-up" is twice the width of "Both"). min-width:0 stops
    a long label forcing its column wider, and the smaller font keeps "Course-up" on one line. */
@@ -342,6 +351,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
      measured against what the app was predicting. Top captures, middle compares, bottom decides. -->
 <details class="notes" id="tuningtab" style="background:#17754B;color:#fff;border:1px solid #0E5837">
   <summary style="color:#fff">Tuning</summary>
+  <div id="tuneWrap" style="display:flex;flex-direction:column">
   <div id="tuneCap" style="margin-top:6px"></div>
   <!-- Lives outside #tuneCap deliberately: that div's innerHTML is rebuilt on every render,
        which would blow away half-typed numbers and steal focus mid-entry. -->
@@ -355,6 +365,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   <div id="tuneCmp" style="margin-top:8px"></div>
   <div id="tuneAct" style="margin-top:8px"></div>
+  </div>
 </details>
 
 <details class="notes" id="timertab" style="background:#2A6285;color:#fff;border:1px solid #1C4E6D">
@@ -461,6 +472,10 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 
   <!-- PAGE 1: the numbers. -->
   <div class="gpage">
+  <!-- v409: four tiles removed to give the compass rose room, which was down to 104px.
+       Dropped: Bearing to Mark (now drawn on the rose itself), VMC, ETA at Mark (Time to Mark
+       is the same arrival in minutes) and Off Course (derived from bearing and distance).
+       Every writer guards with if(el), so the removals need no code changes. -->
   <div class="garmin-frame">
     <div class="garmin-tile">
       <div class="garmin-label">Heading</div>
@@ -469,10 +484,6 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <div class="garmin-tile">
       <div class="garmin-label">Speed</div>
       <div class="garmin-value" id="gSpeed">&ndash;<span class="garmin-unit">kt</span></div>
-    </div>
-    <div class="garmin-tile">
-      <div class="garmin-label" id="gBrgLabel">Bearing to Mark</div>
-      <div class="garmin-value" id="gBrg">&ndash;</div>
     </div>
     <div class="garmin-tile">
       <div class="garmin-label" id="gDistLabel">Dist to Mark</div>
@@ -491,24 +502,12 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
       <div class="garmin-value" id="gVmg">&ndash;<span class="garmin-unit">kt</span></div>
     </div>
     <div class="garmin-tile">
-      <div class="garmin-label">VMC</div>
-      <div class="garmin-value" id="gVmc">&ndash;<span class="garmin-unit">kt</span></div>
-    </div>
-    <div class="garmin-tile">
-      <div class="garmin-label" id="gEtaLabel">ETA at Mark</div>
-      <div class="garmin-value" id="gEta">&ndash;</div>
-    </div>
-    <div class="garmin-tile">
       <div class="garmin-label" id="gTimeLabel">Time to Mark</div>
       <div class="garmin-value" id="gTime">&ndash;</div>
     </div>
     <div class="garmin-tile">
       <div class="garmin-label">Destination</div>
       <div class="garmin-value" id="gDest" style="font-size:20px">&ndash;</div>
-    </div>
-    <div class="garmin-tile">
-      <div class="garmin-label">Off Course</div>
-      <div class="garmin-value" id="gOffCourse">&ndash;</div>
     </div>
   </div>
 
@@ -517,10 +516,11 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        in real document order, so what you read is what is drawn. The compass arc is the elastic
        one (flex:1) so page 1 fills exactly one screen on any device. -->
   <div class="garmin-compass-wrap" id="gpage1wrap">
-    <div id="gSetBox" style="padding:9px 11px;border-radius:11px;background:#F2F7FA;border:1.5px solid #B7C2CC">
-      <div style="font-size:9.5px;letter-spacing:.06em;color:#48627A;font-weight:800">POINTING v MAKING GOOD</div>
-      <div id="gSetMain" style="font-size:19px;font-weight:800;line-height:1.25;margin-top:2px"></div>
-      <div id="gSetNote" style="font-size:11.5px;line-height:1.4;margin-top:3px;color:#48627A"></div>
+    <!-- One line, not three. It is a single fact (pointing versus making good, and whether that
+         lays the mark), and it was costing 76px of the arc's room to say it. -->
+    <div id="gSetBox" style="padding:6px 10px;border-radius:11px;background:#F2F7FA;border:1.5px solid #B7C2CC;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+      <div id="gSetMain" style="font-size:16px;font-weight:800;line-height:1.2"></div>
+      <div id="gSetNote" style="font-size:11.5px;line-height:1.25;color:#48627A;flex:1;min-width:0"></div>
     </div>
     <div id="gSix" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
     <svg id="garminCompass" viewBox="0 6 300 180" preserveAspectRatio="xMidYMid meet" style="width:100%;max-width:none;display:block;flex:1 1 auto;min-height:0;border:0;border-radius:0;background:none"></svg>
@@ -4086,6 +4086,31 @@ function gpsFitPages(){
   // guard against a silly value if the tab is scrolled far off screen
   if(vh-off<260)document.documentElement.style.setProperty("--gpsoff","96px");
 }
+// The Tuning tab is a sequence you work through, so it should behave like the GPS Display:
+// open it and it fills the screen, with nothing above or below competing for attention. Same
+// measurement, visualViewport rather than innerHeight, because that is the one iOS moves as the
+// URL bar comes and goes.
+function tuneFit(){
+  const tab=$("tuningtab"), body=$("tuneCap");
+  if(!tab||!body||!tab.open)return;
+  const vh=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;
+  const top=body.getBoundingClientRect().top;
+  const avail=Math.max(240,Math.round(vh-top-12));
+  const wrap=$("tuneWrap"); if(wrap)wrap.style.minHeight=avail+"px";
+}
+function tuningPagesInit(){
+  const tab=$("tuningtab"); if(!tab)return;
+  tab.addEventListener("toggle",()=>{
+    if(!tab.open){ const w=$("tuneWrap"); if(w)w.style.minHeight=""; return; }
+    tab.scrollIntoView({block:"start"});
+    setTimeout(tuneFit,60); setTimeout(tuneFit,320);
+  });
+  window.addEventListener("resize",tuneFit);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize",tuneFit);
+    window.visualViewport.addEventListener("scroll",tuneFit);
+  }
+}
 function gpsPagesInit(){
   const tab=$("garmintab"); if(!tab)return;
   tab.addEventListener("toggle",()=>{
@@ -4108,6 +4133,7 @@ function gps2Init(){
   const c=$("gps2Clear"); if(c)c.onclick=()=>{ try{trackClear();}catch(e){} gps2Render(); };
   const dl=$("gps2Dl");   if(dl)dl.onclick=()=>{ try{trackDownloadCSV();}catch(e){} };
   try{gpsPagesInit();}catch(e){}
+  try{tuningPagesInit();}catch(e){}
   // Wardrobe: load before the first render so the very first sail call already respects it.
   try{
     wardrobeLoad();
@@ -4143,16 +4169,27 @@ function garminCompassBuild(){
     const r1=major?R-13:R-7;
     s+=`<line x1="${(cx+r1*Math.sin(a)).toFixed(1)}" y1="${(cy-r1*Math.cos(a)).toFixed(1)}" x2="${(cx+R*Math.sin(a)).toFixed(1)}" y2="${(cy-R*Math.cos(a)).toFixed(1)}" stroke="#8A97A3" stroke-width="${major?2:1}"/>`;
   }
+  // v409: the scale reads in ABSOLUTE compass degrees, not degrees off the bow. The ring itself
+  // still does not rotate (that was the point of the relative design: only the pointer moves),
+  // but each label now shows the real bearing that direction corresponds to, recomputed on every
+  // fix. So the top of the arc IS your heading, and the number under the needle IS the bearing to
+  // the mark. That makes the Heading tile redundant too, if the rose ever needs more room.
   for(let d=-90;d<=90;d+=15){
     const a=rad(d), rr=R+17, big=(d%45===0);
-    s+=`<text x="${(cx+rr*Math.sin(a)).toFixed(1)}" y="${(cy-rr*Math.cos(a)+(big?6:4.5)).toFixed(1)}" font-size="${big?16:11.5}" font-weight="${big?800:700}" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="3" paint-order="stroke" data-deg="${d}">${d}</text>`;
+    s+=`<text id="gRoseLbl${d}" data-rose="${d}" x="${(cx+rr*Math.sin(a)).toFixed(1)}" y="${(cy-rr*Math.cos(a)+(big?6:4.5)).toFixed(1)}" font-size="${big?15:11}" font-weight="${big?800:700}" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="3" paint-order="stroke" data-deg="${d}">${d}</text>`;
   }
   s+=`</g>`;
   s+=`<circle cx="${cx}" cy="${cy}" r="5" fill="#12283A"/>`;
   s+=`<g id="garminPtr" transform="rotate(0 ${cx} ${cy})">
       <polygon points="${cx-10},${cy} ${cx+10},${cy} ${cx},${cy-R+18}" fill="#B4232F" stroke="#fff" stroke-width="2"/>
     </g>`;
-  s+=`<text id="garminBehind" x="${cx}" y="${cy+26}" font-size="12" font-weight="800" text-anchor="middle" fill="#B4232F" style="display:none">mark astern</text>`;
+  // Bearing to the mark, moved off its own tile and onto the rose in v409. It belongs here: the
+  // rose already points at the mark, so the number and the picture are one thing.
+  // Below the baseline, clear of the pointer: the needle pivots at (cx,cy) and sweeps the whole
+  // area above it, so anything centred there is crossed out by the thing it describes.
+  s+=`<text id="garminBrgLab" x="${cx}" y="${cy+16}" font-size="9.5" letter-spacing="1.2" font-weight="800" text-anchor="middle" fill="#48627A">TO MARK</text>`;
+  s+=`<text id="garminBrgTxt" x="${cx}" y="${cy+38}" font-size="26" font-weight="800" text-anchor="middle" fill="#12283A" class="mono">&#8211;</text>`;
+  s+=`<text id="garminBehind" x="${cx}" y="${cy+56}" font-size="12" font-weight="800" text-anchor="middle" fill="#B4232F" style="display:none">mark astern</text>`;
   svg.innerHTML=s;
 }
 function garminFmtClock(ms){
@@ -4541,6 +4578,18 @@ function garminRender(pos){
   // at 0 in the middle. Only the pointer moves, and it clamps at the ends when the mark is
   // behind, with a note saying so rather than silently pointing at the edge.
   if(ring)ring.setAttribute("transform","rotate(0 150 150)");
+  // The ring stays put; only its LABELS change, so each mark reads the true compass bearing of
+  // that direction. Top of the arc is the heading itself, which is why the Heading tile is now
+  // duplicated by the rose. When no heading is known the scale falls back to degrees off the bow
+  // rather than lying about north.
+  if(ring){
+    const known=courseVal!=null;
+    ring.querySelectorAll("[data-rose]").forEach(t=>{
+      const d=+t.getAttribute("data-rose");
+      t.textContent = known ? String(Math.round(((heading+d)%360+360)%360)).padStart(3,"0")
+                            : (d>0?"+":"")+d;
+    });
+  }
   sp.innerHTML = sog!=null ? `${sog.toFixed(1)}<span class="garmin-unit">kt</span>` : `&ndash;<span class="garmin-unit">kt</span>`;
   // VMG: speed made good along the wind axis (signed, negative when running/reaching away from it)
   if(vg){
@@ -4553,10 +4602,11 @@ function garminRender(pos){
   const tgt=garminTargetInfo();
   garminLabelsSync();
   const tc=$("gTurn"), oc=$("gOffCourse");
-  if(!tgt){ if(br)br.textContent="\u2013"; if(ds)ds.textContent="\u2013"; if(vc)vc.innerHTML=`&ndash;<span class="garmin-unit">kt</span>`; if(et)et.textContent="\u2013"; if(tm)tm.textContent="\u2013"; if(tc)tc.textContent="\u2013"; if(oc)oc.textContent="\u2013"; return; }
+  if(!tgt){ if(br)br.textContent="\u2013"; { const bt=$("garminBrgTxt"); if(bt)bt.textContent="\u2013"; } if(ds)ds.textContent="\u2013"; if(vc)vc.innerHTML=`&ndash;<span class="garmin-unit">kt</span>`; if(et)et.textContent="\u2013"; if(tm)tm.textContent="\u2013"; if(tc)tc.textContent="\u2013"; if(oc)oc.textContent="\u2013"; return; }
   const bd=brgDist(me,tgt.pos);
   const nm=bd.dist, m=nm*1852;
   if(br)br.textContent = String(Math.round(bd.brg)).padStart(3,"0")+"\u00B0";
+  { const bt=$("garminBrgTxt"); if(bt)bt.textContent=String(Math.round(bd.brg)).padStart(3,"0")+"\u00B0"; }
   if(ds)ds.textContent = nm<0.2 ? `${Math.round(m)} m` : `${nm.toFixed(2)} NM`;
   // Turn: signed turn-to-steer from current heading to the target bearing. Positive = turn
   // right/starboard, negative = turn left/port, matching the L/R convention on a real
@@ -7092,11 +7142,20 @@ function drawLeg(r,idx,wdir,wspd){
   // The first row (Leg / TWA-AW / Sail / Est) also goes under the wind slider on GPS Display
   // page 2, where the chart it describes now lives. Built once and written to both, so the two
   // can never disagree. Everything else stays in Course Tactics.
+  // Four columns on a phone, so every value has to be short. "Broad reach" and "Genoa, well
+  // furled" both overran and pushed Est off the right-hand edge. Abbreviate the words, drop the
+  // "min" (the column already says Est), and let the numbers keep their size.
+  const legAbbr=t=>String(t||"")
+    .replace(/Broad reach/i,"Brd&nbsp;Rch").replace(/Close reach/i,"Cls&nbsp;Rch")
+    .replace(/Beam reach/i,"Bm&nbsp;Rch").replace(/\s/g,"&nbsp;");
+  const sailAbbr=t=>String(t||"")
+    .replace(/\(furling\)/i,"").replace(/,\s*well furled/i," furl+++")
+    .replace(/,\s*(\d) rolls?/i," furl$1").replace(/\s+full$/i," full").trim();
   const row1HTML=`
-    <div>Leg<br><b>${L.pos.replace(" ","&nbsp;")}</b></div>
-    <div>TWA / AW<br><b class="mono">${Math.round(L.sTwa!=null?L.sTwa:L.twa)}\u00B0 ${L.tack}${Math.round(L.sAwa!=null?L.sAwa:L.awa)}\u00B0</b></div>
-    <div>Sail<br><b>${L.sail}</b></div>
-    <div>Est<br><b class="mono">${Math.round(estMin)} min${estSplit}</b></div>`;
+    <div>Leg<br><b>${legAbbr(L.pos)}</b></div>
+    <div>TWA/AW<br><b class="mono">${Math.round(L.sTwa!=null?L.sTwa:L.twa)}\u00B0${L.tack}${Math.round(L.sAwa!=null?L.sAwa:L.awa)}\u00B0</b></div>
+    <div>Sail<br><b>${sailAbbr(L.sail)}</b></div>
+    <div>Est<br><b class="mono">${Math.round(estMin)}${estSplit}</b></div>`;
   $("leginfo").innerHTML=verdictHTML+leadHTML+(sideTxt?`<div class="why">${sideTxt}</div>`:"")+routesHTML+`
     <div>Leg<br><b>${L.pos.replace(" ","&nbsp;")}</b></div>
     <div>TWA / AW<br><b class="mono">${Math.round(L.sTwa!=null?L.sTwa:L.twa)}\u00B0 ${L.tack}${Math.round(L.sAwa!=null?L.sAwa:L.awa)}\u00B0</b></div>
