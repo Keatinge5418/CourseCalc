@@ -3682,6 +3682,20 @@ function gps2Build(){
     if(wide.labelRules) wide.labelRules = wide.labelRules.filter(r=>KEEP.has(r.dataLayer));
     wide.addTo(MAP2);
   }catch(e){}
+  // The basemap layers are Leaflet GridLayers, and protomaps-leaflet draws them into a pane that
+  // sits ABOVE the default overlayPane. So the course lines were being drawn correctly and then
+  // painted over by the tiles. Markers survived because markerPane is higher still, which is
+  // exactly what was seen: marks visible, lines gone.
+  // My own test could not catch this: the harness loads from file:// and the .pmtiles fetches
+  // fail on CORS, so no basemap ever covered anything.
+  // Give the course and track their own pane, above the tiles and below the marks.
+  try{
+    if(!MAP2.getPane("coursePane")){
+      const cp=MAP2.createPane("coursePane");
+      cp.style.zIndex=550;              // tiles ~200-400, markerPane 600
+      cp.style.pointerEvents="none";    // never steal a drag from the map
+    }
+  }catch(e){}
   const lyr=protomapsL.leafletLayer(opts);
   try{
     if(lyr.paintRules)  lyr.paintRules  = lyr.paintRules.filter(r=>KEEP.has(r.dataLayer));
@@ -3765,11 +3779,14 @@ function gps2Render(){
       if(!Lg.from||!Lg.from.pos||!Lg.to||!Lg.to.pos)return;
       const seg=[Lg.from.pos,Lg.to.pos];
       if(i!==curLeg){
-        L.polyline(seg,{color:"#8A97A3",weight:1.6,opacity:.8}).addTo(MAP2LAYERS);
+        // Darker and slightly thicker than the bay chart's grey: that one sits on a pale printed
+        // chart, this one on a coloured basemap with land, water and seamarks under it.
+        L.polyline(seg,{color:"#fff",weight:4,opacity:.55,pane:"coursePane"}).addTo(MAP2LAYERS);
+        L.polyline(seg,{color:"#5B6672",weight:2,opacity:.95,pane:"coursePane"}).addTo(MAP2LAYERS);
         return;
       }
-      L.polyline(seg,{color:"#fff",weight:7,opacity:.85}).addTo(MAP2LAYERS);
-      L.polyline(seg,{color:"#34495E",weight:2.8,opacity:1,dashArray:"9 6"}).addTo(MAP2LAYERS);
+      L.polyline(seg,{color:"#fff",weight:7,opacity:.85,pane:"coursePane"}).addTo(MAP2LAYERS);
+      L.polyline(seg,{color:"#34495E",weight:2.8,opacity:1,dashArray:"9 6",pane:"coursePane"}).addTo(MAP2LAYERS);
       try{
         if(Lg.pos==="Beat"||Lg.pos==="Run"){
           const wB=usedWind(), wspd=+($("wspd").value||10), up=(Lg.pos==="Beat");
@@ -3784,8 +3801,8 @@ function gps2Render(){
             if(!(tt>0&&ss>0))continue;
             const cp=offsetPos(Lg.from.pos,norm(co+Math.atan2(tt*g1[0],tt*g1[1])*180/Math.PI),Math.hypot(tt*g1[0],tt*g1[1]));
             const colOf=h=>((((wB-h+540)%360)-180)>0)?"#007A33":"#C8102E";
-            L.polyline([Lg.from.pos,cp],{color:colOf(norm(wB+sg*tgt)),weight:2.4,opacity:.9}).addTo(MAP2LAYERS);
-            L.polyline([cp,Lg.to.pos],{color:colOf(norm(wB-sg*tgt)),weight:2.4,opacity:.9,dashArray:"6 4"}).addTo(MAP2LAYERS);
+            L.polyline([Lg.from.pos,cp],{color:colOf(norm(wB+sg*tgt)),weight:2.4,opacity:.9,pane:"coursePane"}).addTo(MAP2LAYERS);
+            L.polyline([cp,Lg.to.pos],{color:colOf(norm(wB-sg*tgt)),weight:2.4,opacity:.9,dashArray:"6 4",pane:"coursePane"}).addTo(MAP2LAYERS);
           }
         }
       }catch(e){}
@@ -3799,8 +3816,8 @@ function gps2Render(){
     // or the seamarks, and both are drawn large enough to find at a glance on a wet deck.
     if(typeof TRACK!=="undefined"&&TRACK.length>1){
       const pl=TRACK.map(t=>[t.lat,t.lon]);
-      L.polyline(pl,{color:"#fff",weight:8,opacity:.75}).addTo(MAP2LAYERS);
-      L.polyline(pl,{color:"#FF6A13",weight:4.5,opacity:1}).addTo(MAP2LAYERS);
+      L.polyline(pl,{color:"#fff",weight:8,opacity:.75,pane:"coursePane"}).addTo(MAP2LAYERS);
+      L.polyline(pl,{color:"#FF6A13",weight:4.5,opacity:1,pane:"coursePane"}).addTo(MAP2LAYERS);
     }
     L.circleMarker(me,{radius:12,color:"#fff",weight:4,fill:false,opacity:.9}).addTo(MAP2LAYERS);
     L.circleMarker(me,{radius:9,color:"#12283A",weight:2,fillColor:"#0E7C94",fillOpacity:1}).addTo(MAP2LAYERS);
