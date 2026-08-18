@@ -158,6 +158,17 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
    land page by page instead of resting anywhere. */
 #gpsScroll{height:calc(100dvh - var(--gpsoff, 96px));overflow-y:auto;overflow-x:hidden;
   scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+/* Race timer and Start, two pages, same mechanism as the GPS Display: a contained scroller
+   measured from visualViewport, so iOS's URL bar cannot make the pages the wrong height. */
+#preScroll{height:calc(100dvh - var(--preoff, 96px));overflow-y:auto;overflow-x:hidden;
+  scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#preScroll .ppage{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
+  display:flex;flex-direction:column;box-sizing:border-box;overflow-y:auto}
+/* Page 2's chart is the elastic block, so it uses the height the merge freed instead of leaving
+   it blank below the buttons. Page 1 keeps its natural layout: a clock that stretched would be
+   worse, not better. */
+#ppage2 #startWrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+#ppage2 #startView{flex:1 1 auto;min-height:0;height:auto;width:100%}
 #gpsScroll .gpage{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
   display:flex;flex-direction:column;justify-content:flex-start;box-sizing:border-box}
 /* The charts take whatever is left after the fixed-height blocks, so a page is always exactly
@@ -186,12 +197,16 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 /* Let the map keep its natural aspect (viewBox 710x1008) rather than stretching to fill the
    page, which letterboxed it with white bands above and below. It takes the width, the height
    follows, and the wrap centres what is left. */
-#gpage3 #mapWrap{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
+/* Chart at the TOP of the page, not centred: the plan sits under it and the two read as one
+   block rather than floating apart. */
+#gpage3{justify-content:flex-start}
+#gpage3 #mapWrap{flex:0 1 auto;min-height:0;display:flex;align-items:flex-start;justify-content:center}
+#mapPlan{flex:0 0 auto}
 #gpage3 #map{flex:0 1 auto;min-height:0;max-height:100%;width:100%;height:auto}
 /* The summary row inherits .tot, which is built for a light tab: ink2 labels and near-black
    values disappear on the GPS Display's dark ground. Give it the same light card the tiles use,
    and four equal columns so Leg / TWA-AW / Sail / Est sit on one line instead of wrapping. */
-#legRow1{display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between;gap:8px;padding:7px 9px;
+#legRow1,#legRow3{display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between;gap:8px;padding:7px 9px;
   background:#F2F7FA;border:1.5px solid #B7C2CC;border-radius:11px;font-size:11px;
   color:#48627A;flex:0 0 auto;text-align:center}
 #legRow1 b{font-size:14px;color:#12283A;white-space:nowrap}
@@ -199,11 +214,16 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
    down there rather than abbreviating further: the words are already as short as they can be and
    stay readable. */
 @media (max-width:360px){
-  #legRow1{gap:5px;padding:6px 7px}
-  #legRow1 b{font-size:12.5px}
-  #legRow1{font-size:10px}
+  #legRow1,#legRow3{gap:5px;padding:6px 7px}
+  #legRow1 b,#legRow3 b{font-size:12.5px}
+  #legRow1,#legRow3{font-size:10px}
 }
-#legRow1 > div{min-width:0;overflow:hidden}
+#legRow1 > div,#legRow3 > div{min-width:0;overflow:hidden}
+/* Page 3's copy sits inside a padded yellow panel, so it has less room than page 2's and clipped
+   the sail name at 375px. Its own size, rather than shrinking both. Placed after the media block
+   so it is not overridden on small screens. */
+#legRow3{gap:5px;padding:6px 7px;font-size:9.5px}
+#legRow3 b{font-size:12px}
 /* Four equal buttons across the top of page 2. Grid rather than flex so every column is exactly
    1fr regardless of label length ("Course-up" is twice the width of "Both"). min-width:0 stops
    a long label forcing its column wider, and the smaller font keeps "Course-up" on one line. */
@@ -347,29 +367,14 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div style="font-size:11px;color:#BFE8D4;margin-top:6px">Height at Dun Laoghaire (North Wall), from the same Dublin Port Company tide tables. The orange dot tracks the slider above; drag it and the dot moves with it.</div>
 </details>
 
-<!-- Tuning: the two-beat test, moved off the Start tab in v400 so it has room to show what it
-     measured against what the app was predicting. Top captures, middle compares, bottom decides. -->
-<details class="notes" id="tuningtab" style="background:#17754B;color:#fff;border:1px solid #0E5837">
-  <summary style="color:#fff">Tuning</summary>
-  <div id="tuneWrap" style="display:flex;flex-direction:column">
-  <div id="tuneCap" style="margin-top:6px"></div>
-  <!-- Lives outside #tuneCap deliberately: that div's innerHTML is rebuilt on every render,
-       which would blow away half-typed numbers and steal focus mid-entry. -->
-  <div id="beatIn" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18)">
-    <div style="font-size:10px;letter-spacing:.06em;color:#C6E4D3;font-weight:800">READ OFF THE BOAT, BEFORE YOU TAP TO STOP</div>
-    <div style="display:flex;gap:8px;margin-top:5px">
-      <div style="flex:1"><label style="color:#C6E4D3">Log kt</label><input id="beatLog" type="number" inputmode="decimal" step="0.1" placeholder="Speed from Log" style="width:100%;box-sizing:border-box"></div>
-      <div style="flex:1"><label style="color:#C6E4D3">Compass &deg;</label><input id="beatHdg" type="number" inputmode="numeric" placeholder="Course from Compass" style="width:100%;box-sizing:border-box"></div>
-    </div>
-    <div id="beatInMsg" style="font-size:11px;color:#C6E4D3;line-height:1.4;margin-top:5px">Log speed is the one that matters: it turns the tide from an assumption into a measurement. Compass is optional and calibrates the set banner.</div>
-  </div>
-  <div id="tuneCmp" style="margin-top:8px"></div>
-  <div id="tuneAct" style="margin-top:8px"></div>
-  </div>
-</details>
-
-<details class="notes" id="timertab" style="background:#2A6285;color:#fff;border:1px solid #1C4E6D">
-  <summary style="color:#fff">Race timer</summary>
+<!-- Race timer and Start, merged into one tab with two snap pages, the same pattern as the GPS
+     Display. They are used together in the last five minutes, and switching tabs during a
+     sequence was the thing to avoid. The Start page already repeated the clock at its top for
+     exactly this reason; that repeat is kept, since page 1 is a swipe away rather than in view. -->
+<details class="notes" id="pretab" style="background:#2A6285;color:#fff;border:1px solid #1C4E6D">
+  <summary style="color:#fff">Race timer &amp; Start</summary>
+  <div id="preScroll">
+  <div class="ppage" id="ppage1">
   <div style="text-align:center;margin:8px 0 4px">
     <div id="rtBig" class="mono" style="font-size:clamp(57px,18.75vw,81px);font-weight:800;line-height:1;letter-spacing:.01em">5:00</div>
     <div id="rtLabel" style="font-size:10.5px;color:#C9DFEC;margin-top:6px;min-height:14px">Ready</div>
@@ -409,10 +414,8 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <button class="rtbtn" id="rtSilent" style="flex:1;padding:13px 4px;font-size:14px">Sounds Off</button>
   </div>
   <div id="rtInfo" style="font-size:14px;color:#C9DFEC;line-height:1.55;margin-top:12px"></div>
-</details>
-
-<details class="notes" id="starttab" style="background:#2A6285;color:#fff;border:1px solid #1C4E6D">
-  <summary style="color:#fff">Start</summary>
+  </div>
+  <div class="ppage" id="ppage2">
   <div id="startRepeat" style="text-align:center;margin-top:2px">
     <div id="startRepeatBig" class="mono" style="font-size:34px;font-weight:800;line-height:1;color:#fff">&ndash;</div>
     <div id="startRepeatLab" style="font-size:11px;color:#C9DFEC;margin-top:3px;min-height:14px"></div>
@@ -421,7 +424,32 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <svg id="startView" viewBox="0 0 360 420" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block;border-radius:12px;background:#F2F7FA"></svg>
     <div id="startCtl" style="display:none;margin-top:8px"></div>
   </div>
+  </div>
+  </div>
 </details>
+
+<!-- Tuning: the two-beat test, moved off the Start tab in v400 so it has room to show what it
+     measured against what the app was predicting. Top captures, middle compares, bottom decides. -->
+<details class="notes" id="tuningtab" style="background:#17754B;color:#fff;border:1px solid #0E5837">
+  <summary style="color:#fff">Tuning</summary>
+  <div id="tuneWrap" style="display:flex;flex-direction:column">
+  <div id="tuneCap" style="margin-top:6px"></div>
+  <!-- Lives outside #tuneCap deliberately: that div's innerHTML is rebuilt on every render,
+       which would blow away half-typed numbers and steal focus mid-entry. -->
+  <div id="beatIn" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18)">
+    <div style="font-size:10px;letter-spacing:.06em;color:#C6E4D3;font-weight:800">READ OFF THE BOAT, BEFORE YOU TAP TO STOP</div>
+    <div style="display:flex;gap:8px;margin-top:5px">
+      <div style="flex:1"><label style="color:#C6E4D3">Log kt</label><input id="beatLog" type="number" inputmode="decimal" step="0.1" placeholder="Speed from Log" style="width:100%;box-sizing:border-box"></div>
+      <div style="flex:1"><label style="color:#C6E4D3">Compass &deg;</label><input id="beatHdg" type="number" inputmode="numeric" placeholder="Course from Compass" style="width:100%;box-sizing:border-box"></div>
+    </div>
+    <div id="beatInMsg" style="display:none"></div>
+  </div>
+  <div id="tuneCmp" style="margin-top:8px"></div>
+  <div id="tuneAct" style="margin-top:8px"></div>
+  </div>
+</details>
+
+
 
 <details class="notes" id="tabletab"><summary>Course Table</summary>
   <div class="badge"><div class="big" id="courseName">C1</div><div class="sub" id="courseSummary"></div></div>
@@ -471,7 +499,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div id="gpsScroll">
 
   <!-- PAGE 1: the numbers. -->
-  <div class="gpage">
+  <div class="gpage" id="gpage1">
   <!-- v409: four tiles removed to give the compass rose room, which was down to 104px.
        Dropped: Bearing to Mark (now drawn on the rose itself), VMC, ETA at Mark (Time to Mark
        is the same arrival in minutes) and Off Course (derived from bearing and distance).
@@ -532,9 +560,12 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        drive global state, so they act on the entire app from wherever they live. The two mini
        charts are gone: this chart is the same picture, larger. -->
   <div class="gpage" id="gpage2">
-  <div style="display:flex;justify-content:space-between;align-items:center">
-    <div id="legHead" style="font-size:12.5px;font-weight:800;color:#12283A"></div>
-    <div style="font-size:10.5px;color:#7C93A4">swipe ← →</div>
+  <!-- Light ink: this row was #12283A, right on the light Course Analysis tab but near-black on
+       near-black once the chart moved onto the dark GPS Display in v403. Measured contrast was
+       1.55:1, which is why it could not be read. -->
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 2px 4px">
+    <div id="legHead" style="font-size:12.5px;font-weight:800;color:#F2F7FA;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+    <div style="font-size:10.5px;color:#9FB4C4;flex:0 0 auto">swipe ← →</div>
   </div>
   <!-- Four equal buttons on one row. They used to be a three-button group pushed left and the
        orientation button pushed right, so the fourth was much wider than the other three.
@@ -574,11 +605,10 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        so the page is exactly one screen like the other two. -->
   <div class="gpage" id="gpage3">
   <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
-  <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
-    <label style="white-space:nowrap;margin:0">Wind <span class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
-    <input class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
-    <button class="wslideR" aria-label="Restore forecast wind" title="hand the wind back to the forecast" style="flex:0 0 auto;width:30px;height:30px;border-radius:8px;border:1.5px solid #12283A;background:#fff;color:#12283A;font-weight:800;font-size:13px;padding:0">R</button>
-  </div>
+  <!-- v418: the wind slider and its restore button are gone from this page. Page 2 already has
+       one, it drives the same global wind, and this page is now a plan view rather than a place
+       you adjust things. The leg plan for the chosen leg sits under the chart instead. -->
+  <div id="mapPlan" style="margin-top:8px"></div>
   </div>
 
   </div>
@@ -2032,24 +2062,60 @@ function drawTideFlow(){
 const COURSE_PURPLE="#6D28D9";
 // The sailed track: one solid purple line with the direction of travel shown midway
 // along each leg. Shared by the course chart and the tide map so they always match.
-function courseTrack(px,pts){
+function courseTrack(px,pts,curLeg){
   if(!pts||pts.length<2)return "";
   const PUR=COURSE_PURPLE;
-  let d="";
-  pts.forEach((p,i)=>{ const q=px(p.pos); d+=(i?"L":"M")+q[0].toFixed(1)+","+q[1].toFixed(1)+" "; });
-  let s=`<g opacity="0.75">`;                        // see the marks and the water through the track
-  s+=`<path d="${d}" fill="none" stroke="#fff" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round" opacity=".8"/>`;
-  s+=`<path d="${d}" fill="none" stroke="${PUR}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // v418: the course is context, the chosen leg is the subject. Everything is drawn thin and
+  // grey; only the leg selected on page 2 is drawn in full, in the same convention the leg chart
+  // uses -- rhumb line dashed navy, and the two candidate boards in tack colours when there is a
+  // choice to make. So the bay chart and the leg chart show the same plan at different scales.
+  const cur=(curLeg==null)?-1:curLeg;
+  let s=`<g opacity="0.95">`;
   for(let i=0;i<pts.length-1;i++){
+    if(i===cur)continue;                              // drawn separately, on top
     const a=px(pts[i].pos), b=px(pts[i+1].pos);
-    const mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2, an=Math.atan2(b[1]-a[1],b[0]-a[0]);
-    if(Math.hypot(b[0]-a[0],b[1]-a[1])<26)continue;
-    const ux=Math.cos(an), uy=Math.sin(an), nx=-uy, ny=ux;
-    const L=13, Wd=7;
-    const P=(al,ac)=>`${(mx+ux*al+nx*ac).toFixed(1)},${(my+uy*al+ny*ac).toFixed(1)}`;
-    s+=`<polygon points="${[P(L,0),P(-L*0.55,Wd),P(-L*0.55,-Wd)].join(" ")}" fill="${PUR}" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/>`;
+    s+=`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="#8A97A3" stroke-width="1.4" stroke-linecap="round" opacity="0.8"/>`;
   }
-  return s+`</g>`;
+  if(cur>=0&&cur<pts.length-1){
+    const a=px(pts[cur].pos), b=px(pts[cur+1].pos);
+    // the leg itself: white halo then the rhumb, dashed, exactly as the leg chart draws it
+    s+=`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".85"/>`;
+    s+=`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="#34495E" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="9 6"/>`;
+    // the two boards, when the leg is one where they exist
+    try{
+      const L=CURROUTE&&CURROUTE.legs&&CURROUTE.legs[cur];
+      if(L&&(L.pos==="Beat"||L.pos==="Run")){
+        const wB=usedWind(), wspd=+($("wspd").value||10);
+        const up=(L.pos==="Beat");
+        const tgt=up?interp(P_TWS,P_UP.twa,wspd):interp(P_TWS,P_DN.twa,wspd);
+        const co=brgDist(pts[cur].pos,pts[cur+1].pos).brg;
+        const D=brgDist(pts[cur].pos,pts[cur+1].pos).dist;
+        const Vb=up?interp(P_TWS,P_UP.vel,wspd):interp(P_TWS,P_DN.vel,wspd);
+        for(const sg of [1,-1]){
+          const h1=norm(wB+sg*(up?tgt:180-(180-tgt)))-co, h2=norm(wB-sg*(up?tgt:180-(180-tgt)))-co;
+          const g1=[Vb*Math.sin(rad(h1)),Vb*Math.cos(rad(h1))], g2=[Vb*Math.sin(rad(h2)),Vb*Math.cos(rad(h2))];
+          const den=g1[0]*g2[1]-g1[1]*g2[0];
+          if(Math.abs(den)<1e-9)continue;
+          const tt=(-D*g2[0])/den, ss=(D*g1[0])/den;
+          if(!(tt>0&&ss>0))continue;
+          const cpos=offsetPos(pts[cur].pos,norm(co+Math.atan2(tt*g1[0],tt*g1[1])*180/Math.PI),Math.hypot(tt*g1[0],tt*g1[1]));
+          const c=px(cpos);
+          const col=h=>((((wB-h+540)%360)-180)>0)?"#007A33":"#C8102E";
+          s+=`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${c[0].toFixed(1)}" y2="${c[1].toFixed(1)}" stroke="${col(norm(wB+sg*tgt))}" stroke-width="2" opacity="0.85" stroke-linecap="round"/>`;
+          s+=`<line x1="${c[0].toFixed(1)}" y1="${c[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${col(norm(wB-sg*tgt))}" stroke-width="2" opacity="0.85" stroke-linecap="round" stroke-dasharray="6 4"/>`;
+        }
+      }
+    }catch(e){}
+    // direction arrow at the midpoint, as before but only on the chosen leg
+    const mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2, an=Math.atan2(b[1]-a[1],b[0]-a[0]);
+    if(Math.hypot(b[0]-a[0],b[1]-a[1])>=26){
+      const ux=Math.cos(an), uy=Math.sin(an), nx=-uy, ny=ux, Lh=13, Wd=7;
+      const P=(al,ac)=>`${(mx+ux*al+nx*ac).toFixed(1)},${(my+uy*al+ny*ac).toFixed(1)}`;
+      s+=`<polygon points="${P(Lh,0)} ${P(-Lh*0.4,Wd)} ${P(-Lh*0.4,-Wd)}" fill="${PUR}" stroke="#fff" stroke-width="1.5"/>`;
+    }
+  }
+  s+=`</g>`;
+  return s;
 }
 function courseOverlay(px){
   const r=CURROUTE; if(!r||!r.pts||r.pts.length<2)return "";
@@ -3690,12 +3756,39 @@ function gps2Render(){
     });
     // The chosen course, leg by leg. Each leg takes the colour of the side the mark ahead is
     // left on, matching the leg diagram, with a white casing so it reads over land or water.
-    if(r.legs)r.legs.forEach(Lg=>{
+    // v422: same treatment as the bay chart on GPS Display page 3. The course is context, drawn
+    // thin and grey; only the leg chosen on the leg chart is drawn in full, with its rhumb
+    // dashed and, on a beat or a run, the two candidate boards in tack colours. One selection
+    // drives every view, so the three charts always show the same leg.
+    const curLeg=(state&&state.leg!=null)?state.leg:-1;
+    if(r.legs)r.legs.forEach((Lg,i)=>{
       if(!Lg.from||!Lg.from.pos||!Lg.to||!Lg.to.pos)return;
       const seg=[Lg.from.pos,Lg.to.pos];
-      const col=Lg.to.side==="P" ? "#C8102E" : Lg.to.side==="S" ? "#007A33" : "#12283A";
-      L.polyline(seg,{color:"#fff",weight:6,opacity:.85}).addTo(MAP2LAYERS);
-      L.polyline(seg,{color:col,weight:3,opacity:.95}).addTo(MAP2LAYERS);
+      if(i!==curLeg){
+        L.polyline(seg,{color:"#8A97A3",weight:1.6,opacity:.8}).addTo(MAP2LAYERS);
+        return;
+      }
+      L.polyline(seg,{color:"#fff",weight:7,opacity:.85}).addTo(MAP2LAYERS);
+      L.polyline(seg,{color:"#34495E",weight:2.8,opacity:1,dashArray:"9 6"}).addTo(MAP2LAYERS);
+      try{
+        if(Lg.pos==="Beat"||Lg.pos==="Run"){
+          const wB=usedWind(), wspd=+($("wspd").value||10), up=(Lg.pos==="Beat");
+          const tgt=up?interp(P_TWS,P_UP.twa,wspd):interp(P_TWS,P_DN.twa,wspd);
+          const bd=brgDist(Lg.from.pos,Lg.to.pos), co=bd.brg, D=bd.dist;
+          const Vb=up?interp(P_TWS,P_UP.vel,wspd):interp(P_TWS,P_DN.vel,wspd);
+          for(const sg of [1,-1]){
+            const h1=norm(wB+sg*tgt)-co, h2=norm(wB-sg*tgt)-co;
+            const g1=[Vb*Math.sin(rad(h1)),Vb*Math.cos(rad(h1))], g2=[Vb*Math.sin(rad(h2)),Vb*Math.cos(rad(h2))];
+            const den=g1[0]*g2[1]-g1[1]*g2[0]; if(Math.abs(den)<1e-9)continue;
+            const tt=(-D*g2[0])/den, ss=(D*g1[0])/den;
+            if(!(tt>0&&ss>0))continue;
+            const cp=offsetPos(Lg.from.pos,norm(co+Math.atan2(tt*g1[0],tt*g1[1])*180/Math.PI),Math.hypot(tt*g1[0],tt*g1[1]));
+            const colOf=h=>((((wB-h+540)%360)-180)>0)?"#007A33":"#C8102E";
+            L.polyline([Lg.from.pos,cp],{color:colOf(norm(wB+sg*tgt)),weight:2.4,opacity:.9}).addTo(MAP2LAYERS);
+            L.polyline([cp,Lg.to.pos],{color:colOf(norm(wB-sg*tgt)),weight:2.4,opacity:.9,dashArray:"6 4"}).addTo(MAP2LAYERS);
+          }
+        }
+      }catch(e){}
     });
   }
   // live position and track
@@ -4111,6 +4204,28 @@ function tuningPagesInit(){
     window.visualViewport.addEventListener("scroll",tuneFit);
   }
 }
+function preFitPages(){
+  const tab=$("pretab"), sc=$("preScroll");
+  if(!tab||!sc||!tab.open)return;
+  const vh=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;
+  const off=Math.max(0,Math.round(sc.getBoundingClientRect().top))+10;
+  document.documentElement.style.setProperty("--preoff",off+"px");
+  if(vh-off<260)document.documentElement.style.setProperty("--preoff","96px");
+}
+function prePagesInit(){
+  const tab=$("pretab"); if(!tab)return;
+  tab.addEventListener("toggle",()=>{
+    if(!tab.open)return;
+    tab.scrollIntoView({block:"start"});
+    setTimeout(preFitPages,60); setTimeout(preFitPages,320);
+  });
+  window.addEventListener("resize",preFitPages);
+  window.addEventListener("orientationchange",()=>setTimeout(preFitPages,250));
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize",preFitPages);
+    window.visualViewport.addEventListener("scroll",preFitPages);
+  }
+}
 function gpsPagesInit(){
   const tab=$("garmintab"); if(!tab)return;
   tab.addEventListener("toggle",()=>{
@@ -4133,6 +4248,7 @@ function gps2Init(){
   const c=$("gps2Clear"); if(c)c.onclick=()=>{ try{trackClear();}catch(e){} gps2Render(); };
   const dl=$("gps2Dl");   if(dl)dl.onclick=()=>{ try{trackDownloadCSV();}catch(e){} };
   try{gpsPagesInit();}catch(e){}
+  try{prePagesInit();}catch(e){}
   try{tuningPagesInit();}catch(e){}
   // Wardrobe: load before the first render so the very first sail call already respects it.
   try{
@@ -4370,13 +4486,17 @@ function garminLabelsSync(){
   // this can run on every render() and keep the labels correct even before GPS ever connects,
   // rather than leaving the page's hardcoded "Bearing to Next" placeholder showing indefinitely.
   const bl=$("gBrgLabel"),dl=$("gDistLabel"),el=$("gEtaLabel"),tl=$("gTimeLabel"),dest=$("gDest");
-  if(!bl)return;
+  // Guard each element on its own. This used to bail on `if(!bl)return`, and when the Bearing to
+  // Mark tile was removed in v409 to give the compass rose room, #gBrgLabel went with it: the
+  // function then returned at its first line and the Destination tile silently stopped updating.
+  // Exactly the fault that stranded trackAdd behind posUpdate's guard. A guard that is correct
+  // for one element must not gate the code below it.
   let tgt=null; try{ tgt=garminTargetInfo(); }catch(e){ tgt=null; }
   let started=false; try{ started=garminStarted(); }catch(e){ started=false; }
   // Labels stay generic: the Destination tile already names the mark, so repeating it in four
   // more labels only forced them onto two lines and crowded the values.
-  bl.textContent="Bearing to Mark";
-  dl.textContent="Dist to Mark";
+  if(bl)bl.textContent="Bearing to Mark";
+  if(dl)dl.textContent="Dist to Mark";
   if(tl)tl.textContent="Time to Mark";
   if(el)el.textContent="ETA at Mark";
   if(dest){
@@ -5042,7 +5162,7 @@ function rtInit(){
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && RT.timer && (RT.src==="auto"||RT.src==="manual")) rtWake(true); });
   // Audio needs a user gesture to arm. Listen on both timer tabs so opening either one counts,
   // rather than only arming when the Race timer tab happens to be the one opened.
-  ["timertab","starttab"].forEach(id=>{ const t=$(id); if(t)t.addEventListener("toggle",()=>{ if(t.open)rtArmAudio(); }); });
+  ["pretab"].forEach(id=>{ const t=$(id); if(t)t.addEventListener("toggle",()=>{ if(t.open)rtArmAudio(); }); });   // v416: timer and start merged
   RT.autoOn=false; RT.src="armed"; RT.armSec=300; RT.offset=0; RT.ap=false; RT.apFrozen=null; RT.lastWhole=null;   // default: Auto off, armed 5:00; toggle Auto to join the live sequence
   rtStop(); rtBtns(); rtInfo(); rtTick();
 }
@@ -5415,21 +5535,35 @@ function makeZoom(cfg){
     const bi=$(cfg.inId), bo=$(cfg.outId);
     if(bi)bi.onclick=()=>zoom(1.6);
     if(bo)bo.onclick=()=>zoom(1/1.6);
-    let drag=null;                                     // drag to pan once zoomed in
+    // Drag to pan once zoomed in. The axis is decided on the FIRST move and then locked:
+    //   mostly vertical -> let it through as a page scroll, and never pan for that gesture
+    //   mostly horizontal -> pan, and from then on pan on both axes
+    // Without this, a zoomed chart inside a snap page swallowed every vertical swipe and there
+    // was no way back to the previous page. Panning still works fully; it just has to start
+    // sideways, and a vertical flick always scrolls.
+    let drag=null;
     host.addEventListener("pointerdown",e=>{ if(V.z<=1)return;
       if(e.target.closest("button"))return;             // let the zoom buttons themselves click, don't hijack as a pan
-      drag={x:e.clientX,y:e.clientY,cx:V.cx,cy:V.cy};
-      e.preventDefault();                              // else a downward drag becomes a page scroll
-      try{host.setPointerCapture(e.pointerId);}catch(err){} },{passive:false});
+      drag={x:e.clientX,y:e.clientY,cx:V.cx,cy:V.cy,axis:null};
+      // no preventDefault yet: until the axis is known, the browser must stay free to scroll
+      },{passive:true});
     host.addEventListener("pointermove",e=>{ if(!drag)return;
+      const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+      if(drag.axis===null){
+        if(Math.abs(dx)<6&&Math.abs(dy)<6)return;       // too small to call yet
+        drag.axis=Math.abs(dy)>Math.abs(dx)?"scroll":"pan";
+        if(drag.axis==="scroll"){ drag=null; return; }  // hand the gesture back to the page
+        try{host.setPointerCapture(e.pointerId);}catch(err){}
+      }
       e.preventDefault();
       const svg=cfg.get(); if(!svg)return;
       const rc=svg.getBoundingClientRect(), sc=(cfg.w/V.z)/Math.max(1,rc.width);
-      V.cx=drag.cx-(e.clientX-drag.x)*sc; V.cy=drag.cy-(e.clientY-drag.y)*sc; apply(); },{passive:false});
+      V.cx=drag.cx-dx*sc; V.cy=drag.cy-dy*sc; apply(); },{passive:false});
     const stop=()=>{drag=null;};
     host.addEventListener("pointerup",stop); host.addEventListener("pointercancel",stop);
-    // Safari ignores preventDefault on pointermove, so the scroll has to be stopped here.
-    host.addEventListener("touchmove",e=>{ if(drag)e.preventDefault(); },{passive:false});
+    // Safari ignores preventDefault on pointermove, so the scroll has to be stopped here too,
+    // but only once the gesture has been claimed as a pan.
+    host.addEventListener("touchmove",e=>{ if(drag&&drag.axis==="pan")e.preventDefault(); },{passive:false});
     apply();
   }
   return {V,apply,zoom,init,btns};
@@ -5513,7 +5647,7 @@ function drawMap(r,wdir){
   }
   if(r&&r.pts){
   // track
-  s+=courseTrack(px,r.pts);
+  s+=courseTrack(px,r.pts,(state&&state.leg!=null)?state.leg:null);
   // number every point 1-based: start (CV/hut) = 1, marks 2,3,... matching table & leg analysis
   // A mark can be rounded more than once in a course, so fan the badges around it
   // instead of dropping every visit on the same spot.
@@ -5526,13 +5660,19 @@ function drawMap(r,wdir){
     const badgeCol=isStart?"#12283A":p.side==="P"?"#C8102E":p.side==="S"?"#007A33":"#FF6A13";
     const col=isStart?"#FF6A13":badgeCol;
     const key=p.m||("start"+i);
+    // v419: only the two marks of the CHOSEN leg keep the solid badge. Every other mark is
+    // inverted -- white disc, coloured number, thin coloured ring -- so the course reads as
+    // context and the leg in hand stands out. The colours still mean the same thing, red for a
+    // port rounding and green for starboard; only the weight changes.
+    const curLeg=(state&&state.leg!=null)?state.leg:-1;
+    const onLeg=(i===curLeg||i===curLeg+1);
     const n=(seen[key]=(seen[key]||0)+1)-1;           // 0 first visit, 1 second, ...
     const o=BOFF[n%4], grow=1+Math.floor(n/4)*0.8;
     const ox=o[0]*grow, oy=o[1]*grow;
-    if(!isStart)s+=`<circle cx="${q[0]}" cy="${q[1]}" r="13" data-r="13" stroke="${col}" fill="none" stroke-width="3.5"/>`;
-    if(n)s+=`<line x1="${q[0]}" y1="${q[1]}" x2="${(q[0]+ox).toFixed(1)}" y2="${(q[1]+oy).toFixed(1)}" data-ax="${q[0].toFixed(1)}" data-ay="${q[1].toFixed(1)}" data-ox="${ox.toFixed(1)}" data-oy="${oy.toFixed(1)}" stroke="${badgeCol}" stroke-width="2" opacity=".8"/>`;
-    s+=`<circle cx="${(q[0]+ox).toFixed(1)}" cy="${(q[1]+oy).toFixed(1)}" r="13" data-r="13" data-ax="${q[0].toFixed(1)}" data-ay="${q[1].toFixed(1)}" data-ox="${ox.toFixed(1)}" data-oy="${oy.toFixed(1)}" fill="${badgeCol}"/>`;
-    s+=`<text x="${(q[0]+ox).toFixed(1)}" y="${(q[1]+oy+4.5).toFixed(1)}" font-size="16" font-weight="800" text-anchor="middle" fill="#fff" data-ax="${q[0].toFixed(1)}" data-ay="${q[1].toFixed(1)}" data-ox="${ox.toFixed(1)}" data-oy="${(oy+4.5).toFixed(1)}">${i+1}</text>`;
+    if(!isStart)s+=`<circle cx="${q[0]}" cy="${q[1]}" r="13" data-r="13" stroke="${col}" fill="none" stroke-width="${onLeg?3.5:1.4}" opacity="${onLeg?1:0.85}"/>`;
+    if(n)s+=`<line x1="${q[0]}" y1="${q[1]}" x2="${(q[0]+ox).toFixed(1)}" y2="${(q[1]+oy).toFixed(1)}" data-ax="${q[0].toFixed(1)}" data-ay="${q[1].toFixed(1)}" data-ox="${ox.toFixed(1)}" data-oy="${oy.toFixed(1)}" stroke="${badgeCol}" stroke-width="${onLeg?2:1.2}" opacity="${onLeg?0.8:0.55}"/>`;
+    s+=`<circle cx="${(q[0]+ox).toFixed(1)}" cy="${(q[1]+oy).toFixed(1)}" r="13" data-r="13" data-ax="${q[0].toFixed(1)}" data-ay="${q[1].toFixed(1)}" data-ox="${ox.toFixed(1)}" data-oy="${oy.toFixed(1)}" fill="${onLeg?badgeCol:"#fff"}" stroke="${onLeg?"none":badgeCol}" stroke-width="${onLeg?0:1.6}"/>`;
+    s+=`<text x="${(q[0]+ox).toFixed(1)}" y="${(q[1]+oy+4.5).toFixed(1)}" font-size="16" font-weight="800" text-anchor="middle" fill="${onLeg?"#fff":badgeCol}" data-ax="${q[0].toFixed(1)}" data-ay="${q[1].toFixed(1)}" data-ox="${ox.toFixed(1)}" data-oy="${(oy+4.5).toFixed(1)}">${i+1}</text>`;
   });
   // start
   const sq=px(r.pts[0].pos);
@@ -5886,6 +6026,15 @@ function beatPress(tack){
         `at least 20 seconds and 50 m between the two taps. Boxes cleared, nothing recorded.`;
     }
     BEAT[tack]=st; BEAT.rec=null; BEAT_MSG=null;
+    // One run, both routes. The numeric solve and the ladder fit are the same measurement, so
+    // the same board feeds both: FIT gets the stats and a seeded offset (track made good against
+    // the heading steered), which is the whole unresolved error before anything is attributed.
+    try{
+      if(!FIT.expected)fitFreezeExpected();
+      FIT[tack]=st; FIT.tack=tack; FIT.accepted=false;
+      if(st.hdg!=null)FIT.err[tack]=Math.round(((st.brg-st.hdg+540)%360)-180);
+      fitFootPaint();
+    }catch(e){}
     // v400: no longer applied automatically. The point of the Tuning tab is to see the
     // measurement against the prediction BEFORE the app swallows it, so adopting is now the
     // "Use measured" press at the bottom of that tab.
@@ -6518,104 +6667,113 @@ function fitGoToChart(){
     setTimeout(()=>{ const sc=$("gpsScroll"); if(sc)sc.scrollTo({top:sc.clientHeight,behavior:"smooth"}); fitFootPaint(); },250);
   }catch(e){}
 }
+// The timer already knows which situation we are in, so the tab never asks.
+function tunePhase(){
+  try{
+    if(typeof RT==="undefined"||!RT||!RT.src||RT.src==="armed")return "idle";
+    const t=rtTarget(); if(t==null)return "idle";
+    return Date.now()<t ? "prestart" : "racing";
+  }catch(e){ return "idle"; }
+}
 function tuneCapHTML(){
-  // Amber while that tack is being recorded, green once it is in, blue not done. The live
-  // readout underneath is the point: without it a press looked like nothing had happened.
-  const wStyle=t=>{
-    const recording=BEAT.rec&&BEAT.rec.tack===t;
-    const done=!!BEAT[t];
-    return "flex:1;min-height:44px;font-size:13px;"+(recording?"background:#E08A2B;border-color:#F0A950"
+  // ONE pair of buttons. The beat test and the ladder fit were two controls doing the same
+  // thing: sail a board, press at each end, type log and compass. One solves it in closed form,
+  // the other by eye, and BOTH need two tacks, because one board is one equation with two
+  // unknowns and any offset can be called all leeway or all tide. So a single run feeds both.
+  const recTack=BEAT.rec?BEAT.rec.tack:null;
+  const live=(t)=>{
+    if(recTack!==t)return "";
+    const st=beatStats(BEAT.rec.pts);
+    if(!st)return "<br><span style='font-size:10.5px;font-weight:600'>recording</span>";
+    return "<br><span style='font-size:10.5px;font-weight:600'>"+Math.round(st.secs)+" s \u00B7 "+
+           Math.round(st.m)+" m \u00B7 "+d3(st.brg)+"\u00B0"+
+           (st.straightness<0.97?" \u00B7 not straight":"")+"</span>";
+  };
+  const sty=t=>{
+    const rec=recTack===t, done=!!BEAT[t];
+    return "flex:1;min-height:52px;font-size:14px;"+(rec?"background:#E08A2B;border-color:#F0A950"
       :done?"background:#1E8449;border-color:#2FA35C":"");
   };
-  const wLabel=(t,txt)=>{
-    if(BEAT.rec&&BEAT.rec.tack===t)return txt+"<br><span style='font-size:10.5px;font-weight:600'>recording \u00B7 tap to stop</span>";
-    if(BEAT[t])return txt+" \u2713"+(BEAT[t].weak?"<br><span style='font-size:10.5px;font-weight:600'>weak</span>":"");
-    return txt;
-  };
-  const run=fitRunning();
-  const fitBtn=`<div style="display:flex;gap:8px;margin-top:8px">
-      <button class="rtbtn" data-t="fitrun" style="flex:1;min-height:44px;font-size:13px;${
-        run?"background:#E08A2B;border-color:#F0A950":""}">${
-        run?"End tuning run<br><span style='font-size:10.5px;font-weight:600'>"+FIT.run.tack+" \u00B7 recording</span>"
-           :"Start tuning run"}</button>
-      <button class="rtbtn" data-t="fittack" style="flex:0 0 auto;min-height:44px;font-size:12px;padding:0 12px;width:auto">${FIT.tack==="stbd"?"Stbd":"Port"}</button>
-    </div>
-    <div style="font-size:11px;line-height:1.45;color:#C6E4D3;margin-top:5px">
-      Sail one board, end the run, and the chart opens with that board's ladder ready to drag onto
-      your track. Do the other board too: one board alone cannot separate leeway from tide.</div>`;
-  return `<div style="display:flex;gap:8px;align-items:stretch">`+
-    `<button class="rtbtn" data-t="wport" style="${wStyle("port")}">${wLabel("port","Port beat")}</button>`+
-    `<button class="rtbtn" data-t="wstbd" style="${wStyle("stbd")}">${wLabel("stbd","Stbd beat")}</button>`+
-    ((BEAT.stbd||BEAT.port)?`<button class="rtbtn" data-t="wclear" style="flex:0.5;min-height:44px;font-size:13px">Clear</button>`:``)+
-    `</div>`+fitBtn+
-    (BEAT_MSG?`<div style="font-size:11px;line-height:1.4;color:#FFE3C7;margin-top:6px">${BEAT_MSG}</div>`:``)+
-    beatReadoutHTML();
+  const lab=(t,txt)=> recTack===t ? txt+" \u00B7 tap to stop"+live(t)
+    : BEAT[t] ? txt+" \u2713"+(BEAT[t].weak?"<br><span style='font-size:10.5px;font-weight:600'>weak</span>":"")
+    : txt;
+  return `<div style="display:flex;gap:8px">`+
+    `<button class="rtbtn" data-t="wport" style="${sty("port")}">${lab("port","Port")}</button>`+
+    `<button class="rtbtn" data-t="wstbd" style="${sty("stbd")}">${lab("stbd","Starboard")}</button>`+
+    ((BEAT.stbd||BEAT.port)?`<button class="rtbtn" data-t="wclear" style="flex:0 0 auto;min-height:52px;font-size:12px;padding:0 12px;width:auto">Clear</button>`:``)+
+    `</div>`+
+    (BEAT_MSG?`<div style="font-size:11.5px;line-height:1.4;color:#FFE3C7;margin-top:6px">${BEAT_MSG}</div>`:``);
 }
-// The comparison. Four rows, each one "what the app was using" against "what you measured".
-// The wind row is the one that did not exist before: the app would quietly swallow a solved
-// wind without ever saying how far off the forecast had been.
+// The diagnostics card. Every value carries where it came from: measured, derived, assumed or
+// missing. Nothing here is prose for its own sake -- if a line is not telling you a number or
+// what it rests on, it should not be here.
 function tuneCmpHTML(){
-  const wrap=(inner,col)=>`<div style="padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid ${col||"rgba(255,255,255,.18)"};font-size:11.5px;line-height:1.45">${inner}</div>`;
+  const wrap=(inner,col)=>`<div style="padding:8px 10px;border-radius:11px;background:rgba(255,255,255,.10);border:1.5px solid ${col||"rgba(255,255,255,.20)"};font-size:11.5px;line-height:1.4">${inner}</div>`;
+  const ph=tunePhase();
+  const phTxt={prestart:"Before the gun \u00B7 the wind sets your line",
+               racing:"Racing \u00B7 the tide decides this leg",
+               idle:"Timer not running"}[ph];
+  const need=(BEAT.stbd?0:1)+(BEAT.port?0:1);
+  if(need)
+    return wrap(`<div style="font-size:10px;letter-spacing:.06em;font-weight:800;color:#C6E4D3">DIAGNOSTICS</div>`+
+      `<div style="margin-top:4px">${phTxt}</div>`+
+      `<div style="margin-top:4px;opacity:.85">${need===2?"Sail one board on each tack.":"One board in. Sail the other tack."}`+
+      ` One board cannot separate leeway from tide.</div>`);
   const r=beatSolve();
-  if(!r)return wrap(`<div style="font-size:10px;letter-spacing:.06em;color:#C6E4D3;font-weight:800">MEASURED AGAINST PREDICTED</div>`+
-    `<div style="margin-top:5px;opacity:.75">Sail a beat on each tack and the comparison appears here.</div>`);
-  const dAng=(a,b)=>Math.abs(((a-b+540)%360)-180);
-  // Rows are [label, what the app had, what you measured, difference, agreed?]. A null "app"
-  // value means there was nothing to compare against, which is itself worth saying.
-  const rows=[];
+  if(!r)return wrap(`<div style="font-size:10px;letter-spacing:.06em;font-weight:800;color:#C6E4D3">DIAGNOSTICS</div>`+
+    `<div style="margin-top:4px">Both boards recorded but the solve failed. Re-sail one.</div>`,"#E0A64A");
   const fc=+($("wdir").value||0);
-  rows.push(["Wind", `${d3(fc)}\u00B0 forecast`, `<b>${d3(r.wind)}\u00B0</b>`,
-             `${Math.round(dAng(r.wind,fc))}\u00B0`, dAng(r.wind,fc)<10]);
+  const dAng=(a,b)=>Math.abs(((a-b+540)%360)-180);
   const m=r.modelled;
-  if(m&&m.dir!=null)
-    rows.push(["Tide", `${d3(m.dir)}\u00B0 ${m.kt.toFixed(1)} kt atlas`,
-               `<b>${d3(r.tideDir)}\u00B0 ${r.tideKt.toFixed(1)} kt</b>`,
-               `${Math.round(dAng(r.tideDir,m.dir))}\u00B0 \u00B7 ${Math.abs(r.tideKt-m.kt).toFixed(1)} kt`,
-               dAng(r.tideDir,m.dir)<35&&Math.abs(r.tideKt-m.kt)<0.5]);
-  else
-    rows.push(["Tide", m?`slack, per atlas`:`no atlas figure`,
-               `<b>${d3(r.tideDir)}\u00B0 ${r.tideKt.toFixed(1)} kt</b>`, ``, null]);
-  rows.push(["Boat speed", `${r.Vpolar.toFixed(1)} kt polar`,
-             r.measured?`<b>${r.Vmeas.toFixed(1)} kt log</b>`:`<span style="opacity:.7">no log entered</span>`,
-             r.measured?`${Math.round(r.pct*100)}% of polar`:``,
-             r.measured?(r.pct>0.9&&r.pct<1.1):null]);
-  rows.push(["Compass", `steering`, r.compassErr!=null?`<b>${Math.abs(r.compassErr).toFixed(0)}\u00B0 ${r.compassErr<0?"high":"low"}</b> vs track`:`<span style="opacity:.7">enter it on both tacks</span>`,
-             ``, r.compassErr!=null?(Math.abs(r.compassErr)<5):null]);
-  const tick=v=>v===null?`<span style="opacity:.5">\u2013</span>`
+  // value, source, and whether it stands up
+  const rows=[
+    ["Wind",  `${d3(r.wind)}\u00B0`, "measured, from the two tracks",
+       `forecast ${d3(fc)}\u00B0, out by ${Math.round(dAng(r.wind,fc))}\u00B0`, dAng(r.wind,fc)<15],
+    ["Tide",  `${d3(r.tideDir)}\u00B0 ${r.tideKt.toFixed(1)} kt`,
+       r.measured?"measured, log speed used":"ASSUMED, polar speed used",
+       m&&m.dir!=null?`atlas ${d3(m.dir)}\u00B0 ${m.kt.toFixed(1)} kt`:`no atlas figure`,
+       r.measured?null:false],
+    ["Boat",  r.measured?`${r.Vmeas.toFixed(1)} kt`:`\u2013`,
+       r.measured?"measured, you typed it":"MISSING, enter Log kt",
+       r.measured?`${Math.round(r.pct*100)}% of polar ${r.Vpolar.toFixed(1)} kt`:`polar ${r.Vpolar.toFixed(1)} kt assumed`,
+       r.measured?(r.pct>0.85):false],
+    ["Compass", r.compassErr!=null?`${Math.abs(r.compassErr).toFixed(0)}\u00B0 ${r.compassErr<0?"high":"low"}`:`\u2013`,
+       r.compassErr!=null?"derived, from both tacks":"MISSING, enter Compass on both",
+       r.compassErr!=null?`heading against track`:``, r.compassErr!=null?(Math.abs(r.compassErr)<8):null],
+    ["Spread", `${(r.ratio*100).toFixed(0)}%`, "derived, angle sailed",
+       `of the polar's expected spread`, r.trusted]
+  ];
+  const tick=v=>v===null?`<span style="opacity:.45">\u2013</span>`
     :v?`<span style="color:#BFE8D4">\u2713</span>`:`<span style="color:#FFD9A8">\u26A0</span>`;
-  const body=rows.map(([lab,app,meas,diff,ok])=>
-    `<div style="display:grid;grid-template-columns:64px 1fr 1fr 16px;gap:6px;align-items:baseline;padding:4px 0;border-top:1px solid rgba(255,255,255,.14)">`+
-    `<div style="font-weight:800;color:#C6E4D3">${lab}</div>`+
-    `<div style="opacity:.8">${app}</div>`+
-    `<div>${meas}${diff?`<div style="font-size:10.5px;opacity:.7">${diff}</div>`:``}</div>`+
-    `<div style="text-align:right">${tick(ok)}</div></div>`).join("");
-  const head=`<div style="display:grid;grid-template-columns:64px 1fr 1fr 16px;gap:6px;font-size:10px;letter-spacing:.05em;color:#C6E4D3;font-weight:800">`+
-    `<div></div><div>APP</div><div>MEASURED</div><div></div></div>`;
-  const note=r.trusted
-    ? `<div style="color:#BFE8D4;font-weight:800;margin-top:6px">\u2713 Both beats agree. Safe to accept.</div>`
-    : `<div style="color:#FFD9A8;font-weight:800;margin-top:6px">Beats don't agree well enough (${(r.ratio*100).toFixed(0)}% of expected spread).</div>`+
-      (!r.measured&&r.ratio<0.9
-        ? `<div style="font-size:10.5px;opacity:.85;margin-top:2px">A low spread usually means you are slower than the polar, not that you sailed badly. Enter the log speed and re-check before re-sailing.</div>`
-        : `<div style="font-size:10.5px;opacity:.75;margin-top:2px">You can still accept it, but re-sail a beat if you can.</div>`);
-  return wrap(head+body+note, r.trusted?"#2FA35C":"#E0A64A");
+  const body=rows.map(([lab,val,src,cmp,ok])=>
+    `<div style="display:grid;grid-template-columns:52px 1fr 14px;gap:6px;padding:5px 0;border-top:1px solid rgba(255,255,255,.14)">
+      <div style="font-weight:800;color:#C6E4D3">${lab}</div>
+      <div><b style="font-size:14px">${val}</b>
+        <div style="font-size:10.5px;opacity:.8">${src}</div>
+        ${cmp?`<div style="font-size:10.5px;opacity:.6">${cmp}</div>`:``}</div>
+      <div style="text-align:right">${tick(ok)}</div></div>`).join("");
+  const verdict = !r.trusted
+    ? `<div style="color:#FFD9A8;font-weight:800;margin-top:6px">Boards disagree.${r.measured?"":" Enter the log speed and look again before re-sailing: a low spread usually means you are slower than the polar, not that you sailed badly."}</div>`
+    : r.measured
+      ? `<div style="color:#BFE8D4;font-weight:800;margin-top:6px">\u2713 Wind and tide both measured.</div>`
+      : `<div style="color:#BFE8D4;font-weight:800;margin-top:6px">\u2713 Wind measured. Tide assumes polar speed.</div>`;
+  return wrap(
+    `<div style="font-size:10px;letter-spacing:.06em;font-weight:800;color:#C6E4D3">DIAGNOSTICS \u00B7 ${phTxt}</div>`+
+    body+verdict+
+    `<div style="font-size:10px;opacity:.62;margin-top:5px">Rests on: you sailed the same angle off the wind on both tacks. 5\u00B0 low on one puts the wind 2.5\u00B0 out, and nothing here would show it.</div>`,
+    r.trusted?"#2FA35C":"#E0A64A");
 }
-// Accept adopts the measurement; Revert hands the app back to the buoy wind and the tide atlas.
-// Revert deliberately leaves the beats and the comparison on screen, so you can look again and
-// re-accept. Clear, at the top, is what wipes the beats.
+// Two actions, plus a link to the chart where the same run can be checked by eye.
 function tuneActHTML(){
   const r=beatSolve();
   const live=START.obsWind!=null;
-  const acc=r?``:` disabled`;
-  return `<div style="display:flex;gap:8px;align-items:stretch">`+
-    `<button class="rtbtn" data-t="wuse"${acc} style="flex:1;min-height:46px;font-size:13px;${r&&!live?"background:#1E8449;border-color:#2FA35C":""}${r?"":"opacity:.4"}">`+
-      `${live?"Re-apply measured":"Use measured"}</button>`+
+  const both=BEAT.stbd&&BEAT.port;
+  return `<div style="display:flex;gap:8px">`+
+    `<button class="rtbtn" data-t="wuse"${r?"":" disabled"} style="flex:1;min-height:46px;font-size:13px;${r&&!live?"background:#1E8449;border-color:#2FA35C":""}${r?"":"opacity:.4"}">${live?"Re-apply":"Use measured"}</button>`+
     `<button class="rtbtn" data-t="wrevert"${live?"":" disabled"} style="flex:1;min-height:46px;font-size:13px;${live?"":"opacity:.4"}">Back to forecast</button>`+
     `</div>`+
-    `<div style="font-size:11px;line-height:1.4;color:#C6E4D3;margin-top:6px">`+
-    (live
-      ? `The app is running on <b>your measured</b> wind and tide.`
-      : `The app is running on the <b>forecast</b> wind and the tide atlas.`)+
-    ` Clear, above, wipes the beats themselves.</div>`;
+    (both?`<div style="margin-top:7px"><button class="rtbtn" data-t="gochart" style="width:100%;min-height:40px;font-size:12.5px">Check it on the chart</button></div>`:``)+
+    `<div style="font-size:11px;line-height:1.4;color:#C6E4D3;margin-top:6px">Running on <b>${live?"measured":"forecast"}</b> wind and tide.</div>`;
 }
 function tuningCtl(){
   const cap=$("tuneCap"); if(cap)cap.innerHTML=tuneCapHTML();
@@ -6626,9 +6784,8 @@ function tuningClick(ev){
   const b=ev.target.closest?ev.target.closest("[data-t]"):null; if(!b)return;
   const k=b.dataset.t;
   if(k==="wport"||k==="wstbd"){ beatPress(k==="wstbd"?"stbd":"port"); return; }
-  if(k==="fitrun"){ if(fitRunning())fitEnd(); else fitStart(FIT.tack); return; }
-  if(k==="fittack"){ FIT.tack=FIT.tack==="stbd"?"port":"stbd"; tuningCtl(); return; }
-  if(k==="wclear"){ beatReset(); }
+  if(k==="gochart"){ fitGoToChart(); return; }
+  if(k==="wclear"){ beatReset(); FIT.stbd=null; FIT.port=null; FIT.err={stbd:0,port:0}; FIT.accepted=false; try{fitFootPaint();}catch(e){} }
   else if(k==="wuse"){ beatApply(); try{raceRecEvent("tuning","use measured",{wind:START.obsWind,tide:START.obsTide});}catch(e){} }
   else if(k==="wrevert"){ beatUnapply(); try{raceRecEvent("tuning","back to forecast",null);}catch(e){} }
   render();
@@ -7164,6 +7321,22 @@ function drawLeg(r,idx,wdir,wspd){
     <div class="row2">Tgt VMG<br><b class="mono">${L.smg.toFixed(1)}kt</b></div>
     <div class="row2">Est<br><b class="mono">${Math.round(estMin)} min${estSplit}</b></div>`+breakdownHTML+nextHTML;
   const lr=$("legRow1"); if(lr)lr.innerHTML=row1HTML;
+  // GPS Display page 3: the same summary under the bay chart, plus the leg's own verdict, so the
+  // chosen leg can be read in context of the whole course without leaving the page.
+  const mp=$("mapPlan");
+  if(mp)mp.innerHTML=
+    `<div style="background:#FBEEB0;border-radius:14px;padding:7px">
+       <div class="tot leginfo" id="legRow3" style="margin:0">${row1HTML}</div>
+       ${(function(){
+          // Leg 0 has no "Arrive X" sentence, because it starts from the line rather than a
+          // rounding. firstLegHTML is the equivalent call for that leg, so the panel is never
+          // blank on the first beat.
+          let t=leadHTML;
+          if(!t&&idx===0){ try{ t=firstLegHTML(r,wdir,wspd); }catch(e){ t=""; } }
+          t=(t||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();
+          return t?`<div style="font-size:12px;line-height:1.45;color:#3A2A00;margin-top:7px">${t}</div>`:``;
+        })()}
+     </div>`;
 }
 
 // ---------- Course Chart mini leg panel: leg shape, course to steer, tactical numbers, one side ----------
@@ -7848,7 +8021,10 @@ function legStep(dir){                             // dir: -1 previous leg, +1 n
 // Make any chart swipe through the legs. Both the Course Analysis diagram and the GPS tab's
 // mini chart use this, and both call legStep, so wherever you swipe the whole app follows the
 // same leg -- there is only one leg index (state.leg).
-function legSwipeOn(id){
+// `guard` returns true when the swipe must be ignored. Page 3 uses it so a horizontal drag on a
+// ZOOMED bay chart pans the chart instead of also stepping the leg: the two would otherwise both
+// fire from one gesture.
+function legSwipeOn(id,guard){
   const svg=$(id); if(!svg||svg.dataset.swipeWired)return;
   svg.dataset.swipeWired="1";
   svg.style.touchAction="pan-y";                                // let the page still scroll vertically
@@ -7859,6 +8035,7 @@ function legSwipeOn(id){
     const dx=e.clientX-sx, dy=e.clientY-sy;
     sx=null;
     if(Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.3)return;   // mostly-horizontal, at least 50px
+    try{ if(guard&&guard())return; }catch(err){}
     legStep(dx<0?1:-1);
   });
   svg.addEventListener("pointercancel",()=>{ active=false; sx=null; });
@@ -7866,6 +8043,14 @@ function legSwipeOn(id){
 function legSwipeInit(){
   legSwipeOn("legview");                                        // Course Analysis
   legSwipeOn("miniLegSvg");     // hidden #minitab, but wired so unhiding it just works
+  // Page 1 of the GPS Display: swiping the numbers changes leg exactly as swiping the chart on
+  // page 2 does. The whole page is the target, since there is no single big element to grab, and
+  // the handler already ignores anything that is not a firm horizontal drag, so the vertical
+  // page snap is untouched.
+  legSwipeOn("gpage1");
+  // Page 3, the bay chart. Ignored while the chart is zoomed in, because a horizontal drag is
+  // then a pan and must not also change leg.
+  legSwipeOn("gpage3",()=>{ try{ return typeof MAPZ!=="undefined"&&MAPZ&&MAPZ.V.z>1; }catch(e){ return false; } });
   document.addEventListener("keydown",e=>{
     if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;
     const dg=$("diagramtab"), gt=$("garmintab");                  // either chart's tab being open counts
