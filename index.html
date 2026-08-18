@@ -180,6 +180,34 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 }
 #gpage2{display:flex;flex-direction:column;min-height:0}
 #gpage2 #legview{flex:1 1 auto;min-height:0;height:auto}
+/* Page 3 is the course chart. Same rule: one elastic block, so the page is exactly one screen.
+   The map is 710x1008, a tall aspect, so it is the thing that must give. */
+#gpage3{display:flex;flex-direction:column;min-height:0}
+/* Let the map keep its natural aspect (viewBox 710x1008) rather than stretching to fill the
+   page, which letterboxed it with white bands above and below. It takes the width, the height
+   follows, and the wrap centres what is left. */
+#gpage3 #mapWrap{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
+#gpage3 #map{flex:0 1 auto;min-height:0;max-height:100%;width:100%;height:auto}
+/* The summary row inherits .tot, which is built for a light tab: ink2 labels and near-black
+   values disappear on the GPS Display's dark ground. Give it the same light card the tiles use,
+   and four equal columns so Leg / TWA-AW / Sail / Est sit on one line instead of wrapping. */
+#legRow1{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:7px 9px;
+  background:#F2F7FA;border:1.5px solid #B7C2CC;border-radius:11px;font-size:11px;
+  color:#48627A;flex:0 0 auto;text-align:center}
+#legRow1 b{font-size:15px;color:#12283A}
+/* Four equal buttons across the top of page 2. Grid rather than flex so every column is exactly
+   1fr regardless of label length ("Course-up" is twice the width of "Both"). min-width:0 stops
+   a long label forcing its column wider, and the smaller font keeps "Course-up" on one line. */
+/* Head and foot of page 2 both sit on the same yellow as the tiles and the compass wrap, so the
+   controls read as two groups bracketing the chart rather than as loose items on the dark ground. */
+#viewrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  background:#FBEEB0;border-radius:14px;padding:7px}
+#legFoot{background:#FBEEB0;border-radius:14px;padding:7px;margin-top:8px;flex:0 0 auto}
+#legFoot > div:first-of-type{margin-top:0 !important}
+#legFoot .wslideLbl{color:#12283A}
+#legFoot label{color:#5B4A00}
+#viewrow .pick{min-width:0;width:100%;padding:8px 4px;font-size:13px;white-space:nowrap}
+#viewrow #orientBtn{min-width:0;font-size:12px}
 .garmin-frame{background:#FBEEB0;border-radius:14px;padding:7px;display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
 .garmin-tile{background:#F4F6F8;border:1px solid #D6DEE5;border-radius:11px;padding:8px 6px;text-align:center;min-height:44px;display:flex;flex-direction:column;justify-content:center}
 .garmin-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:#48627A;font-weight:800;line-height:1.1}
@@ -251,6 +279,13 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
 </details>
 
+
+<!-- Wardrobe: what the boat owns, and what is actually aboard for THIS race. The advice engine
+     reads only the ticked sails, so the app can no longer call for a sail that is ashore. -->
+<details class="notes" id="sailtab" style="background:#EFE6F5;border:1px solid #C9B6DC">
+  <summary style="color:#3B2A4A">Sail wardrobe</summary>
+  <div id="wardrobeBody" style="margin-top:6px"></div>
+</details>
 
 <details class="notes" id="buoytab" style="background:#E2F4E9;border:1px solid #A6D9BC">
   <summary style="color:#0B5138">Wind (Dublin Bay Buoy)</summary>
@@ -343,6 +378,15 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <button class="rtbtn" id="rtSync" style="flex:1;padding:13px 8px;font-size:15px">Sync</button>
     <button class="rtbtn" id="rtStart" style="flex:1;padding:13px 8px;font-size:15px">Manual</button>
   </div>
+  <!-- Recording. Starting the countdown starts collection; End Race stops it and offers the
+       save. Nothing reaches storage until that save is confirmed. -->
+  <div id="recBox" style="margin:10px 0;padding:9px 11px;border-radius:11px;background:rgba(255,255,255,.10);border:1.5px solid rgba(255,255,255,.22)">
+    <div id="recState" style="font-size:12px;line-height:1.45;color:#C9DFEC"></div>
+    <div style="display:flex;gap:8px;margin-top:7px">
+      <button class="rtbtn" id="recEnd" style="flex:1;min-height:42px;font-size:14px">End race</button>
+      <button class="rtbtn" id="recSave" style="flex:1;min-height:42px;font-size:14px">Save race</button>
+    </div>
+  </div>
   <div style="display:flex;gap:8px;justify-content:center;margin:8px 0">
     <button class="rtbtn" id="rtM5" style="flex:1;padding:12px 6px;font-size:16px">&minus;5</button>
     <button class="rtbtn" id="rtM1" style="flex:1;padding:12px 6px;font-size:16px">&minus;1</button>
@@ -379,14 +423,6 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
 </details>
 
-<details class="notes" id="charttab"><summary>Course Chart</summary>
-  <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
-  <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
-    <label style="white-space:nowrap;margin:0">Wind <span class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
-    <input class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
-    <button class="wslideR" aria-label="Restore forecast wind" title="hand the wind back to the forecast" style="flex:0 0 auto;width:30px;height:30px;border-radius:8px;border:1.5px solid #12283A;background:#fff;color:#12283A;font-weight:800;font-size:13px;padding:0">R</button>
-  </div>
-</details>
 
 
 <!-- The GPS Display mini chart, kept but hidden. The Course Analysis chart moved into the GPS
@@ -500,18 +536,47 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <div id="legHead" style="font-size:12.5px;font-weight:800;color:#12283A"></div>
     <div style="font-size:10.5px;color:#7C93A4">swipe ← →</div>
   </div>
-  <div style="margin-top:6px;margin-bottom:-4px;display:flex;justify-content:space-between;align-items:center">
-    <div id="viewbtns" style="display:flex;gap:6px">
-      <button class="pick" data-vm="tide" style="padding:8px 10px;font-size:13px">Tide</button>
-      <button class="pick" data-vm="wind" style="padding:8px 10px;font-size:13px">Wind</button>
-      <button class="pick" data-vm="both" style="padding:8px 10px;font-size:13px">Both</button>
+  <!-- Four equal buttons on one row. They used to be a three-button group pushed left and the
+       orientation button pushed right, so the fourth was much wider than the other three.
+       #viewbtns is kept as the wrapper the click handler binds to, but it is display:contents
+       so its three children sit in the SAME four-column grid as the orientation button. -->
+  <div id="viewrow" style="margin-top:6px;margin-bottom:-4px">
+    <div id="viewbtns" style="display:contents">
+      <button class="pick" data-vm="tide">Tide</button>
+      <button class="pick" data-vm="wind">Wind</button>
+      <button class="pick" data-vm="both">Both</button>
     </div>
-    <button class="pick" id="orientBtn" style="min-width:110px">Course-up</button>
+    <button class="pick" id="orientBtn">Course-up</button>
   </div>
   <svg id="legview" viewBox="0 0 360 688" preserveAspectRatio="xMidYMid meet" style="margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA;touch-action:pan-y"></svg>
+  <!-- Slider, R and the summary share one yellow panel, so the controls at the foot of the
+       page read as one group the way the four buttons do at the head. -->
+  <!-- The error slider replaces the wind slider while a fit is pending, so there is only ever
+       one slider on the page. They do different jobs and must not be confused: the wind slider
+       moves BOTH boards and changes the app's wind; the error slider moves ONE board and records
+       an offset. Swapped by context rather than by a mode the user has to remember. -->
+  <div id="fitFoot" style="display:none"></div>
+  <div id="legFoot">
+    <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
+      <label style="white-space:nowrap;margin:0">Wind <span id="wslideLbl" class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
+      <input id="wslide" class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
+      <button class="wslideR" aria-label="Restore forecast wind" title="hand the wind back to the forecast" style="flex:0 0 auto;width:30px;height:30px;border-radius:8px;border:1.5px solid #12283A;background:#fff;color:#12283A;font-weight:800;font-size:13px;padding:0">R</button>
+    </div>
+    <!-- First row of the Course Tactics summary, repeated under the slider because it describes
+         the chart directly above it. Written by the same code that writes #leginfo, so the two
+         cannot drift. The rest of that panel stays in Course Tactics. -->
+    <div class="tot leginfo" id="legRow1" style="margin-top:7px"></div>
+  </div>
+  </div>
+
+  <!-- PAGE 3: the Course Chart, moved out of its own tab. The whole course on the bay, with the
+       same wind slider that drives the app everywhere else. The map is the elastic block here,
+       so the page is exactly one screen like the other two. -->
+  <div class="gpage" id="gpage3">
+  <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
   <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
-    <label style="white-space:nowrap;margin:0">Wind <span id="wslideLbl" class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
-    <input id="wslide" class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
+    <label style="white-space:nowrap;margin:0">Wind <span class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
+    <input class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
     <button class="wslideR" aria-label="Restore forecast wind" title="hand the wind back to the forecast" style="flex:0 0 auto;width:30px;height:30px;border-radius:8px;border:1.5px solid #12283A;background:#fff;color:#12283A;font-weight:800;font-size:13px;padding:0">R</button>
   </div>
   </div>
@@ -525,7 +590,11 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     worked out later. Nothing leaves the phone unless you export it.
   </div>
   <div style="display:flex;gap:8px;margin-top:10px;align-items:stretch">
-    <button class="rtbtn" id="raceSaveBtn" style="flex:1;min-height:46px;background:#2E6D96;border-color:#5090B8">Save race</button>
+    <!-- "Save race" removed in v406. It saved a bare track with no events, no expectations and
+         no provenance, so it produced a record that could not be corrected and was of little use
+         for building polars. Races are recorded from the Race timer now: start the countdown,
+         End race, Save race. Two buttons that both claimed to save a race but produced different
+         things was a trap. -->
     <button class="rtbtn" id="raceExportBtn" style="flex:1;min-height:46px;background:#2E6D96;border-color:#5090B8">Export all</button>
   </div>
   <div id="raceList" style="margin-top:10px"></div>
@@ -1355,6 +1424,8 @@ function setBoat(k){
   const b=BOATS[k].d;
   P_TWS=b.tws; P_UP=b.up; P_DN=b.dn; POLAR=b.polar;
   state&&(state.boat=k);
+  try{wardrobeRender();}catch(e){}   // wardrobe is per boat
+  try{raceRecEvent("setting","boat",k);}catch(e){}
 }
 function polarSpeed(twa,tws){
   const ta=Math.max(POLAR.twa[0],Math.min(180,twa));
@@ -1511,6 +1582,94 @@ function nearestIdx(arr,v){let bi=0,bd=1e9;arr.forEach((a,i)=>{const d=Math.abs(
 // because the pole runs out of forward travel at a fixed apparent angle; the same true angle is
 // an easy reach in 20 kt and unholdable in 6 kt. null means we have no measured number yet, so
 // no warning is shown rather than a guessed one.
+// ---------- Sail wardrobe (v405) ----------
+// The app used to assume every boat owned the full J/122 headsail wardrobe and a spinnaker. It
+// does not. DBSC NoR 2.4: boats not using spinnakers may race Cruisers 4, or, with a roller
+// furling jib, Cruisers 5. Red Tape is in 5B, so a spinnaker call is not merely unhelpful, it is
+// a sail she is barred from carrying, and "change to J3" is a headsail change a furler cannot
+// make. So the wardrobe is declared per boat, and the advice is filtered to it.
+//
+// Two layers, deliberately:
+//   owned  - everything the boat has, edited rarely
+//   aboard - what is actually on the boat for THIS race, ticked before the start
+// Aurelia (Chris Power Smith's J/122 2.3 GP, Cruiser 0) carries a subset of a large wardrobe and
+// changes within a race. Red Tape carries one headsail and keeps it up.
+//
+// `kind` drives the logic, `label` is only what you read:
+//   head   - headsail. `furl` true means one sail at varying roll, not a set to change between.
+//   kite   - spinnaker of any cut.
+//   main   - carried always; here so reefs can be modelled later.
+// lo/hi are the true wind range the sail is intended for, used to pick between what is aboard.
+// `polar` is null until we have real numbers: null means "estimated from the boat polar", and
+// the app says so rather than pretending.
+const WARDROBE_DEFAULT={
+  etap28i:{
+    owned:[
+      {id:"main",  kind:"main", label:"Main",            lo:0,  hi:99, polar:null},
+      {id:"genoa", kind:"head", label:"Genoa (furling)", lo:0,  hi:99, furl:true, polar:null},
+      {id:"jib",   kind:"head", label:"Working jib",     lo:16, hi:99, polar:null}
+    ],
+    aboard:["main","genoa"]
+  },
+  j122:{
+    owned:[
+      {id:"main", kind:"main", label:"Main",       lo:0,  hi:99, polar:null},
+      {id:"j1",   kind:"head", label:"J1 light",   lo:0,  hi:14, polar:null},
+      {id:"j2",   kind:"head", label:"J2 medium",  lo:12, hi:20, polar:null},
+      {id:"j3",   kind:"head", label:"J3 heavy",   lo:18, hi:28, polar:null},
+      {id:"j4",   kind:"head", label:"J4 storm",   lo:26, hi:99, polar:null},
+      {id:"a2",   kind:"kite", label:"A2 running", lo:0,  hi:18, polar:null},
+      {id:"a3",   kind:"kite", label:"A3 reaching",lo:0,  hi:22, polar:null}
+    ],
+    aboard:["main","j1","j2","a2","a3"]
+  },
+  j109:{
+    owned:[
+      {id:"main", kind:"main", label:"Main",       lo:0,  hi:99, polar:null},
+      {id:"j1",   kind:"head", label:"J1 light",   lo:0,  hi:14, polar:null},
+      {id:"j2",   kind:"head", label:"J2 medium",  lo:12, hi:20, polar:null},
+      {id:"j3",   kind:"head", label:"J3 heavy",   lo:18, hi:99, polar:null},
+      {id:"a2",   kind:"kite", label:"A2 running", lo:0,  hi:18, polar:null},
+      {id:"a3",   kind:"kite", label:"A3 reaching",lo:0,  hi:22, polar:null}
+    ],
+    aboard:["main","j1","j2","a2","a3"]
+  }
+};
+let WARDROBE=JSON.parse(JSON.stringify(WARDROBE_DEFAULT));
+function wardrobeLoad(){
+  try{ const raw=localStorage.getItem("cc_wardrobe"); if(!raw)return;
+    const w=JSON.parse(raw);
+    // merge rather than replace, so a new default sail added in a later build is not lost and a
+    // stored wardrobe from an older build still works
+    for(const k in WARDROBE) if(w[k]){
+      if(Array.isArray(w[k].owned)&&w[k].owned.length)WARDROBE[k].owned=w[k].owned;
+      if(Array.isArray(w[k].aboard))WARDROBE[k].aboard=w[k].aboard;
+    }
+  }catch(e){}
+}
+function wardrobeSave(){ try{ localStorage.setItem("cc_wardrobe",JSON.stringify(WARDROBE)); }catch(e){} }
+function wardrobeOf(b){ return WARDROBE[b||(state&&state.boat)||"etap28i"]||WARDROBE.etap28i; }
+function sailsAboard(kind){
+  const w=wardrobeOf();
+  const on=w.owned.filter(s=>w.aboard.indexOf(s.id)>=0);
+  return kind?on.filter(s=>s.kind===kind):on;
+}
+function hasKiteAboard(){ return sailsAboard("kite").length>0; }
+function furlingOnly(){ const h=sailsAboard("head"); return h.length>0&&h.every(s=>s.furl); }
+// The class is the second, independent signal. RTCLASS already maps boat to DBSC class, and
+// Cruisers 4 and 5 are non-spinnaker by the NoR. If the wardrobe and the class disagree, say so
+// rather than silently picking one: either the wrong boat is selected or a kite has been ticked
+// that the boat may not fly.
+function classAllowsKite(){
+  const c=(RTCLASS[(state&&state.boat)||"etap28i"]||RTCLASS.etap28i).code;
+  return !(c==="c45"||c==="c4"||c==="c5");
+}
+function wardrobeConflict(){
+  if(hasKiteAboard()&&!classAllowsKite())
+    return "A spinnaker is ticked, but "+(RTCLASS[(state&&state.boat)||"etap28i"]||RTCLASS.etap28i).name+
+           " is a non-spinnaker class (NoR 2.4). Advice will still use it, but it is not class legal.";
+  return null;
+}
 const RIG={
   etap28i:{kite:"sym", gear:"end-for-end pole", kiteLabel:"Kite", minAwa:85},
   j122:   {kite:"asym", gear:"bowsprit", minAwa:null},
@@ -1536,11 +1695,85 @@ function sailFor(twa,tws){
   const c=Math.min(Math.max(Math.round(tws)-S_TWS0,0),SAILS[0].length-1);
   const raw=SAILS[r][c];
   const rig=rigOf();
-  // One symmetric kite covers the whole spinnaker range, so any A-sail becomes that one sail.
-  // The trailing * (meaning reefed//heavy) is preserved, it is a condition flag not a sail name.
-  if(rig.kite==="sym"&&/^A[1-4]/.test(raw)) return (rig.kiteLabel||"Kite")+(raw.endsWith("*")?"*":"");
-  return raw;
+  const heavy=raw.endsWith("*")?"*":"";          // condition flag, not part of the sail name
+  const wantsKite=/^A[1-4]/.test(raw);
+  // v405: the chart is a preference order, not an oracle. Filter it to what is actually aboard.
+  const kites=sailsAboard("kite"), heads=sailsAboard("head");
+  if(wantsKite){
+    if(!kites.length){
+      // No kite aboard (Cruisers 4/5, or simply left ashore). Fall back to the headsail this
+      // wind strength calls for: white sails downwind, which is what the boat will really do.
+      return headCall(heads,tws,raw,heavy);
+    }
+    if(rig.kite==="sym")return (rig.kiteLabel||"Kite")+heavy;
+    const k=pickHead(kites,tws); return k?k.label+heavy:raw;
+  }
+  return headCall(heads,tws,raw,heavy);
 }
+// One place that turns "which headsail" into words, so the furler is described the same way
+// wherever the call comes from. A furling sail is ONE sail at varying roll: never call for a
+// change between sizes, say how much to roll.
+function headCall(heads,tws,raw,heavy){
+  if(!heads||!heads.length)return raw;
+  const h=pickHead(heads,tws); if(!h)return raw;
+  return (h.furl?furlLabel(h,tws):h.label)+(heavy||"");
+}
+// Choose from the sails aboard by wind range: the one whose band contains this wind, else the
+// nearest band. Never returns a sail that is not aboard.
+function pickHead(list,tws){
+  if(!list||!list.length)return null;
+  const inBand=list.filter(s=>tws>=(s.lo||0)&&tws<=(s.hi==null?99:s.hi));
+  if(inBand.length)return inBand.sort((a,b)=>(a.hi-a.lo)-(b.hi-b.lo))[0];
+  return list.slice().sort((a,b)=>
+    Math.min(Math.abs(tws-(a.lo||0)),Math.abs(tws-(a.hi==null?99:a.hi)))-
+    Math.min(Math.abs(tws-(b.lo||0)),Math.abs(tws-(b.hi==null?99:b.hi))))[0];
+}
+// A furler does not change sail, it rolls. Say how much, not which.
+function furlLabel(sail,tws){
+  const n=sail.label.replace(/\s*\(furling\)/i,"");
+  if(tws<14)return n+" full";
+  if(tws<18)return n+", 1 roll";
+  if(tws<22)return n+", 2 rolls";
+  return n+", well furled";
+}
+// ---------- white-sail downwind (v405) ----------
+// With a kite the boat has ONE downwind mode and P_DN describes it. Without one there are two,
+// and they want different angles:
+//   goosewinged   near dead downwind, slower through the water but pointed at the mark
+//   heated up     genoa drawing to leeward, faster but well off the rhumb line, only worth it
+//                 if you gybe down
+// Which wins is a VMG comparison and it moves with wind strength.
+//
+// HONESTY NOTE. There is no measured white-sail polar for any of these boats. What follows is
+// an ESTIMATE anchored on one real data point: Michael reports Red Tape does about 4 kt dead
+// downwind goosewinged in 10-12 kt. The existing polar's own 180-degree figure is 4.02 kt at
+// 10 kt and 4.89 at 12, so the goosewinged branch is close to right already and is used as is.
+// The heated-up branch is the guess: losing the kite costs roughly 15% of the polar's speed at
+// the same angle, and the angle itself comes down because a genoa will not hold as deep as a
+// spinnaker. Both numbers are marked estimated wherever they are shown, and the Data tab is
+// what will replace them.
+const WS_SPEED_FACTOR=0.85;      // heated-up speed as a fraction of the kite polar at that angle
+const WS_MAX_TWA=150;            // a genoa to leeward will not hold deeper than this and draw
+function whiteSailDown(tws){
+  const kiteTwa=interp(P_TWS,P_DN.twa,tws);
+  const twa=Math.min(WS_MAX_TWA,kiteTwa);
+  const heatV=polarSpeed(twa,tws)*WS_SPEED_FACTOR;
+  const heatVmg=heatV*Math.cos(rad(180-twa));
+  const gooseV=polarSpeed(180,tws);          // the polar's own dead-downwind figure
+  const gooseVmg=gooseV;                      // dead downwind, VMG is boat speed
+  const goose=gooseVmg>=heatVmg;
+  // The break-even is the useful output, not the verdict. Heating up only pays if the genoa
+  // reaches this speed at that angle; the verdict above rests entirely on WS_SPEED_FACTOR,
+  // which is a guess. Reporting the number to beat turns an invented answer into a measurable
+  // question: sail 150 degrees, read the log, compare.
+  const need=gooseVmg/Math.cos(rad(180-twa));
+  return {goose, twa:goose?180:twa, vel:goose?gooseV:heatV, vmg:goose?gooseVmg:heatVmg,
+          heatTwa:twa, heatVmg, gooseVmg, needToHeat:need,
+          needPctOfPolar:need/polarSpeed(twa,tws), estimated:true};
+}
+// True when the boat is sailing white sails downwind, so the caller knows to use the above
+// rather than P_DN.
+function whiteSailMode(){ return !hasKiteAboard(); }
 function legModel(twa,tws){
   const upT=interp(P_TWS,P_UP.twa,tws), dnT=interp(P_TWS,P_DN.twa,tws);
   const upV=interp(P_TWS,P_UP.vel,tws), dnV=interp(P_TWS,P_DN.vel,tws);
@@ -3177,6 +3410,8 @@ function trackAdd(pos){
   TRACK.push({lat,lon,t:now,cog,sog,twd,tws,twa});
   // a beat being recorded gets every fix, unthinned: the heading is fitted from these
   if(typeof BEAT!=="undefined"&&BEAT.rec)BEAT.rec.pts.push({lat,lon,t:now});
+  try{ raceRecSample(TRACK[TRACK.length-1]); }catch(e){}   // recorder rides the same thinning
+  try{ if(FIT.run)FIT.run.pts.push({lat,lon,t:now}); }catch(e){}   // tuning run, same thinning
   trackRedraw();
 }
 function trackRedraw(){
@@ -3535,28 +3770,248 @@ function raceThin(track,everyMs){
   if(track.length&&out[out.length-1]!==track[track.length-1])out.push(track[track.length-1]);
   return out;
 }
-function raceSave(){
-  if(typeof TRACK==="undefined"||TRACK.length<2){ raceMsg("No track to save yet. Turn GPS on and sail."); return; }
-  const pts=raceThin(TRACK,5000);
-  const t0=TRACK[0].t, t1=TRACK[TRACK.length-1].t;
-  let r=null; try{ r=compute(state.card,+($("wdir").value||0),+($("wspd").value||10),+($("wgst").value||15),state.letter,state.num); }catch(e){}
-  const rec={
-    id:"r"+t0,
-    saved:Date.now(),
-    start:t0, end:t1,
-    boat:state.boat, card:state.card, letter:state.letter, num:state.num,
-    courseName:(CARDS[state.card]&&CARDS[state.card].title)||state.card,
-    marks:(r&&r.pts)?r.pts.map(p=>({name:p.name,pos:p.pos,side:p.side,m:p.m})):[],
-    wind:{dir:+($("wdir").value||0), spd:+($("wspd").value||0), gust:+($("wgst").value||0), src:WIND.src},
+// ---------- Race recorder (v405, slice two) ----------
+// A "real race" is one that actually happened: the timer ran, and the data was collected while
+// it did. Recording starts when the countdown starts and stops on End Race. Nothing is written
+// to storage until the save is confirmed, so a practice sail or a mistaken timer press costs
+// nothing.
+//
+// THREE KINDS OF CONTENT, and the record must never confuse them:
+//   measured   track, SOG, COG, solved wind and tide. Facts.
+//   inferred   which sail was up, taken from the app's own advice and assumed followed.
+//   corrected  edits made afterwards: the sail actually held, the published finish time.
+// Every field carries which it is. A polar built from corrected data is worth more than one
+// built from inferred data, and in two seasons nobody will remember which was which unless the
+// record says so.
+//
+// KNOWN LIMIT of the inferred sail log. If the app assumes its own advice was followed, the
+// data can only ever confirm the crossover it already had: hold the J1 to 17 kt and that fast
+// data gets filed under "J2". So the log is marked inferred and is correctable afterwards. The
+// gap between inferred and corrected is itself the interesting data.
+const RACEREC_SCHEMA=1;
+let RACEREC=null;
+function raceRecActive(){ return !!(RACEREC&&!RACEREC.ended); }
+function raceSettings(){
+  const b=(state&&state.boat)||"etap28i", w=wardrobeOf(b);
+  return {
+    boat:b, boatLabel:(BOATS[b]&&BOATS[b].label)||b,
+    cls:(RTCLASS[b]||RTCLASS.etap28i).name,
+    card:state.card, letter:state.letter, num:state.num,
+    wind:{dir:+($("wdir").value||0), spd:+($("wspd").value||0), gust:+($("wgst").value||0), src:WIND&&WIND.src},
     tide:(typeof TIDECTX!=="undefined"&&TIDECTX)?{off:TIDECTX.off,range:TIDECTX.range}:null,
-    line:(START.cv||START.pin)?{cv:START.cv,pin:START.pin,obsWind:START.obsWind,obsTack:START.obsTack}:null,
-    n:pts.length,
-    track:pts
+    viewMode:(state&&state.viewMode)||null,
+    wardrobe:{owned:w.owned.map(x=>({id:x.id,kind:x.kind,label:x.label,lo:x.lo,hi:x.hi,furl:!!x.furl})),
+              aboard:w.aboard.slice()},
+    line:(START.cv||START.pin)?{cv:START.cv,pin:START.pin}:null
+  };
+}
+function raceRecStart(why){
+  if(raceRecActive())return;
+  RACEREC={
+    schema:RACEREC_SCHEMA, app:(typeof CC_VER!=="undefined"?CC_VER:"v405"),
+    started:Date.now(), startedBy:why||"timer", ended:null,
+    opening:raceSettings(),           // every setting at the outset
+    // Which polar produced every "exp" below. Without this the expectations cannot be
+    // interpreted once the polars are updated from this very data.
+    polar:(function(){ try{ const b=(state&&state.boat)||"etap28i";
+      return {boat:b, note:(BOATS[b]&&BOATS[b].note)||null,
+              tws:P_TWS.slice(), up:{twa:P_UP.twa.slice(),vel:P_UP.vel.slice()},
+              dn:{twa:P_DN.twa.slice(),vel:P_DN.vel.slice()}, ver:"builtin-v405", measured:false};
+    }catch(e){ return null; } })(),
+    events:[],                        // every change the user makes, with a timestamp
+    samples:[],                       // response data: GPS, compass, tide, wind, sail called
+    corrections:null                  // filled in afterwards, never overwrites the above
+  };
+  raceRecEvent("record","started",{why:why||"timer"});
+  try{raceRecPaint();}catch(e){}
+}
+function raceRecEvent(kind,what,detail){
+  if(!raceRecActive())return;
+  RACEREC.events.push({t:Date.now(),kind,what,detail:detail==null?null:detail,prov:"measured"});
+  if(RACEREC.events.length>4000)RACEREC.events.splice(0,500);   // a long day cannot exhaust memory
+}
+// One sample per accepted track point, so sampling inherits the 3 m / 5 s thinning already
+// applied to the track rather than inventing a second rate.
+function raceRecSample(pt){
+  if(!raceRecActive()||!pt)return;
+  let sail=null;
+  try{
+    const r=CURROUTE, i=Math.max(0,Math.min(state.leg,(r&&r.legs?r.legs.length:1)-1));
+    const L=r&&r.legs&&r.legs[i];
+    if(L)sail=sailFor(L.sTwa!=null?L.sTwa:L.twa, +($("wspd").value||10));
+  }catch(e){}
+  let set=null;
+  try{ if(typeof SETW!=="undefined"&&SETW&&SETW.deg!=null)set={deg:SETW.deg,conf:!!SETW.confident}; }catch(e){}
+  // EXPECTED must be written now, not recomputed later. The whole point of collecting this is
+  // to update the polars, and once they change, recomputing "expected" gives the NEW polar's
+  // answer rather than the one the app actually used that night. That would silently compare
+  // expected-v2 against observed-v1. So the expectation, and the identity of the polar that
+  // produced it, are frozen into the sample.
+  let exp=null, tide=null;
+  try{
+    const twd=pt.twd, tws=pt.tws;
+    if(twd!=null&&tws!=null&&pt.cog!=null){
+      const twa=Math.abs(((twd-pt.cog+540)%360)-180);
+      exp={twa, spd:polarSpeed(twa,tws),
+           tgtUp:interp(P_TWS,P_UP.twa,tws), tgtDn:interp(P_TWS,P_DN.twa,tws),
+           vmg:polarSpeed(twa,tws)*Math.cos(rad(twa))};
+    }
+  }catch(e){}
+  try{
+    if(typeof TIDECTX!=="undefined"&&TIDECTX){
+      const st2=streamAtPos([pt.lat,pt.lon],TIDECTX.off,TIDECTX.range);
+      if(st2)tide={dir:st2.dir,kt:st2.kt,slack:!!st2.slack,
+                   src:(START&&START.obsTide)?"measured":"atlas"};
+    }
+  }catch(e){}
+  RACEREC.samples.push({
+    t:pt.t, lat:pt.lat, lon:pt.lon, cog:pt.cog, sog:pt.sog,
+    hdg:(typeof COMPASS!=="undefined"&&COMPASS&&COMPASS.deg!=null)?COMPASS.deg:null,
+    twd:pt.twd==null?null:pt.twd, tws:pt.tws==null?null:pt.tws,
+    windSrc:(START&&START.obsWind!=null)?"measured":"forecast",
+    tide, set, exp,
+    sail, sailProv:"inferred", leg:state&&state.leg
+  });
+  if(RACEREC.samples.length>20000)RACEREC.samples.splice(0,2000);
+}
+function raceRecEnd(){
+  if(!raceRecActive())return;
+  RACEREC.ended=Date.now();
+  raceRecEvent("record","ended",null);
+  RACEREC.ended=Date.now();
+  try{raceRecPaint();}catch(e){}
+}
+function raceRecPaint(){
+  const st=$("recState"), be=$("recEnd"), bs=$("recSave");
+  if(!st)return;
+  const on=raceRecActive(), done=RACEREC&&RACEREC.ended;
+  const mins=RACEREC?Math.round(((RACEREC.ended||Date.now())-RACEREC.started)/60000):0;
+  st.innerHTML= on
+    ? `<b style="color:#BFE8D4">Recording</b> \u00B7 ${mins} min \u00B7 ${RACEREC.samples.length} fixes \u00B7 ${RACEREC.events.length} changes`
+    : done
+    ? `<b style="color:#FFD9A8">Race ended</b> \u00B7 ${mins} min \u00B7 ${RACEREC.samples.length} fixes. Not saved yet.`
+    : `Not recording. Starting the countdown starts collection.`;
+  if(be){ be.disabled=!on; be.style.opacity=on?"1":".4"; }
+  if(bs){ const can=!!(RACEREC&&RACEREC.samples.length);
+    bs.disabled=!can; bs.style.opacity=can?"1":".4";
+    bs.style.background=can&&done?"#1E8449":""; bs.style.borderColor=can&&done?"#2FA35C":""; }
+}
+function raceRecEndClick(){
+  if(!raceRecActive())return;
+  raceRecEnd();
+  raceMsg&&raceMsg("");
+  raceRecPaint();
+}
+// The save is the user's, not the app's. Confirm, then write, then leave the record in memory
+// so a second press cannot silently duplicate it.
+function raceRecSaveClick(){
+  if(!RACEREC||!RACEREC.samples.length)return;
+  if(!RACEREC.ended)raceRecEnd();
+  const mins=Math.round((RACEREC.ended-RACEREC.started)/60000);
+  const ok=confirm("Save this race?\n\n"+
+    RACEREC.opening.boatLabel+" \u00B7 "+RACEREC.opening.cls+"\n"+
+    "Course "+(RACEREC.opening.letter||"")+(RACEREC.opening.num||"")+" \u00B7 "+(RACEREC.opening.card||"")+"\n"+
+    mins+" min \u00B7 "+RACEREC.samples.length+" fixes \u00B7 "+RACEREC.events.length+" changes\n\n"+
+    "Sail choices are recorded as INFERRED from the app's advice. You can correct them, and add "+
+    "the published finish time, on the Data tab.");
+  if(!ok)return;
+  raceRecCommit();
+}
+function raceRecCommit(){
+  const R=RACEREC;
+  const rec={
+    id:"race"+R.started,
+    schema:R.schema, app:R.app, kind:"race",
+    saved:Date.now(), start:R.started, end:R.ended||Date.now(),
+    boat:R.opening.boat, card:R.opening.card, letter:R.opening.letter, num:R.opening.num,
+    courseName:(CARDS[R.opening.card]&&CARDS[R.opening.card].title)||R.opening.card,
+    opening:R.opening, polar:R.polar, events:R.events, samples:R.samples,
+    n:R.samples.length,
+    corrections:R.corrections||null,
+    provenance:{track:"measured",wind:"measured",tide:"measured",sail:"inferred",finish:"none"}
   };
   raceTx("readwrite").then(st=>{ st.put(rec);
-    raceMsg("Saved "+pts.length+" points from "+new Date(t0).toLocaleString()+".");
-    raceRender();
+    raceMsg("Saved race: "+rec.n+" fixes, "+rec.events.length+" changes. Correct the sails and add the finish time on the Data tab.");
+    RACEREC=null; raceRecPaint(); raceRender();
   }).catch(e=>raceMsg("Could not save: "+e.message));
+}
+// raceSave() removed in v406, superseded by the timer recorder (raceRecStart / raceRecEnd /
+// raceRecSaveClick). Deliberately not left as a stub: a silent no-op would look like a working
+// save. If something still calls this, it should throw and be found.
+// ---------- post-race corrections ----------
+// Corrections NEVER overwrite what was recorded. They sit alongside it, because the gap between
+// what the app assumed and what actually happened is itself the interesting data: that gap is
+// what says the crossover chart is wrong, and it is the only way the inferred sail log can ever
+// be escaped. Provenance is updated so the analysis can weight corrected races above inferred.
+function raceFixOpen(id){
+  const box=$("fix_"+id); if(!box)return;
+  if(box.style.display!=="none"){ box.style.display="none"; box.innerHTML=""; return; }
+  raceTx("readonly").then(st=>{ const q=st.get(id); q.onsuccess=()=>{
+    const r=q.result; if(!r)return;
+    const c=r.corrections||{};
+    const sails=(r.opening&&r.opening.wardrobe)?r.opening.wardrobe.owned:[];
+    const inferred=[...new Set((r.samples||[]).map(x=>x.sail).filter(Boolean))];
+    box.style.display="block";
+    box.innerHTML=`<div style="padding:9px 10px;margin:2px 0 8px;border-radius:10px;background:rgba(255,255,255,.55);border:1.5px solid #C4B8D8">
+      <div style="font-size:11px;letter-spacing:.05em;font-weight:800;color:#4A3A5A">CORRECT THE RECORD</div>
+      <div style="font-size:11.5px;color:#48627A;line-height:1.45;margin-top:4px">
+        The app assumed its own advice was followed: ${inferred.length?"<b>"+inferred.join(", ")+"</b>":"no sail recorded"}.
+        Correcting it does not erase that, both are kept.</div>
+      <div style="margin-top:7px">
+        <label style="font-size:11.5px;color:#4A3A5A">Headsail actually held</label>
+        <select id="fixSail_${id}" style="width:100%;box-sizing:border-box;margin-top:2px">
+          <option value="">as recorded</option>
+          ${sails.filter(x=>x.kind!=="main").map(x=>`<option value="${x.label}"${c.sail===x.label?" selected":""}>${x.label}</option>`).join("")}
+          <option value="mixed"${c.sail==="mixed"?" selected":""}>changed during the race</option>
+        </select></div>
+      <div style="margin-top:7px">
+        <label style="font-size:11.5px;color:#4A3A5A">Published finish time (clock, e.g. 20:14:35)</label>
+        <input id="fixFin_${id}" type="text" inputmode="numeric" placeholder="hh:mm:ss" value="${c.finishClock||""}"
+          style="width:100%;box-sizing:border-box;margin-top:2px"></div>
+      <div style="margin-top:7px">
+        <label style="font-size:11.5px;color:#4A3A5A">Note</label>
+        <input id="fixNote_${id}" type="text" placeholder="anything worth remembering" value="${(c.note||"").replace(/"/g,"&quot;")}"
+          style="width:100%;box-sizing:border-box;margin-top:2px"></div>
+      <div style="display:flex;gap:8px;margin-top:9px">
+        <button class="pick" id="fixSave_${id}" style="flex:1;min-height:38px;font-size:12.5px">Save correction</button>
+        <button class="pick" id="fixCancel_${id}" style="flex:0 0 auto;min-height:38px;font-size:12.5px;padding:0 12px;width:auto">Close</button>
+      </div>
+      ${c.saved?`<div style="font-size:11px;color:#48627A;margin-top:6px">Last corrected ${new Date(c.saved).toLocaleString()}.</div>`:""}
+    </div>`;
+    $("fixCancel_"+id).onclick=()=>{ box.style.display="none"; box.innerHTML=""; };
+    $("fixSave_"+id).onclick=()=>raceFixSave(id);
+  };});
+}
+function raceFixSave(id){
+  raceTx("readwrite").then(st=>{ const q=st.get(id); q.onsuccess=()=>{
+    const r=q.result; if(!r)return;
+    const sail=$("fixSail_"+id).value.trim();
+    const fin=$("fixFin_"+id).value.trim();
+    const note=$("fixNote_"+id).value.trim();
+    let finMs=null;
+    if(fin){
+      const m=fin.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+      if(m){ const d=new Date(r.start); d.setHours(+m[1],+m[2],+(m[3]||0),0);
+             // A finish before the start is normally a race that crossed midnight, but it is
+             // just as often a mistyped hour. Roll the day only if that gives a plausible race;
+             // otherwise refuse the value rather than storing a 20-hour elapsed time.
+             if(d.getTime()<r.start)d.setDate(d.getDate()+1);
+             const el=d.getTime()-r.start;
+             if(el>0&&el<=8*3600*1000)finMs=d.getTime();
+             else { raceMsg("That finish time gives an elapsed of "+(el/3600000).toFixed(1)+
+                    " hours, so it has not been saved. Check the hour."); return; } }
+    }
+    r.corrections={saved:Date.now(), sail:sail||null, finishClock:fin||null, finishMs:finMs,
+                   note:note||null, prov:"corrected"};
+    r.provenance=Object.assign({},r.provenance||{},{
+      sail: sail?"corrected":(r.provenance&&r.provenance.sail)||"inferred",
+      finish: finMs?"corrected":"none"});
+    if(finMs)r.elapsedMs=finMs-r.start;
+    st.put(r);
+    raceMsg("Correction saved. The original recording is unchanged.");
+    const box=$("fix_"+id); if(box){ box.style.display="none"; box.innerHTML=""; }
+    raceRender();
+  };}).catch(e=>raceMsg("Could not save correction: "+e.message));
 }
 function raceRender(){
   const el=$("raceList"); if(!el)return;
@@ -3566,15 +4021,22 @@ function raceRender(){
     const mins=r=>Math.max(1,Math.round((r.end-r.start)/60000));
     el.innerHTML=list.map(r=>{
       const d=new Date(r.start);
-      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.12)">
-        <div style="flex:1;min-width:0">
+      // Three buttons on one line squeezed the summary into a narrow column and wrapped it.
+      // Put the text on its own line and the buttons beneath it, so neither has to give way.
+      return `<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.12)">
+        <div style="min-width:0">
           <div style="font-weight:800;font-size:13px;color:#12283A">${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})} \u00B7 ${r.letter||"?"}${r.num||""}</div>
           <div style="font-size:11px;color:#48627A">${r.courseName||""} \u00B7 ${mins(r)} min \u00B7 ${r.n} pts \u00B7 wind ${d3(r.wind&&r.wind.dir||0)}\u00B0/${Math.round((r.wind&&r.wind.spd)||0)}kt</div>
         </div>
-        <button class="pick" data-race="${r.id}" style="min-height:32px;font-size:11.5px;padding:0 10px;width:auto">Export</button>
-        <button class="pick" data-racedel="${r.id}" style="min-height:32px;font-size:11.5px;padding:0 9px;width:auto">Delete</button>
-      </div>`;
+        <div style="display:flex;gap:6px;margin-top:7px">
+          <button class="pick" data-racefix="${r.id}" style="flex:1;min-height:34px;font-size:11.5px;padding:0 8px">${r.corrections?"Corrected \u2713":"Correct"}</button>
+          <button class="pick" data-race="${r.id}" style="flex:1;min-height:34px;font-size:11.5px;padding:0 8px">Export</button>
+          <button class="pick" data-racedel="${r.id}" style="flex:0 0 auto;min-height:34px;font-size:11.5px;padding:0 12px;width:auto">Delete</button>
+        </div>
+      </div>
+      <div id="fix_${r.id}" style="display:none"></div>`;
     }).join("");
+    el.querySelectorAll("[data-racefix]").forEach(b=>b.onclick=()=>raceFixOpen(b.getAttribute("data-racefix")));
     el.querySelectorAll("[data-race]").forEach(b=>b.onclick=()=>raceExport(b.getAttribute("data-race")));
     el.querySelectorAll("[data-racedel]").forEach(b=>b.onclick=()=>raceDelete(b.getAttribute("data-racedel")));
   }).catch(e=>{ el.innerHTML=""; raceMsg("Could not read saved races: "+e.message); });
@@ -3606,7 +4068,6 @@ function raceDelete(id){
   raceTx("readwrite").then(st=>{ st.delete(id); raceMsg("Deleted."); setTimeout(raceRender,80); });
 }
 function raceInit(){
-  const s1=$("raceSaveBtn"); if(s1)s1.onclick=raceSave;
   const s2=$("raceExportBtn"); if(s2)s2.onclick=raceExportAll;
   const tab=$("datatab");
   if(tab)tab.addEventListener("toggle",()=>{ if(tab.open)raceRender(); });
@@ -3647,6 +4108,13 @@ function gps2Init(){
   const c=$("gps2Clear"); if(c)c.onclick=()=>{ try{trackClear();}catch(e){} gps2Render(); };
   const dl=$("gps2Dl");   if(dl)dl.onclick=()=>{ try{trackDownloadCSV();}catch(e){} };
   try{gpsPagesInit();}catch(e){}
+  // Wardrobe: load before the first render so the very first sail call already respects it.
+  try{
+    wardrobeLoad();
+    const el=$("wardrobeBody"); if(el)el.addEventListener("change",wardrobeClick);
+    if(el)el.addEventListener("click",e=>{ if(e.target&&e.target.dataset&&e.target.dataset.sail==="__reset")wardrobeClick(e); });
+    wardrobeRender();
+  }catch(e){}
   // trackRedraw is what greys Download, and it otherwise only runs when a fix arrives. Call it
   // once here so the button starts greyed rather than looking live with nothing to download.
   try{trackRedraw();}catch(e){}
@@ -4310,6 +4778,14 @@ function rtClaimTime(){
 // Wrapping rtTick keeps the two in step whichever of its several early returns is taken.
 function rtTick(){
   rtTick0();
+  // A "real race" is one where the timer ran. Rather than hook every one of the four ways the
+  // countdown can be started (auto, manual, armed, sync), watch the running state here: this is
+  // the one function they all end up driving.
+  try{
+    if(!raceRecActive()&&!(RACEREC&&RACEREC.ended)&&typeof RT!=="undefined"&&RT&&RT.src&&RT.src!=="armed")
+      raceRecStart("timer:"+RT.src);
+    if(raceRecActive()&&RACEREC.samples.length%10===0)raceRecPaint();
+  }catch(e){}
   // Keep the beat readout ticking while a run is being recorded, so it visibly counts up.
   // The beat test moved to the Tuning tab in v400, so this follows it. Only the capture box is
   // repainted: the comparison and the buttons cannot change mid-run, and repainting them every
@@ -4509,6 +4985,8 @@ function rtSilent(){
 function rtInit(){
   const bind=(id,fn)=>{const el=$(id);if(el)el.onclick=fn;};
   bind("rtAuto",rtAuto); bind("rtReset",rtReset); bind("rtStart",rtStartManual);
+  bind("recEnd",raceRecEndClick); bind("recSave",raceRecSaveClick);
+  try{raceRecPaint();}catch(e){}
   bind("rtM5",()=>rtNudge(-5)); bind("rtM1",()=>rtNudge(-1)); bind("rtP1",()=>rtNudge(1)); bind("rtP5",()=>rtNudge(5));
   bind("rtSync",rtSync); bind("rtSilent",rtSilent);   // Line button removed: Pin/CV request GPS themselves
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && RT.timer && (RT.src==="auto"||RT.src==="manual")) rtWake(true); });
@@ -4582,6 +5060,7 @@ function buildPickers(){
   ["tuneCap","tuneCmp","tuneAct"].forEach(id=>{
     const el=$(id); if(el)el.addEventListener("click",tuningClick);
   });
+  { const f=$("fitFoot"); if(f)f.addEventListener("click",fitClick); try{fitFootPaint();}catch(e){} }
   try{tuningCtl();}catch(e){}
   // Wind sliders: one under the leg diagram, one under the course chart. Both drive the
   // app's wind, so whichever you reach for, everything re-renders together.
@@ -4799,6 +5278,7 @@ function render(){
   drawStart(r,wdir,wspd);
   startCtl();
   try{tuningCtl();}catch(e){}
+  try{fitWatchLeg();}catch(e){}
 }
 let CURROUTE=null;
 const TIDECOL="#123C69";     // dark navy: the tidal stream, on every view that draws it
@@ -5083,6 +5563,101 @@ const DEFLINE=250;                              // metres, the assumed line's le
 // Headings come from the positions, not from GPS course-over-ground: iOS often leaves
 // coords.heading null, which is why the old single-press version silently did nothing.
 const BEAT={stbd:null, port:null, rec:null};     // rec = {tack, pts:[...]} while recording
+// ---------- tuning run and ladder fit (v408) ----------
+// A second, visual route to the same two unknowns the beat test solves numerically: leeway and
+// tide. Sail a board, then drag that board's ladder until it lies along the track you actually
+// made. What you dial in is NOT leeway until everything else is accounted for, so it is called
+// unresolved error and tide is the working assumption for what it is.
+//
+// WHY ONE BOARD MEASURES NOTHING. Leeway is symmetric about the wind: it puts you to leeward by
+// the same angle on both tacks. Tide is a ground vector: it helps one board and hurts the other.
+// So with ONE board fitted the two are indistinguishable, and any value can be made to fit. With
+// both:
+//     leeway = (errStbd + errPort) / 2        the symmetric part
+//     tide   = (errStbd - errPort) / 2        the antisymmetric part, across the track
+// That is exactly what Michael saw on Saturday: one board fitted, the other would not, which is
+// the signature of tide rather than leeway.
+//
+// WHY THE WIND IS NOT TOUCHED. Folding leeway into the wind would rotate the picture, which is
+// antisymmetric, and so put the two tacks wrong in OPPOSITE directions when the truth was that
+// both were wrong the same way. It would also corrupt the favoured end, the T line, the shift
+// baseline and the sail crossover to fix one leg's laylines. Leeway gets its own term instead.
+const FIT={run:null, stbd:null, port:null, err:{stbd:0,port:0}, tack:"stbd", accepted:false, expected:null};
+function fitRunning(){ return !!(FIT.run); }
+// The expectation is frozen when you round onto the leg. If it moved, the judgement would
+// dissolve: nudge anything and the prediction walks over to meet your track.
+function fitFreezeExpected(legIdx){
+  try{
+    const r=CURROUTE; if(!r||!r.legs)return;
+    const i=Math.max(0,Math.min(legIdx==null?state.leg:legIdx,r.legs.length-1));
+    const L=r.legs[i];
+    FIT.expected={leg:i, t:Date.now(), co:L.co, twa:L.sTwa!=null?L.sTwa:L.twa,
+      wdir:+($("wdir").value||0), wspd:+($("wspd").value||0),
+      tide:(function(){ try{ const st=streamAtPos(r.pts[i].pos,TIDECTX.off,TIDECTX.range);
+        return st?{dir:st.dir,kt:st.kt,src:"atlas"}:null; }catch(e){ return null; } })(),
+      vb:interp(P_TWS,P_UP.vel,+($("wspd").value||10))};
+  }catch(e){}
+}
+function fitStart(tack){
+  if(!GPS.last||GPS.watch==null){ BEAT_MSG="Turn GPS on first: the fit needs a live track."; try{tuningCtl();}catch(e){} return; }
+  if(!FIT.expected)fitFreezeExpected();
+  FIT.run={tack:tack||FIT.tack, pts:[], t0:Date.now()};
+  FIT.tack=FIT.run.tack;
+  BEAT_MSG=null;
+  try{tuningCtl();}catch(e){}
+}
+function fitEnd(){
+  if(!fitRunning())return;
+  const R=FIT.run, st=beatStats(R.pts);
+  FIT.run=null;
+  // beatStats only returns null under two fixes. A run of two fixes a second apart passes, and
+  // then sog = distance/tiny time, which came out in the thousands of knots and carried straight
+  // into the tide. Reject weak runs here, where the message can say why.
+  if(!st||st.weak||!(st.secs>=20)||!(st.sog>0&&st.sog<25)){
+    BEAT_MSG="That run was too short to fit"+(st&&st.secs?" ("+Math.round(st.secs)+" s)":"")+
+             ". Sail 30 to 40 seconds on one board, straight, then end the run.";
+    try{tuningCtl();}catch(e){} return; }
+  if(st.straightness<0.97){
+    BEAT_MSG="That run was not straight enough to fit ("+(st.straightness*100).toFixed(0)+
+             "%). Settle on the board and sail it straight before ending the run.";
+    try{tuningCtl();}catch(e){} return; }
+  st.log=+($("beatLog").value||0)||null;
+  st.hdg=+($("beatHdg").value||0)||null;
+  const lg=$("beatLog"), hd=$("beatHdg"); if(lg)lg.value=""; if(hd)hd.value="";
+  FIT[R.tack]=st;
+  // seed the slider with the offset between the track made good and the heading steered, which
+  // is the whole unresolved error before anything is attributed
+  if(st.hdg!=null)FIT.err[R.tack]=Math.round(((st.brg-st.hdg+540)%360)-180);
+  FIT.accepted=false;
+  try{tuningCtl();}catch(e){}
+  fitGoToChart();
+}
+// Both boards fitted, so the symmetric and antisymmetric parts separate.
+function fitResolve(){
+  if(!FIT.stbd||!FIT.port)return null;
+  const es=FIT.err.stbd, ep=FIT.err.port;
+  const leeway=(es+ep)/2;
+  const crossDeg=(es-ep)/2;
+  const vb=(FIT.stbd.log||FIT.port.log)
+    ? ((FIT.stbd.log||0)+(FIT.port.log||0))/((FIT.stbd.log?1:0)+(FIT.port.log?1:0))
+    : (FIT.expected?FIT.expected.vb:4);
+  // across-track tide component from the angular split, at the speed actually sailed
+  const across=vb*Math.tan(rad(Math.abs(crossDeg)))*(crossDeg>=0?1:-1);
+  // along-track component from the two boards' speed made good against the polar
+  const sogAvg=((FIT.stbd.sog||0)+(FIT.port.sog||0))/2;
+  const along=sogAvg-vb;
+  const kt=Math.hypot(across,along);
+  const mean=norm(((FIT.stbd.brg+FIT.port.brg)/2));
+  const dir=norm(mean+(Math.atan2(across,along)*180/Math.PI));
+  return {leeway, crossDeg, tideDir:dir, tideKt:kt, vb,
+          oneBoardOnly:false, measured:!!(FIT.stbd.log&&FIT.port.log)};
+}
+function fitStatus(){
+  if(FIT.stbd&&FIT.port)return "both";
+  if(FIT.stbd||FIT.port)return "one";
+  return "none";
+}
+
 let BEAT_MSG=null;                               // shown on the Tuning tab, where the buttons are
 function beatBrg(pts){                            // straight-line bearing over the run
   if(!pts||pts.length<2)return null;
@@ -5768,6 +6343,131 @@ function startCtl(){
 // plus one behavioural change, that adopting is now a deliberate press rather than automatic.
 // Split into three containers so the Log/Compass inputs between them are never re-rendered
 // while you are typing into them.
+// ---------- Wardrobe tab ----------
+function wardrobeRender(){
+  const el=$("wardrobeBody"); if(!el)return;
+  const b=(state&&state.boat)||"etap28i";
+  const w=wardrobeOf(b), cl=RTCLASS[b]||RTCLASS.etap28i;
+  const boatLbl=(BOATS[b]&&BOATS[b].label)||b;
+  const conflict=wardrobeConflict();
+  const row=sl=>{
+    const on=w.aboard.indexOf(sl.id)>=0;
+    const band=sl.kind==="main"?"":
+      (sl.hi>=99?`${sl.lo}+ kt`:sl.lo<=0?`to ${sl.hi} kt`:`${sl.lo}\u2013${sl.hi} kt`);
+    return `<label style="display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:10px;
+      background:${on?"#fff":"rgba(255,255,255,.45)"};border:1.5px solid ${on?"#8E6FAE":"#D8CCE4"};margin-top:6px">
+      <input type="checkbox" data-sail="${sl.id}"${on?" checked":""} style="width:20px;height:20px;flex:0 0 auto;margin:0">
+      <span style="flex:1;font-weight:${on?800:600};color:#3B2A4A">${sl.label}
+        ${band?`<span style="font-weight:600;color:#6B5A7A;font-size:11.5px"> \u00B7 ${band}</span>`:""}
+        ${sl.furl?`<span style="font-weight:600;color:#6B5A7A;font-size:11.5px"> \u00B7 rolls, does not change</span>`:""}
+      </span>
+      <span style="font-size:10px;letter-spacing:.05em;font-weight:800;color:#8E6FAE">${sl.kind.toUpperCase()}</span>
+    </label>`;
+  };
+  const kites=sailsAboard("kite").length, heads=sailsAboard("head").length;
+  el.innerHTML=
+    `<div style="font-size:12px;color:#4A3A5A;line-height:1.5">
+       <b>${boatLbl}</b> \u00B7 ${cl.name}. Tick what is on the boat for this race. Everything the app
+       recommends is chosen from the ticked sails only.</div>`+
+    (conflict?`<div style="margin-top:7px;padding:8px 10px;border-radius:10px;background:#FFF1DC;border:1.5px solid #E0A64A;font-size:11.5px;line-height:1.45;color:#5A4020">${conflict}</div>`:"")+
+    w.owned.map(row).join("")+
+    `<div style="margin-top:9px;font-size:11.5px;line-height:1.5;color:#4A3A5A">`+
+      (kites?`Spinnaker aboard, so downwind advice uses it.`
+            :`No spinnaker aboard. Downwind advice is white sails: ${
+               heads?"main and headsail, goosewinged when it pays":"nothing selected"}.`)+
+      (heads===1&&sailsAboard("head")[0].furl
+        ? ` The headsail furls, so calls are given as rolls rather than a change of sail.`:``)+
+    `</div>`+
+    `<div style="margin-top:8px;font-size:11px;line-height:1.45;color:#6B5A7A">
+       Speeds for these sails are <b>estimated</b>, not measured. Only the goosewinged
+       dead-downwind figure is anchored on a real observation.</div>`+
+    `<div style="margin-top:8px;text-align:right">
+       <button class="pick" data-sail="__reset" style="min-height:32px;font-size:11.5px;padding:0 12px;width:auto">Reset to default</button></div>`;
+}
+function wardrobeClick(ev){
+  const t=ev.target;
+  if(!t||!t.dataset||!t.dataset.sail)return;
+  const id=t.dataset.sail, b=(state&&state.boat)||"etap28i", w=wardrobeOf(b);
+  if(id==="__reset"){ WARDROBE[b]=JSON.parse(JSON.stringify(WARDROBE_DEFAULT[b])); }
+  else{
+    const i=w.aboard.indexOf(id);
+    if(i>=0)w.aboard.splice(i,1); else w.aboard.push(id);
+  }
+  wardrobeSave();
+  try{raceRecEvent("setting","wardrobe",{aboard:wardrobeOf().aboard.slice()});}catch(e){}
+  wardrobeRender();
+  render();                       // sail calls, estimates and tactics all change with this
+}
+// ---------- fit UI, on the chart where the track is ----------
+function fitFootHTML(){
+  const st=fitStatus();
+  const t=FIT.tack, other=t==="stbd"?"port":"stbd";
+  const err=FIT.err[t]||0;
+  const res=fitResolve();
+  const btn=(k,lab,on)=>`<button class="pick" data-fit="${k}" style="flex:1;min-height:34px;font-size:11.5px;padding:0 6px;${on?"background:#12283A;color:#fff;border-color:#12283A":""}">${lab}</button>`;
+  let head=`<div style="display:flex;gap:6px;align-items:center">`+
+    btn("tack_stbd","Starboard"+(FIT.stbd?" \u2713":""),t==="stbd")+
+    btn("tack_port","Port"+(FIT.port?" \u2713":""),t==="port")+
+    `</div>`;
+  let slider=`<div style="display:flex;align-items:center;gap:10px;margin-top:7px">
+      <label style="white-space:nowrap;margin:0;color:#5B4A00">Error <span class="mono" style="font-weight:800;color:#12283A">${err>0?"+":""}${err}\u00B0</span></label>
+      <input id="fitSlide" type="range" min="-25" max="25" step="1" value="${err}" style="flex:1">
+      <button class="pick" data-fit="zero" style="flex:0 0 auto;width:30px;height:30px;padding:0;width:auto;min-height:30px;font-size:11px">0</button>
+    </div>`;
+  let note;
+  if(st==="none")
+    note=`Run a tuning run on the Tuning tab first. Then drag until this board's ladder lies along your track.`;
+  else if(st==="one")
+    note=`<b>${FIT.stbd?"Starboard":"Port"} fitted.</b> One board cannot separate leeway from tide: any value will fit. Sail the other board and run it too.`;
+  else
+    note=`<b>Both fitted.</b> Leeway ${res.leeway>0?"+":""}${res.leeway.toFixed(1)}\u00B0 \u00B7 tide ${d3(res.tideDir)}\u00B0 at ${res.tideKt.toFixed(1)} kt`+
+         (res.measured?``:` <span style="opacity:.75">(no log speed entered, so the drift is from the polar)</span>`);
+  const canAccept=st==="both"&&!FIT.accepted;
+  return `<div style="background:#FBEEB0;border-radius:14px;padding:7px;margin-top:8px">
+    ${head}${slider}
+    <div style="font-size:11px;line-height:1.45;color:#5A4020;margin-top:6px">${note}</div>
+    <div style="display:flex;gap:6px;margin-top:7px">
+      <button class="pick" data-fit="accept"${canAccept?"":" disabled"} style="flex:1;min-height:34px;font-size:11.5px;${canAccept?"background:#1E8449;color:#fff;border-color:#2FA35C":"opacity:.45"}">${FIT.accepted?"Accepted":"Accept fit"}</button>
+      <button class="pick" data-fit="clear" style="flex:0 0 auto;min-height:34px;font-size:11.5px;padding:0 12px;width:auto">Clear</button>
+    </div></div>`;
+}
+function fitFootPaint(){
+  const f=$("fitFoot"), lf=$("legFoot");
+  if(!f)return;
+  // pending means: a run has been done and not yet accepted
+  const pending=(fitStatus()!=="none"&&!FIT.accepted)||fitRunning();
+  f.style.display=pending?"block":"none";
+  if(lf)lf.style.display=pending?"none":"block";
+  if(!pending){ f.innerHTML=""; return; }
+  f.innerHTML=fitFootHTML();
+  const sl=$("fitSlide");
+  if(sl)sl.addEventListener("input",()=>{ FIT.err[FIT.tack]=+sl.value; fitFootPaint(); render(); });
+}
+function fitClick(ev){
+  const b=ev.target.closest?ev.target.closest("[data-fit]"):null; if(!b)return;
+  const k=b.dataset.fit;
+  if(k==="tack_stbd")FIT.tack="stbd";
+  else if(k==="tack_port")FIT.tack="port";
+  else if(k==="zero")FIT.err[FIT.tack]=0;
+  else if(k==="clear"){ FIT.stbd=null; FIT.port=null; FIT.err={stbd:0,port:0}; FIT.accepted=false; }
+  else if(k==="accept"){
+    // Nothing is adopted until both boards are fitted: one board makes the picture consistent
+    // while measuring nothing, which is exactly the trap Saturday set.
+    if(fitStatus()!=="both")return;
+    FIT.accepted=true;
+    const r=fitResolve();
+    if(r){ START.leeway=r.leeway; START.obsTide={dir:r.tideDir,kt:r.tideKt,src:"fit"}; startSave(); }
+    try{raceRecEvent("tuning","fit accepted",fitResolve());}catch(e){}
+  }
+  fitFootPaint(); render();
+}
+// After a run ends, go where the track is: fitting is a visual act and the chart is on page 2.
+function fitGoToChart(){
+  try{
+    const tab=$("garmintab"); if(tab&&!tab.open){ tab.open=true; tab.dispatchEvent(new Event("toggle")); }
+    setTimeout(()=>{ const sc=$("gpsScroll"); if(sc)sc.scrollTo({top:sc.clientHeight,behavior:"smooth"}); fitFootPaint(); },250);
+  }catch(e){}
+}
 function tuneCapHTML(){
   // Amber while that tack is being recorded, green once it is in, blue not done. The live
   // readout underneath is the point: without it a press looked like nothing had happened.
@@ -5782,11 +6482,22 @@ function tuneCapHTML(){
     if(BEAT[t])return txt+" \u2713"+(BEAT[t].weak?"<br><span style='font-size:10.5px;font-weight:600'>weak</span>":"");
     return txt;
   };
+  const run=fitRunning();
+  const fitBtn=`<div style="display:flex;gap:8px;margin-top:8px">
+      <button class="rtbtn" data-t="fitrun" style="flex:1;min-height:44px;font-size:13px;${
+        run?"background:#E08A2B;border-color:#F0A950":""}">${
+        run?"End tuning run<br><span style='font-size:10.5px;font-weight:600'>"+FIT.run.tack+" \u00B7 recording</span>"
+           :"Start tuning run"}</button>
+      <button class="rtbtn" data-t="fittack" style="flex:0 0 auto;min-height:44px;font-size:12px;padding:0 12px;width:auto">${FIT.tack==="stbd"?"Stbd":"Port"}</button>
+    </div>
+    <div style="font-size:11px;line-height:1.45;color:#C6E4D3;margin-top:5px">
+      Sail one board, end the run, and the chart opens with that board's ladder ready to drag onto
+      your track. Do the other board too: one board alone cannot separate leeway from tide.</div>`;
   return `<div style="display:flex;gap:8px;align-items:stretch">`+
     `<button class="rtbtn" data-t="wport" style="${wStyle("port")}">${wLabel("port","Port beat")}</button>`+
     `<button class="rtbtn" data-t="wstbd" style="${wStyle("stbd")}">${wLabel("stbd","Stbd beat")}</button>`+
     ((BEAT.stbd||BEAT.port)?`<button class="rtbtn" data-t="wclear" style="flex:0.5;min-height:44px;font-size:13px">Clear</button>`:``)+
-    `</div>`+
+    `</div>`+fitBtn+
     (BEAT_MSG?`<div style="font-size:11px;line-height:1.4;color:#FFE3C7;margin-top:6px">${BEAT_MSG}</div>`:``)+
     beatReadoutHTML();
 }
@@ -5865,9 +6576,11 @@ function tuningClick(ev){
   const b=ev.target.closest?ev.target.closest("[data-t]"):null; if(!b)return;
   const k=b.dataset.t;
   if(k==="wport"||k==="wstbd"){ beatPress(k==="wstbd"?"stbd":"port"); return; }
+  if(k==="fitrun"){ if(fitRunning())fitEnd(); else fitStart(FIT.tack); return; }
+  if(k==="fittack"){ FIT.tack=FIT.tack==="stbd"?"port":"stbd"; tuningCtl(); return; }
   if(k==="wclear"){ beatReset(); }
-  else if(k==="wuse"){ beatApply(); }
-  else if(k==="wrevert"){ beatUnapply(); }
+  else if(k==="wuse"){ beatApply(); try{raceRecEvent("tuning","use measured",{wind:START.obsWind,tide:START.obsTide});}catch(e){} }
+  else if(k==="wrevert"){ beatUnapply(); try{raceRecEvent("tuning","back to forecast",null);}catch(e){} }
   render();
 }
 function startClick(ev){
@@ -6376,6 +7089,14 @@ function drawLeg(r,idx,wdir,wspd){
     }
     breakdownHTML=angleNoteHTML(L,wspd)+spinnakerCallHTML(advNow,r,idx,wdir,wspd,L.twa)+breakdownHTML;
   }catch(e){}
+  // The first row (Leg / TWA-AW / Sail / Est) also goes under the wind slider on GPS Display
+  // page 2, where the chart it describes now lives. Built once and written to both, so the two
+  // can never disagree. Everything else stays in Course Tactics.
+  const row1HTML=`
+    <div>Leg<br><b>${L.pos.replace(" ","&nbsp;")}</b></div>
+    <div>TWA / AW<br><b class="mono">${Math.round(L.sTwa!=null?L.sTwa:L.twa)}\u00B0 ${L.tack}${Math.round(L.sAwa!=null?L.sAwa:L.awa)}\u00B0</b></div>
+    <div>Sail<br><b>${L.sail}</b></div>
+    <div>Est<br><b class="mono">${Math.round(estMin)} min${estSplit}</b></div>`;
   $("leginfo").innerHTML=verdictHTML+leadHTML+(sideTxt?`<div class="why">${sideTxt}</div>`:"")+routesHTML+`
     <div>Leg<br><b>${L.pos.replace(" ","&nbsp;")}</b></div>
     <div>TWA / AW<br><b class="mono">${Math.round(L.sTwa!=null?L.sTwa:L.twa)}\u00B0 ${L.tack}${Math.round(L.sAwa!=null?L.sAwa:L.awa)}\u00B0</b></div>
@@ -6383,6 +7104,7 @@ function drawLeg(r,idx,wdir,wspd){
     <div class="row2">Dist (course)<br><b class="mono">${dPref.toFixed(1)}'${splitTxt}</b></div>
     <div class="row2">Tgt VMG<br><b class="mono">${L.smg.toFixed(1)}kt</b></div>
     <div class="row2">Est<br><b class="mono">${Math.round(estMin)} min${estSplit}</b></div>`+breakdownHTML+nextHTML;
+  const lr=$("legRow1"); if(lr)lr.innerHTML=row1HTML;
 }
 
 // ---------- Course Chart mini leg panel: leg shape, course to steer, tactical numbers, one side ----------
@@ -6624,6 +7346,7 @@ function angleNoteHTML(L,wspd){
 }
 function spinnakerCallHTML(a,r,idx,wdir,wspd,twa){
   if(!a||!isKite(a.sail))return "";
+  if(!hasKiteAboard())return "";               // v405: nothing to hoist, so nothing to say
   const rig=rigOf(), sym=rig.kite==="sym";
   // The SAILS table calls for a kite from TWA 110 up, which suits a sprit boat's asymmetric.
   // Whether Red Tape can hold it depends on APPARENT angle, not true: the pole runs out of
@@ -7030,6 +7753,18 @@ function drawMiniLeg(r,idx,wdir,wspd){
 // Mini leg chart on the GPS Display tab, opposite the compass. Unlike the old Course Chart
 // version it keeps no leg index of its own: it always draws whatever leg Course Analysis has
 // selected, so there is nothing to keep in sync and no second set of swipe/arrow-key handlers.
+// The expectation is frozen on rounding, i.e. whenever the selected leg changes. Anything that
+// moves the expectation afterwards would let the prediction walk over to meet the track.
+let FIT_LASTLEG=null;
+function fitWatchLeg(){
+  try{
+    if(state&&state.leg!==FIT_LASTLEG){
+      FIT_LASTLEG=state.leg;
+      FIT.stbd=null; FIT.port=null; FIT.err={stbd:0,port:0}; FIT.accepted=false; FIT.run=null;
+      fitFreezeExpected(state.leg);
+    }
+  }catch(e){}
+}
 function miniLegRender(){
   const svg=$("miniLegSvg"); if(!svg)return;
   // Hidden by default since v403. Building the SVG for something nobody can see is pure cost on
