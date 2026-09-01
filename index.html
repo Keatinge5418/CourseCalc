@@ -245,9 +245,9 @@ tr:nth-child(even) td{background:var(--zebra)}
 .sail.gust{background:var(--start);color:var(--ink)}
 .pos{font-size:11px;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em}
 .tot{display:flex;gap:18px;flex-wrap:wrap;padding-top:10px;font-size:13px;color:var(--ink2)}
-.tiderow{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
-.tiderow .tev{flex:1;min-width:70px;background:var(--zebra);border-radius:9px;padding:7px 6px;text-align:center}
-.tiderow .tev b{display:block;font-size:16px}
+.tiderow{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.tiderow .tev{flex:1;min-width:64px;background:var(--zebra);border-radius:9px;padding:4px 5px;text-align:center}
+.tiderow .tev b{display:block;font-size:14px}
 .tiderow .tev.hw b{color:var(--ink)} .tiderow .tev.lw b{color:var(--ink2)}
 .tiderow .tev span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2)}
 .tidenow{margin-top:9px;font-size:13px;color:var(--ink)}
@@ -301,10 +301,8 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
    allows shades, and this is the darkest of them. */
 /* The trend chart stretches to fill its page even when empty, so the page does not look broken
    before the first Refresh. Same for the tide curve and the stream chart. */
-#condtab #dbbDirChart{flex:1 1 auto;min-height:120px;display:flex;align-items:center;justify-content:center}
-#condtab #dbbDirChart:empty::after{content:"no readings yet";color:var(--ink3);font-size:var(--fs-body)}
-#condtab #tideCurve, #condtab #tideWrap{flex:1 1 auto;min-height:0}
-#condtab #tideWrap{overflow:hidden}
+#condtab #tideCurve{flex:3 1 auto;min-height:0;overflow:hidden}
+#condtab #tideWrap{flex:2 1 auto;min-height:110px;overflow:hidden;margin-top:6px}
 #condtab #tideFlow{height:100%}
 #condtab .bpage > svg{flex:1 1 auto;min-height:0;height:auto}
 .bpage-head{font-size:var(--fs-label);letter-spacing:.06em;font-weight:800;opacity:.75;
@@ -501,6 +499,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   <div style="font-size:12px;color:#3A7D5E;margin:-2px 0 8px">Open-Meteo hourly forecast for Dun Laoghaire across the race window, one hour before your start to three hours after.</div>
   <div id="fcTable" style="background:#fff;border-radius:10px;padding:8px 10px"></div>
+  <div id="dbbDirChart" style="background:#fff;border-radius:10px;padding:8px 4px;margin-top:8px"></div>
   <div id="fcTrendLine" style="font-size:12px;color:#12283A;margin-top:8px"></div>
   <div id="fcCalLine" style="font-size:12px;color:#3A7D5E;margin-top:4px"></div>
   </div>
@@ -508,10 +507,6 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div class="bpage">
     <div class="bpage-head">WIND NOW</div>
 
-  <div class="inrow" style="margin-bottom:8px;align-items:flex-end">
-    <div style="flex:1"><button class="pick" id="bdRefresh" style="width:100%">Refresh</button></div>
-  </div>
-  <div id="dbbStat2" style="font-size:12px;color:#3A7D5E;margin:-2px 0 10px">Tap Refresh to pull the latest buoy reading. Last updated: <span id="bdAge">no reading yet</span>.</div>
   <div class="inrow" style="margin-bottom:8px">
     <div style="flex:1"><label>Wind from</label><div class="buoytile" id="bdWind">&ndash;</div></div>
     <div style="flex:1"><label>Gusts from</label><div class="buoytile" id="bdGust">&ndash;</div></div>
@@ -527,14 +522,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div class="inrow" style="margin-bottom:4px">
     <div style="flex:1"><label>Sea state (Douglas)</label><div class="buoytile" id="bdSea" style="font-size:17px">&ndash;</div></div>
   </div>
-  <div style="font-size:11px;color:#3A7D5E;margin-top:6px">Wind and gusts are the compass bearing each is coming from. Sea state uses the standard Douglas Scale, worked out here from wave height (dublinbaybuoy.com's own reading uses the same scale). Not for navigation.</div>
-  </div>
-  <div class="bpage">
-    <div class="bpage-head">6-HOUR TREND</div>
-  <div style="font-weight:800;color:#0B5138;font-size:14px;margin-bottom:6px">6-hour Trends</div>
-  <div id="dbbTrendStat" style="font-size:12px;color:#3A7D5E;margin-bottom:8px">Tap Refresh above to pull the last 6 hours.</div>
-  <div style="font-weight:700;color:#0B5138;font-size:12px;margin-bottom:2px">Wind Direction</div>
-  <div id="dbbDirChart" style="background:#fff;border-radius:10px;padding:8px 4px;margin-bottom:10px;order:2"></div>
+  <div style="font-weight:700;color:#0B5138;font-size:12px;margin:8px 0 2px">6-hour trend</div>
   <div class="inrow" style="margin-bottom:4px">
     <div style="flex:1"><label>Avg direction</label><div class="buoytile" id="bdAvgDir6">&ndash;</div></div>
     <div style="flex:1"><label>Avg speed (kt)</label><div class="buoytile" id="bdAvgSpd6">&ndash;</div></div>
@@ -543,23 +531,14 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   <div class="bpage">
     <div class="bpage-head">TIDES</div>
-
-  <div id="tideSubtitle" style="font-size:12px;color:#3A7D5E;margin:2px 0 6px">Dun Laoghaire (Dublin North Wall)</div>
+  <div id="tideSubtitle" style="font-size:12px;color:#3A7D5E;margin:2px 0 4px">Dun Laoghaire (Dublin North Wall)</div>
   <div id="tideDay" class="tiderow"></div>
-  <div id="tideNow" class="tidenow"></div>
-    <div style="border-top:1px solid var(--rule);margin:14px 0 10px"></div>
-    <div style="font-weight:700;color:#0B5138;font-size:12px;margin-bottom:2px">Tide Curve</div>
-    <div id="tideCurve" style="background:#fff;border-radius:10px;padding:8px 4px"></div>
-    <div style="font-size:11px;color:#3A7D5E;margin-top:6px">Height at Dun Laoghaire (North Wall), from the same Dublin Port Company tide tables. The orange dot tracks the slider above; drag it and the dot moves with it.</div>
-  </div>
-  <div class="bpage">
-    <div class="bpage-head">TIDAL STREAM</div>
+  <div id="tideNow" class="tidenow" style="display:none"></div>
+  <div id="tideCurve" style="background:#fff;border-radius:10px;padding:6px 4px;margin-top:6px"></div>
 <div id="tideWrap" style="position:relative"><div id="tideFlow"></div><div style="position:absolute;top:16px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="tideIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="tideOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="tideZlab" style="position:absolute;bottom:12px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
-  <div style="margin-top:6px">
+  <div style="margin-top:4px">
     <input id="tflow" type="range" min="0" max="6" step="0.5" value="0" style="width:100%;display:block">
-    <label style="margin:4px 0 0;color:#3A7D5E">Time <span id="tflowLbl" class="mono" style="font-weight:800;color:var(--ink);font-size:22px">now</span></label>
   </div>
-  <div style="font-size:11px;color:#3A7D5E;margin-top:4px">Stream from the Dublin Port Company tidal atlas, springs and neaps blended on the day’s range. Slide from the race start to 6 h ahead; each navy arrow shows the stream set, with rate in knots at the arrowhead.</div>
   </div>
   <div class="bpage">
     <div class="bpage-head">WEATHER SETTINGS</div>
@@ -2266,9 +2245,12 @@ function drawTideCurve(){
   if(pts.length<2){ host.innerHTML=`<div style="font-size:12px;color:var(--ink3);padding:8px 0">No tide data for this date.</div>`; return; }
   const hs=pts.map(p=>p.height);
   const yLo=Math.floor(Math.min(...hs)*2)/2-0.25, yHi=Math.ceil(Math.max(...hs)*2)/2+0.25;
-  const W=340,H=170,L=30,R=10,T=10,B=22, PW=W-L-R, PH=H-T-B;
+  const box=host.getBoundingClientRect?host.getBoundingClientRect():null;
+  const W=340,
+        H=(box&&box.height>60&&box.width>60)?Math.max(120,Math.min(420,Math.round(W*(box.height-12)/(box.width-8)))):132,
+        L=30,R=10,T=8,B=20, PW=W-L-R, PH=H-T-B;
   const X=h=>L+(h-WIN0)/(WIN1-WIN0)*PW, Y=v=>T+PH-(v-yLo)/(yHi-yLo)*PH;
-  let g=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:420px;display:block;margin:0 auto">`;
+  let g=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;display:block">`;
   // gridlines every 0.5m
   for(let v=Math.ceil(yLo/0.5)*0.5; v<=yHi; v+=0.5){
     g+=`<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W-R}" y2="${Y(v).toFixed(1)}" stroke="rgba(255,255,255,.12)" stroke-width="1"/>`;
@@ -3271,7 +3253,7 @@ function drawWindDirChart(){
   // their order of arrival further below, rather than showing nothing at all.
   const tsOk = obs.length>0 && obs.every(p=>isFinite(p.t));
   if(!obs.length&&!fc.length){
-    host.innerHTML=`<div style="font-size:12px;color:#3A7D5E;padding:10px 0">No direction history yet \u2014 tap Refresh above, and fetch a forecast from Weather settings, to see the trend.</div>`;
+    host.innerHTML=`<div style="font-size:12px;color:#3A7D5E;padding:10px 0">No history yet \u2014 tap Refresh above to pull the forecast and the buoy.</div>`;
     return;
   }
   const W=320,H=170,L=34,R=10,T=10,B=24, PW=W-L-R, PH=H-T-B;
@@ -3304,8 +3286,13 @@ function drawWindDirChart(){
   const t0=obs.length?Math.min(now-6*3600000,obs[0].t):now-6*3600000;
   const t1=fc.length?Math.min(Math.max(...fc.map(p=>p.t)),now+12*3600000):now;
   const X=t=>L+(t-t0)/Math.max(t1-t0,1)*PW;
+  // race-window band first, so the lines draw over it
+  try{ const gw=trendWindow(), b0=Math.max(gw[0],t0), b1=Math.min(gw[1],t1);
+    if(b1>b0){ g+=`<rect x="${X(b0).toFixed(1)}" y="${T}" width="${(X(b1)-X(b0)).toFixed(1)}" height="${PH}" fill="rgba(72,98,122,.12)"/>`;
+      g+=`<text x="${((X(b0)+X(b1))/2).toFixed(1)}" y="${T+9}" font-size="8.5" text-anchor="middle" fill="#48627A">race</text>`; } }catch(e){}
   // "now" marker
-  if(now>=t0&&now<=t1)g+=`<line x1="${X(now).toFixed(1)}" y1="${T}" x2="${X(now).toFixed(1)}" y2="${T+PH}" stroke="#C9D6DF" stroke-width="1" stroke-dasharray="2 3"/>`;
+  if(now>=t0&&now<=t1){ g+=`<line x1="${X(now).toFixed(1)}" y1="${T}" x2="${X(now).toFixed(1)}" y2="${T+PH}" stroke="#48627A" stroke-width="1.5"/>`;
+    g+=`<text x="${X(now).toFixed(1)}" y="${T+9}" font-size="8.5" text-anchor="middle" fill="#48627A">now</text>`; }
   // hour labels along the bottom, roughly every 2h
   for(let t=Math.ceil(t0/7200000)*7200000; t<=t1; t+=7200000){
     const hh=new Date(t).getHours();
@@ -3496,8 +3483,9 @@ function fcPageRender(){
   const g0=trendWindow()[0], t0=g0-3600000, t1=g0+3*3600000;
   const ts=FC.data.time.map(x=>new Date(x).getTime());
   const cell='flex:1;text-align:right';
+  const hasCorr=FCCAL.ok&&FCCAL.bias!=null;
   let rows=`<div style="display:flex;gap:8px;font-size:10px;letter-spacing:.06em;font-weight:800;color:#48627A">`+
-    `<div style="flex:1">TIME</div><div style="${cell}">DIR</div><div style="${cell}">KT</div><div style="${cell}">GUST</div></div>`;
+    `<div style="flex:1">TIME</div><div style="${cell}">DIR</div><div style="${cell}">CORR</div><div style="${cell}">KT</div><div style="${cell}">GUST</div></div>`;
   let n=0;
   for(let i=0;i<ts.length;i++){
     if(ts[i]<t0-1800000||ts[i]>t1+1800000)continue;
@@ -3506,28 +3494,14 @@ function fcPageRender(){
     const dir=Math.round(+FC.data.dir[i]);
     const sp=(FC.data.spd[i]!=null)?Math.round(+FC.data.spd[i]):null;
     const gu=(FC.data.gst[i]!=null)?Math.round(+FC.data.gst[i]):null;
+    const cd=hasCorr?String(Math.round(fcCorr(+FC.data.dir[i]))).padStart(3,"0")+"\u00B0":"\u2013";
     rows+=`<div class="mono" style="display:flex;gap:8px;font-size:15px;color:#12283A;padding:3px 0;border-top:1px solid #E2EAF0">`+
       `<div style="flex:1">${hh}</div><div style="${cell}">${String(dir).padStart(3,"0")}\u00B0</div>`+
+      `<div style="${cell};font-weight:800">${cd}</div>`+
       `<div style="${cell}">${sp!=null?sp:"\u2013"}</div><div style="${cell}">${gu!=null?gu:"\u2013"}</div></div>`;
     n++;
   }
-  // Second table: the same hours with the buoy bias applied, shown only when a bias is in
-  // use. Direction only: the correction has nothing to say about speed or gusts.
-  let corr="";
-  if(n&&FCCAL.ok&&FCCAL.bias!=null){
-    corr=`<div style="font-size:10px;letter-spacing:.06em;font-weight:800;color:#48627A;margin:12px 0 0;padding-top:8px;border-top:2px solid #C9D6DF">CORRECTED (${FCCAL.bias>=0?"+":""}${FCCAL.bias.toFixed(0)}\u00B0 FROM BUOY)</div>`+
-      `<div style="display:flex;gap:8px;font-size:10px;letter-spacing:.06em;font-weight:800;color:#48627A;margin-top:2px">`+
-      `<div style="flex:1">TIME</div><div style="${cell}">DIR</div></div>`;
-    for(let i=0;i<ts.length;i++){
-      if(ts[i]<t0-1800000||ts[i]>t1+1800000)continue;
-      const d2=new Date(ts[i]);
-      const hh=String(d2.getHours()).padStart(2,"0")+":"+String(d2.getMinutes()).padStart(2,"0");
-      const dir=Math.round(fcCorr(+FC.data.dir[i]));
-      corr+=`<div class="mono" style="display:flex;gap:8px;font-size:15px;color:#12283A;padding:3px 0;border-top:1px solid #E2EAF0">`+
-        `<div style="flex:1">${hh}</div><div style="${cell}">${String(dir).padStart(3,"0")}\u00B0</div></div>`;
-    }
-  }
-  host.innerHTML=(n?rows:`<div style="font-size:12px;color:#3A7D5E;padding:6px 0">The cached forecast does not cover the race window. Tap Refresh.</div>`)+corr;
+  host.innerHTML=n?rows:`<div style="font-size:12px;color:#3A7D5E;padding:6px 0">The cached forecast does not cover the race window. Tap Refresh.</div>`;
   if(tr){ const t=window.TREND;
     tr.textContent=(t!=null&&isFinite(t))?`Trend across the window: ${t>0?"+":""}${(+t).toFixed(0)}\u00B0/h (veering positive).`:""; }
   if(cal){
@@ -5906,8 +5880,8 @@ function buildPickers(){
      else trendFetch();
    };
    const db=$("dbbFetch"); if(db)db.onclick=dbbFetchAll;
-   { const fb=$("fcPageRefresh"); if(fb)fb.onclick=()=>{ try{trendFetch();}catch(e){} try{dbbTrendFetch();}catch(e){} };
-     const ct=$("condtab"); if(ct)ct.addEventListener("toggle",()=>{ if(ct.open)try{fcPageRender();}catch(e){} }); }
+   { const fb=$("fcPageRefresh"); if(fb)fb.onclick=()=>{ try{trendFetch();}catch(e){} try{dbbFetchAll();}catch(e){} };
+     const ct=$("condtab"); if(ct)ct.addEventListener("toggle",()=>{ if(ct.open){ try{fcPageRender();}catch(e){} setTimeout(()=>{try{drawTideCurve();}catch(e){}},60); } }); }
    const bdr=$("bdRefresh"); if(bdr)bdr.onclick=dbbFetchAll;
    const rb=$("trRate"); if(rb){rb.onchange=trendManual; rb.oninput=null;}
    const mf=$("trManual"); if(mf)mf.onclick=getForecastManual;
@@ -6196,7 +6170,8 @@ const MAPGROW=1;
 // One zoom implementation, shared by the course chart and the tide map, so the two
 // cannot drift apart. Each caller says how to find its <svg> and where its course sits.
 function makeZoom(cfg){
-  const V={z:1,cx:cfg.w/2,cy:cfg.h/2};
+  const CR=cfg.crop||{x:0,y:0,w:cfg.w,h:cfg.h};   // the sheet, or a tighter default frame
+  const V={z:1,cx:CR.x+CR.w/2,cy:CR.y+CR.h/2};
   function scale(svg){
     const k=Math.pow(V.z,MAPGROW-1);
     if(k===1)return;                                   // full magnification: nothing to undo
@@ -6223,13 +6198,13 @@ function makeZoom(cfg){
   function btns(){
     const dim=(el,off)=>{ if(!el)return; el.disabled=off; el.style.opacity=off?0.4:1; el.style.cursor=off?"default":"pointer"; };
     dim($(cfg.outId), V.z<=1.001);   // cannot zoom out below fit
-    dim($(cfg.inId),  V.z>=7.999);   // cannot zoom in past the limit
+    dim($(cfg.inId),  cfg.fitCourse?false:V.z>=7.999);   // fit mode: + always re-fits
   }
   function apply(){
     const svg=cfg.get(); if(!svg)return;
-    const w=cfg.w/V.z, hh=cfg.h/V.z;
+    const w=CR.w/V.z, hh=CR.h/V.z;
     let x=V.cx-w/2, y=V.cy-hh/2;
-    x=Math.max(0,Math.min(cfg.w-w,x)); y=Math.max(0,Math.min(cfg.h-hh,y));   // never scroll off the sheet
+    x=Math.max(CR.x,Math.min(CR.x+CR.w-w,x)); y=Math.max(CR.y,Math.min(CR.y+CR.h-hh,y));   // never scroll off the frame
     V.cx=x+w/2; V.cy=y+hh/2;
     svg.setAttribute("viewBox",x.toFixed(1)+" "+y.toFixed(1)+" "+w.toFixed(1)+" "+hh.toFixed(1));
     // At fit the chart must not swallow the page scroll; zoomed in, the drag is ours.
@@ -6244,19 +6219,35 @@ function makeZoom(cfg){
   function zoom(f){
     const wasFit=V.z<=1.001;
     V.z=Math.max(1,Math.min(8,V.z*f));
-    if(V.z===1){ V.cx=cfg.w/2; V.cy=cfg.h/2; }
+    if(V.z===1){ V.cx=CR.x+CR.w/2; V.cy=CR.y+CR.h/2; }
     else if(wasFit){                                   // first press goes to the course, not the sheet centre
       const c=cfg.centre&&cfg.centre();
       if(c){ V.cx=c[0]; V.cy=c[1]; }
     }
     apply();
   }
+  function fitCourse(){
+    const r=(typeof CURROUTE!=="undefined")&&CURROUTE, pts=r&&r.pts;
+    let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9,n=0;
+    if(pts)for(const p of pts){ if(!p||!p.pos)continue; const q=chartPx(p.pos);
+      x0=Math.min(x0,q[0]); y0=Math.min(y0,q[1]); x1=Math.max(x1,q[0]); y1=Math.max(y1,q[1]); n++; }
+    if(!n){ zoom(1.6); return; }                       // no course picked: plain zoom step
+    const pad=55;                                      // room for badges and stream arrows
+    const bw=Math.max(40,x1-x0+2*pad), bh=Math.max(40,y1-y0+2*pad);
+    V.z=Math.max(1,Math.min(8,Math.min(CR.w/bw,CR.h/bh)));
+    V.cx=(x0+x1)/2; V.cy=(y0+y1)/2;
+    apply(); btns();
+  }
+  function reset(){ V.z=1; V.cx=CR.x+CR.w/2; V.cy=CR.y+CR.h/2; apply(); btns(); }
   function init(){
     const host=$(cfg.hostId); if(!host||host.dataset.zoomWired)return;
     host.dataset.zoomWired="1";
     const bi=$(cfg.inId), bo=$(cfg.outId);
+    if(cfg.fitCourse){ if(bi)bi.onclick=fitCourse; if(bo)bo.onclick=reset; }
+    else{
     if(bi)bi.onclick=()=>zoom(1.6);
     if(bo)bo.onclick=()=>zoom(1/1.6);
+    }
     // Drag to pan once zoomed in. The axis is decided on the FIRST move and then locked:
     //   mostly vertical -> let it through as a page scroll, and never pan for that gesture
     //   mostly horizontal -> pan, and from then on pan on both axes
@@ -6302,7 +6293,8 @@ function courseCentre(){
 const MAPZ=makeZoom({hostId:"mapWrap",inId:"mapIn",outId:"mapOut",labId:"mapZlab",
   w:MAPW,h:MAPH,get:()=>$("map"),centre:courseCentre});
 const TIDEZ=makeZoom({hostId:"tideWrap",inId:"tideIn",outId:"tideOut",labId:"tideZlab",
-  w:MAPW,h:MAPH,get:()=>{const d=$("tideFlow");return d?d.querySelector("svg"):null;},centre:courseCentre});
+  w:MAPW,h:MAPH,crop:{x:0,y:150,w:676,h:832},fitCourse:true,
+  get:()=>{const d=$("tideFlow");return d?d.querySelector("svg"):null;},centre:courseCentre});
 function mapApply(){ MAPZ.apply(); MAPZ.btns(); if(typeof POSVIEW!=="undefined")posBtns(); }
 function mapInit(){ MAPZ.init(); TIDEZ.init(); }
 function posBtns(){
