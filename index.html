@@ -531,14 +531,17 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   <div class="bpage">
     <div class="bpage-head">TIDES</div>
-  <div id="tideSubtitle" style="font-size:12px;color:#3A7D5E;margin:2px 0 4px">Dun Laoghaire (Dublin North Wall)</div>
+  <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin:2px 0 4px">
+    <div id="tideSubtitle" style="font-size:12px;color:#3A7D5E">Dun Laoghaire (Dublin North Wall)</div>
+    <div id="tflowLbl" class="mono" style="font-weight:800;font-size:13px;color:var(--ink)"></div>
+  </div>
   <div id="tideDay" class="tiderow"></div>
   <div id="tideNow" class="tidenow" style="display:none"></div>
   <div id="tideCurve" style="background:#fff;border-radius:10px;padding:6px 4px;margin-top:6px"></div>
-<div id="tideWrap" style="position:relative"><div id="tideFlow"></div><div style="position:absolute;top:16px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="tideIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="tideOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="tideZlab" style="position:absolute;bottom:12px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
-  <div style="margin-top:4px">
+  <div style="margin:6px 0 0">
     <input id="tflow" type="range" min="0" max="6" step="0.5" value="0" style="width:100%;display:block">
   </div>
+<div id="tideWrap" style="position:relative"><div id="tideFlow"></div><div style="position:absolute;top:16px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="tideIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="tideOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="tideZlab" style="position:absolute;bottom:12px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
   </div>
   <div class="bpage">
     <div class="bpage-head">WEATHER SETTINGS</div>
@@ -2247,7 +2250,7 @@ function drawTideCurve(){
   const yLo=Math.floor(Math.min(...hs)*2)/2-0.25, yHi=Math.ceil(Math.max(...hs)*2)/2+0.25;
   const box=host.getBoundingClientRect?host.getBoundingClientRect():null;
   const W=340,
-        H=(box&&box.height>60&&box.width>60)?Math.max(120,Math.min(420,Math.round(W*(box.height-12)/(box.width-8)))):132,
+        H=(box&&box.height>50&&box.width>60)?Math.max(90,Math.min(640,Math.round(W*(box.height-12)/(box.width-8)))):132,
         L=30,R=10,T=8,B=20, PW=W-L-R, PH=H-T-B;
   const X=h=>L+(h-WIN0)/(WIN1-WIN0)*PW, Y=v=>T+PH-(v-yLo)/(yHi-yLo)*PH;
   let g=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;display:block">`;
