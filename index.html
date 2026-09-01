@@ -301,8 +301,8 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
    allows shades, and this is the darkest of them. */
 /* The trend chart stretches to fill its page even when empty, so the page does not look broken
    before the first Refresh. Same for the tide curve and the stream chart. */
-#condtab #tideCurve{flex:3 1 auto;min-height:0;overflow:hidden}
-#condtab #tideWrap{flex:2 1 auto;min-height:110px;overflow:hidden;margin-top:6px}
+#condtab #tideCurve{flex:2 1 auto;min-height:100px;overflow:hidden}
+#condtab #tideWrap{flex:3 1 auto;min-height:140px;overflow:hidden;margin-top:4px}
 #condtab #tideFlow{height:100%}
 #condtab .bpage > svg{flex:1 1 auto;min-height:0;height:auto}
 .bpage-head{font-size:var(--fs-label);letter-spacing:.06em;font-weight:800;opacity:.75;
@@ -537,11 +537,11 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   <div id="tideDay" class="tiderow"></div>
   <div id="tideNow" class="tidenow" style="display:none"></div>
-  <div id="tideCurve" style="background:#fff;border-radius:10px;padding:6px 4px;margin-top:6px"></div>
+<div id="tideWrap" style="position:relative"><div id="tideFlow"></div><div style="position:absolute;top:16px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="tideIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="tideOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="tideZlab" style="position:absolute;bottom:12px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
   <div style="margin:6px 0 0">
     <input id="tflow" type="range" min="0" max="6" step="0.5" value="0" style="width:100%;display:block">
   </div>
-<div id="tideWrap" style="position:relative"><div id="tideFlow"></div><div style="position:absolute;top:16px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="tideIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="tideOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="tideZlab" style="position:absolute;bottom:12px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
+  <div id="tideCurve" style="background:#fff;border-radius:10px;padding:6px 4px;margin-top:6px"></div>
   </div>
   <div class="bpage">
     <div class="bpage-head">WEATHER SETTINGS</div>
@@ -2247,7 +2247,15 @@ function drawTideCurve(){
   }
   if(pts.length<2){ host.innerHTML=`<div style="font-size:12px;color:var(--ink3);padding:8px 0">No tide data for this date.</div>`; return; }
   const hs=pts.map(p=>p.height);
-  const yLo=Math.floor(Math.min(...hs)*2)/2-0.25, yHi=Math.ceil(Math.max(...hs)*2)/2+0.25;
+  // Springs and neaps reference curves: today's shape rescaled about the window's mean level
+  // to the mean spring and mean neap ranges (MSR, MNR), so the eye reads at a glance where
+  // today sits between them. Same times, scaled heights; mean level taken as phase-invariant.
+  const hMax=Math.max(...hs), hMin=Math.min(...hs);
+  const Md=(hMax+hMin)/2, Rd=Math.max(0.3,hMax-hMin);
+  const scaleTo=r=>pts.map(p=>({h:p.h,height:Md+(p.height-Md)*r/Rd}));
+  const ptsS=scaleTo(MSR), ptsN=scaleTo(MNR);
+  const all=hs.concat(ptsS.map(p=>p.height));
+  const yLo=Math.floor(Math.min(...all)*2)/2-0.25, yHi=Math.ceil(Math.max(...all)*2)/2+0.25;
   const box=host.getBoundingClientRect?host.getBoundingClientRect():null;
   const W=340,
         H=(box&&box.height>50&&box.width>60)?Math.max(90,Math.min(640,Math.round(W*(box.height-12)/(box.width-8)))):132,
@@ -2268,6 +2276,11 @@ function drawTideCurve(){
   const line=pts.map((p,i)=>(i?"L":"M")+X(p.h).toFixed(1)+","+Y(p.height).toFixed(1)).join("");
   g+=`<path d="${line}L${X(WIN1).toFixed(1)},${(T+PH).toFixed(1)}L${X(WIN0).toFixed(1)},${(T+PH).toFixed(1)}Z" fill="#8FE0C4" opacity="0.18"/>`;
   g+=`<path d="${line}" fill="none" stroke="#8FE0C4" stroke-width="2.2" stroke-linejoin="round"/>`;
+  const dline=q=>q.map((p,i)=>(i?"L":"M")+X(p.h).toFixed(1)+","+Y(p.height).toFixed(1)).join("");
+  g+=`<path d="${dline(ptsS)}" fill="none" stroke="#4E9E7C" stroke-width="1.3" stroke-dasharray="4 3"/>`;
+  g+=`<path d="${dline(ptsN)}" fill="none" stroke="#48627A" stroke-width="1.1" stroke-dasharray="3 3" opacity="0.55"/>`;
+  g+=`<text x="${W-R-2}" y="${(Y(ptsS[ptsS.length-1].height)-3).toFixed(1)}" font-size="7.5" text-anchor="end" fill="#4E9E7C">springs</text>`;
+  g+=`<text x="${W-R-2}" y="${(Y(ptsN[ptsN.length-1].height)+9).toFixed(1)}" font-size="7.5" text-anchor="end" fill="#48627A">neaps</text>`;
   // HW/LW markers within the window, derived directly from tideEvents on each day touched
   const daysTouched=new Set([dateTimeAt(rdate,rtime,WIN0).dateStr, dateTimeAt(rdate,rtime,0).dateStr, dateTimeAt(rdate,rtime,WIN1).dateStr]);
   daysTouched.forEach(ds=>{
@@ -6295,8 +6308,19 @@ function courseCentre(){
 
 const MAPZ=makeZoom({hostId:"mapWrap",inId:"mapIn",outId:"mapOut",labId:"mapZlab",
   w:MAPW,h:MAPH,get:()=>$("map"),centre:courseCentre});
+const TIDECROP=(function(){
+  // Default frame: the racing box, South Bar to Bullock north-south and Merrion to Poldy
+  // east-west, padded so badges and arrows at the corner marks stay inside.
+  const ks=["E","L","P","R"], pad=26;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  ks.forEach(k=>{ const m=MARKS[k]; if(!m)return; const q=chartPx([m[1],m[2]]);
+    x0=Math.min(x0,q[0]); y0=Math.min(y0,q[1]); x1=Math.max(x1,q[0]); y1=Math.max(y1,q[1]); });
+  if(!(x1>x0))return {x:0,y:150,w:676,h:832};
+  x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad);
+  return {x:x0,y:y0,w:Math.min(MAPW,x1+pad)-x0,h:Math.min(MAPH,y1+pad)-y0};
+})();
 const TIDEZ=makeZoom({hostId:"tideWrap",inId:"tideIn",outId:"tideOut",labId:"tideZlab",
-  w:MAPW,h:MAPH,crop:{x:0,y:150,w:676,h:832},fitCourse:true,
+  w:MAPW,h:MAPH,crop:TIDECROP,fitCourse:true,
   get:()=>{const d=$("tideFlow");return d?d.querySelector("svg"):null;},centre:courseCentre});
 function mapApply(){ MAPZ.apply(); MAPZ.btns(); if(typeof POSVIEW!=="undefined")posBtns(); }
 function mapInit(){ MAPZ.init(); TIDEZ.init(); }
