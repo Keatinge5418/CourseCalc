@@ -134,7 +134,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
 .legpanel .why div{margin:3px 0;font-size:13px;line-height:1.45;color:#0E6074}
 .legpanel .why .whyhead{font-weight:800;font-size:13px}
 .legpanel .roundline{grid-column:1/-1;font-weight:700;font-size:14px;line-height:1.45;margin:4px 0 2px}
-.notes summary{font-weight:800;color:#111;cursor:pointer;font-size:14px}
+.notes summary{font-weight:800;color:#111;cursor:pointer;font-size:15px;
+  display:flex;align-items:center;min-height:48px;padding:0 14px;margin:-10px -14px 8px;
+  background:rgba(0,0,0,.06);border-radius:12px 12px 0 0}
+.notes:not([open]) summary{margin:-10px -14px;border-radius:12px}
+.fam-race-dark summary, .fam-tide-dark summary, .fam-boat-dark summary{background:rgba(255,255,255,.12)}
 
 /* AFTER .notes summary, which is later in the file and was overriding the family colours back to
    near-black. Third time this has bitten in this session: equal specificity means source order
@@ -1945,10 +1949,12 @@ const WARDROBE_DEFAULT={
       {id:"j2",   kind:"head", label:"J2 medium",  lo:12, hi:20, polar:null},
       {id:"j3",   kind:"head", label:"J3 heavy",   lo:18, hi:28, polar:null},
       {id:"j4",   kind:"head", label:"J4 storm",   lo:26, hi:99, polar:null},
+      {id:"a1",   kind:"kite", label:"A1 light",   lo:0,  hi:10, polar:null},
       {id:"a2",   kind:"kite", label:"A2 running", lo:0,  hi:18, polar:null},
-      {id:"a3",   kind:"kite", label:"A3 reaching",lo:0,  hi:22, polar:null}
+      {id:"a3",   kind:"kite", label:"A3 reaching",lo:0,  hi:22, polar:null},
+      {id:"a4",   kind:"kite", label:"A4 heavy running", lo:14, hi:28, polar:null}
     ],
-    aboard:["main","j1","j2","a2","a3"]
+    aboard:["main","j1","j2","a1","a2","a3","a4"]
   },
   j109:{
     owned:[
