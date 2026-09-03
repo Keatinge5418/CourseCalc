@@ -3467,19 +3467,35 @@ function fcAt(ms){                                     // forecast wind interpol
 // anything missing flashes it red, and either way the base colour returns after 5 s so the
 // button reads as ready again. Status greens/reds here are the app's status-light usage, not
 // the reserved port/starboard hues.
+// THE FLASH TREATMENT, reusable on any button as refreshFlash(btn, fire, markers?):
+//   marker mode:  refreshFlash(btn, ()=>{fetchA();fetchB();}, ["aOkAt","bOkAt"])
+//                 green when every named window marker goes fresh within 12 s, else red.
+//   promise mode: refreshFlash(btn, ()=>somePromise) with no markers:
+//                 green on resolve, red on reject or a 12 s timeout.
+// Either way: ellipsis while working, colour flash, base colour back after 5 s.
 function refreshFlash(btn,fire,markers){
   if(!btn){ try{fire();}catch(e){} return; }
   const t0=Date.now(), prevTxt=btn.textContent;
   btn.disabled=true; btn.textContent="\u2026";
-  try{fire();}catch(e){}
+  let settled=false;
   const settle=ok=>{
+    if(settled)return; settled=true;
     btn.disabled=false; btn.textContent=prevTxt;
     btn.style.background=ok?"#2E7D4F":"#B3403A";
     btn.style.borderColor=ok?"#2E7D4F":"#B3403A";
     btn.style.color="#fff";
     setTimeout(()=>{ btn.style.background=""; btn.style.borderColor=""; btn.style.color=""; },5000);
   };
+  let p=null;
+  try{ p=fire(); }catch(e){ settle(false); return; }
+  if(!markers){
+    // promise mode: the action itself is the verdict
+    setTimeout(()=>settle(false),12000);
+    Promise.resolve(p).then(v=>settle(v!==false)).catch(()=>settle(false));
+    return;
+  }
   const poll=setInterval(()=>{
+    if(settled){ clearInterval(poll); return; }
     const ok=markers.every(k=>(window[k]||0)>=t0);
     if(ok){ clearInterval(poll); settle(true); return; }
     if(Date.now()-t0>12000){ clearInterval(poll); settle(false); }
@@ -3575,13 +3591,39 @@ function aptFetch(){
   const st=$("aptStat");
   if(st)st.textContent="fetching\u2026";
   const q=u=>fetch(u).then(r=>{ if(!r.ok)throw new Error("HTTP "+r.status); return r.json(); });
-  Promise.all([
-    q("https://aviationweather.gov/api/data/metar?ids=EIDW&format=json"),
-    q("https://aviationweather.gov/api/data/taf?ids=EIDW&format=json")
-  ]).then(([m,t])=>{ aptIngest(m,t);
-    if(st)st.textContent="METAR and TAF for EIDW, via aviationweather.gov.";
+  // aviationweather.gov refuses browser requests (tested v491: Safari "Load failed"), so the
+  // observation comes from the Iowa Environmental Mesonet's republication of EIDW instead.
+  // Their currents feed is metric (m/s? no: sknt is knots, alti inHg, tmpf F) - map carefully.
+  const mp=q("https://mesonet.agron.iastate.edu/api/1/currents.json?station=EIDW&network=IE__ASOS")
+    .then(j=>{
+      const d=j&&j.data&&j.data[0]; if(!d)throw new Error("no EIDW row");
+      // reshape to the METAR fields aptRender already reads
+      return [{
+        icaoId:"EIDW",
+        obsTime:d.utc_valid?Math.floor(new Date(d.utc_valid+"Z").getTime()/1000):
+                (d.local_valid?Math.floor(new Date(d.local_valid).getTime()/1000):null),
+        wdir:(d.drct!=null)?+d.drct:null,
+        wspd:(d.sknt!=null)?+d.sknt:null,
+        wgst:(d.gust!=null)?+d.gust:null,
+        altim:(d.mslp!=null)?+d.mslp:((d.alti!=null)?Math.round(+d.alti*33.8639*10)/10:null),
+        visib:(d.vsby!=null)?String(d.vsby):null,
+        wxString:d.wxcodes||null,
+        temp:(d.tmpf!=null)?Math.round(((+d.tmpf-32)*5/9)*10)/10:null,
+        rawOb:d.raw||""
+      }];
+    });
+  // The TAF half died with aviationweather.gov; try the mesonet's TAF service, and if nothing
+  // usable returns, the page carries the observation alone.
+  const tp=q("https://mesonet.agron.iastate.edu/api/1/taf.json?station=EIDW")
+    .then(j=>{
+      const D=(j&&(j.data||j.tafs))||[]; const t=D[0];
+      if(!t||!t.fcsts)throw new Error("no taf");
+      return [t];
+    }).catch(()=>null);
+  Promise.all([mp,tp]).then(([m,t])=>{ aptIngest(m,t||[]);
+    if(st)st.textContent="EIDW observation via the Iowa mesonet"+((t&&t.length)?" with TAF.":"; no TAF available from this source.");
   }).catch(e=>{
-    if(st)st.textContent="Fetch failed ("+e.message+"). If this repeats on data, the API is blocking browser requests and this page cannot work; tell Claude."+(APT.metar?" Showing the last cached report.":"");
+    if(st)st.textContent="Fetch failed ("+e.message+"). This source is blocked too; the page comes out next build. "+(APT.metar?"Showing the last cached report.":"");
     aptRender();
   });
 }
@@ -3611,7 +3653,7 @@ function aptRender(){
       `<div class="mono" style="font-size:10px;color:#48627A;margin-top:5px;word-break:break-all">${m.rawOb||""}</div>`;
   }
   const t=APT.taf, g=(()=>{try{return trendWindow();}catch(e){return null;}})();
-  if(!t||!t.fcsts||!t.fcsts.length){ ht.innerHTML=`<div style="font-size:12px;color:#3A7D5E">No TAF yet. Tap Refresh.</div>`; return; }
+  if(!t||!t.fcsts||!t.fcsts.length){ ht.innerHTML=`<div style="font-size:12px;color:#3A7D5E">No TAF from this source.</div>`; return; }
   const w0=g?g[0]-3600000:Date.now()-3600000, w1=g?g[1]:Date.now()+3*3600000;
   const per=t.fcsts.filter(f=>f.timeFrom*1000<w1&&f.timeTo*1000>w0);
   let flag="";
