@@ -97,8 +97,8 @@ body{margin:0;background:var(--paper);color:var(--ink);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   padding:max(calc(env(safe-area-inset-top) + 10px), 58px) 10px calc(env(safe-area-inset-bottom) + 24px)}
 .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
-header{padding:12px 14px 10px;background:#FFF6D0;border-radius:12px;margin:6px 0 10px}
-.notes{background:#FFF6D0;border-radius:12px;padding:10px 14px;margin:10px 0}
+header{padding:26px 96px 24px 14px;background:#FFF6D0;border-radius:12px;margin:6px 0 10px;min-height:96px;box-sizing:border-box}
+.notes{background:#FFF6D0;border-radius:12px;padding:10px 14px;margin:10px 0;scroll-margin-top:54px}
 /* Must come AFTER .notes: same specificity, so source order decides, and .notes was
    overriding every family tint back to cream. */
 /* family tints, applied to a tab so its shade follows its subject */
@@ -139,7 +139,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
 .notes summary{font-weight:800;color:#111;cursor:pointer;font-size:15px;
   display:flex;align-items:center;min-height:56px;padding:0 14px;margin:-10px -14px 8px;
   background:rgba(0,0,0,.06);border-radius:12px 12px 0 0}
-.notes:not([open]) summary{margin:-10px -14px;border-radius:12px}
+.notes:not([open]) summary{margin:-10px -14px;border-radius:12px;min-height:72px;font-size:17px}
 .fam-race-dark summary, .fam-tide-dark summary, .fam-boat-dark summary{background:rgba(255,255,255,.12)}
 
 /* AFTER .notes summary, which is later in the file and was overriding the family colours back to
@@ -434,7 +434,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 <header style="position:relative">
   <div class="eyebrow" id="eyebrow">Dublin Bay SC</div>
   <h1>CourseCalc <small>2026 card v1.1</small></h1>
-  <button id="goBtn" aria-label="Start location, compass and get forecast" style="position:absolute;top:12px;right:14px;width:60px;height:60px;border-radius:50%;border:2.5px solid #12283A;background:#fff;color:#12283A;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.18)">GO</button>
+  <button id="goBtn" aria-label="Start location, compass and get forecast" style="position:absolute;top:50%;transform:translateY(-50%);right:16px;width:64px;height:64px;border-radius:50%;border:2.5px solid #12283A;background:#fff;color:#12283A;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.18)">GO</button>
 </header>
 
 <!-- The tab is now a transparent container holding TWO cards: the gold Setup card and the
