@@ -509,8 +509,19 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div style="font-size:12px;color:#3A7D5E;margin:-2px 0 8px">Open-Meteo hourly forecast for Dun Laoghaire across the race window, one hour before your start to three hours after.</div>
   <div id="fcTable" style="background:#fff;border-radius:10px;padding:8px 10px"></div>
   <div id="dbbDirChart" style="background:#fff;border-radius:10px;padding:8px 4px;margin-top:8px"></div>
+  <div id="fcPress" style="background:#fff;border-radius:10px;padding:6px 4px;margin-top:8px"></div>
   <div id="fcTrendLine" style="font-size:12px;color:#12283A;margin-top:8px"></div>
   <div id="fcCalLine" style="font-size:12px;color:#3A7D5E;margin-top:4px"></div>
+  </div>
+
+  <div class="bpage">
+    <div class="bpage-head">MODELS</div>
+  <div class="inrow" style="margin-bottom:8px;align-items:flex-end">
+    <div style="flex:1"><button class="pick" id="mdlRefresh" style="width:100%">Refresh</button></div>
+  </div>
+  <div id="mdlStat" style="font-size:12px;color:#3A7D5E;margin:-2px 0 8px">Five models side by side for the race window. Agreement is a confidence signal: a spread day is a day to trust your own tacks sooner.</div>
+  <div id="mdlTable" style="background:#fff;border-radius:10px;padding:8px 10px"></div>
+  <div id="mdlVerdict" style="font-size:12px;color:#12283A;margin-top:8px"></div>
   </div>
 
   <div class="bpage">
@@ -537,6 +548,17 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <div style="flex:1"><label>Avg speed (kt)</label><div class="buoytile" id="bdAvgSpd6">&ndash;</div></div>
     <div style="flex:1"><label>Max speed (kt)</label><div class="buoytile" id="bdMaxSpd6">&ndash;</div></div>
   </div>
+  </div>
+  <div class="bpage">
+    <div class="bpage-head">DUBLIN AIRPORT</div>
+  <div class="inrow" style="margin-bottom:8px;align-items:flex-end">
+    <div style="flex:1"><button class="pick" id="aptRefresh" style="width:100%">Refresh</button></div>
+  </div>
+  <div id="aptStat" style="font-size:12px;color:#3A7D5E;margin:-2px 0 8px">METAR observation and TAF forecast for EIDW, via aviationweather.gov.</div>
+  <div id="aptMetar" style="background:#fff;border-radius:10px;padding:8px 10px"></div>
+  <div style="font-weight:700;color:#0B5138;font-size:12px;margin:8px 0 2px">TAF across the race window</div>
+  <div id="aptTaf" style="background:#fff;border-radius:10px;padding:8px 10px;flex:1 1 auto;min-height:0;overflow-y:auto"></div>
+  <div style="font-size:11px;color:#3A7D5E;margin-top:6px">Land station 10 km from the bay; indicative, not the racecourse wind.</div>
   </div>
   <div class="bpage">
     <div class="bpage-head">TIDES</div>
@@ -3071,7 +3093,8 @@ function trendFromForecast(quiet){
 function fcIngest(j){                           // accepts an Open-Meteo reply from fetch or from paste
   const H=j&&j.hourly;
   if(!H||!H.time||!H.wind_direction_10m)throw new Error("no hourly wind in that data");
-  FC.data={time:H.time, dir:H.wind_direction_10m, spd:H.wind_speed_10m||[], gst:H.wind_gusts_10m||[]}; FC.stamp=Date.now();
+  FC.data={time:H.time, dir:H.wind_direction_10m, spd:H.wind_speed_10m||[], gst:H.wind_gusts_10m||[], pmsl:H.pressure_msl||[]}; FC.stamp=Date.now();
+  window.fcOkAt=Date.now();
   const C=j&&j.current;
   FC.cur = (C&&C.wind_direction_10m!=null) ? {dir:+C.wind_direction_10m, spd:+C.wind_speed_10m, gust:(C.wind_gusts_10m!=null?+C.wind_gusts_10m:null), t:C.time||""} : null;
   fcCacheSave();
@@ -3178,7 +3201,7 @@ function windAvail(){
 }
 function fcUrl(bust){
   return "https://api.open-meteo.com/v1/forecast?latitude="+FC.lat+"&longitude="+FC.lon+
-         "&hourly=wind_direction_10m,wind_speed_10m,wind_gusts_10m&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kn&timezone=Europe%2FDublin&forecast_days=2"+
+         "&hourly=wind_direction_10m,wind_speed_10m,wind_gusts_10m,pressure_msl&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl&wind_speed_unit=kn&timezone=Europe%2FDublin&forecast_days=2"+
          (bust?("&_="+Date.now()):"");
 }
 function trendFetch(){
@@ -3256,6 +3279,7 @@ function dbbTrendFetch(){
       TREND6={avgSpd:spds.reduce((a,b)=>a+b,0)/spds.length, maxSpd:Math.max(...spds),
         avgDir:circMeanDeg(dirs), n:good.length,
         points:good.map(r=>({t:parseBuoyTs(r.timestamp),dir:r.wind_dir}))};
+      window.dbbTrendOkAt=Date.now();
       trend6Render();
       try{fcCalUpdate();}catch(e){}            // 4a: fresh buoy pairs, refresh the calibration
       if(st)st.textContent=`${good.length} reading${good.length===1?"":"s"} in the last 6 hours.`;
@@ -3370,6 +3394,7 @@ function dbbFetch(){
       if(row.gust_speed!=null)setUsedGst(row.gust_speed,"dbb");
       BUOY={windDir:row.wind_dir,gustDir:row.gust_dir,avgWind:row.avg_wind,gustSpeed:row.gust_speed,
         waveHeight:row.wave_height,waterTemp:row.water_temp,ts:row.timestamp};
+      window.dbbOkAt=Date.now();
       try{render();}catch(e){}
       windAvail(); buoyDashRender();
       if(st)st.textContent=`Dublin Bay Buoy: ${Math.round(row.wind_dir)}\u00B0 / ${row.avg_wind.toFixed(1)} kt`+
@@ -3435,6 +3460,168 @@ function fcAt(ms){                                     // forecast wind interpol
   // value, which can be a day off and wildly different in direction.
   return {dir:norm(D[D.length-1]), spd:S.length?+S[S.length-1]:null, gst:G.length?+G[G.length-1]:null,
           clamped:true, lastTime:T[T.length-1]};
+}
+// ---------- Refresh button feedback (v493) ----------
+// A pressed Refresh says nothing about whether it worked. The helper fires the fetches, then
+// polls for their success markers: every marker fresh within 12 s flashes the button green,
+// anything missing flashes it red, and either way the base colour returns after 5 s so the
+// button reads as ready again. Status greens/reds here are the app's status-light usage, not
+// the reserved port/starboard hues.
+function refreshFlash(btn,fire,markers){
+  if(!btn){ try{fire();}catch(e){} return; }
+  const t0=Date.now(), prevTxt=btn.textContent;
+  btn.disabled=true; btn.textContent="\u2026";
+  try{fire();}catch(e){}
+  const settle=ok=>{
+    btn.disabled=false; btn.textContent=prevTxt;
+    btn.style.background=ok?"#2E7D4F":"#B3403A";
+    btn.style.borderColor=ok?"#2E7D4F":"#B3403A";
+    btn.style.color="#fff";
+    setTimeout(()=>{ btn.style.background=""; btn.style.borderColor=""; btn.style.color=""; },5000);
+  };
+  const poll=setInterval(()=>{
+    const ok=markers.every(k=>(window[k]||0)>=t0);
+    if(ok){ clearInterval(poll); settle(true); return; }
+    if(Date.now()-t0>12000){ clearInterval(poll); settle(false); }
+  },300);
+}
+// ---------- Multi-model comparison (v492) ----------
+// One Open-Meteo request, five models for the same hours: ECMWF, GFS, ICON, UKMO 2km and
+// KNMI Harmonie (AROME physics on a domain that, unlike AROME itself, covers Ireland).
+// The per-hour circular spread across models is the agreement figure: models tight together
+// is a day to trust the forecast machinery, models apart is a day to sail your own tacks.
+const MDL={data:null,stamp:0};
+const MDL_LIST=[["ecmwf_ifs025","EC"],["gfs_seamless","GFS"],["icon_seamless","ICON"],["ukmo_seamless","UKMO"],["knmi_seamless","KNMI"]];
+function mdlUrl(){
+  return "https://api.open-meteo.com/v1/forecast?latitude="+FC.lat+"&longitude="+FC.lon+
+    "&hourly=wind_direction_10m,wind_speed_10m&models="+MDL_LIST.map(m=>m[0]).join(",")+
+    "&wind_speed_unit=kn&timezone=Europe%2FDublin&forecast_days=2";
+}
+function mdlIngest(j){
+  const H=j&&j.hourly;
+  if(!H||!H.time)throw new Error("no hourly data");
+  MDL.data=H; MDL.stamp=Date.now();
+  window.mdlOkAt=Date.now();
+  try{ localStorage.setItem("cc_mdl",JSON.stringify({data:H,stamp:MDL.stamp})); }catch(e){}
+  mdlRender();
+}
+function mdlLoad(){ try{ const r=localStorage.getItem("cc_mdl"); if(r){ const o=JSON.parse(r); MDL.data=o.data; MDL.stamp=o.stamp||0; } }catch(e){} }
+function mdlFetch(){
+  const st=$("mdlStat"); if(st)st.textContent="fetching\u2026";
+  fetch(mdlUrl()).then(r=>{ if(!r.ok)throw new Error("HTTP "+r.status); return r.json(); })
+    .then(j=>{ mdlIngest(j); if(st)st.textContent="Five models side by side for the race window."; })
+    .catch(e=>{ if(st)st.textContent="Fetch failed ("+e.message+")."+(MDL.data?" Showing the last cached run.":""); mdlRender(); });
+}
+function mdlRender(){
+  const host=$("mdlTable"), vd=$("mdlVerdict"); if(!host)return;
+  const H=MDL.data;
+  if(!H){ host.innerHTML=`<div style="font-size:12px;color:#3A7D5E;padding:6px 0">No model runs yet. Tap Refresh.</div>`; if(vd)vd.textContent=""; return; }
+  // per-model direction series, matched by key suffix so a missing model degrades to a dash
+  const cols=MDL_LIST.map(m=>({key:"wind_direction_10m_"+m[0], lab:m[1]})).filter(c=>H[c.key]);
+  if(!cols.length){ host.innerHTML=`<div style="font-size:12px;color:#3A7D5E;padding:6px 0">The reply named no models this build recognises.</div>`; return; }
+  const ts=H.time.map(x=>new Date(x).getTime());
+  const g0=(()=>{try{return trendWindow()[0];}catch(e){return Date.now();}})();
+  const t0=g0-3600000, t1=g0+3*3600000, cell='flex:1;text-align:right';
+  let rows=`<div style="display:flex;gap:6px;font-size:10px;letter-spacing:.05em;font-weight:800;color:#48627A">`+
+    `<div style="flex:0 0 44px">TIME</div>`+cols.map(c=>`<div style="${cell}">${c.lab}</div>`).join("")+
+    `<div style="${cell}">\u00B1</div></div>`;
+  const spreads=[];
+  for(let i=0;i<ts.length;i++){
+    if(ts[i]<t0-1800000||ts[i]>t1+1800000)continue;
+    const d=new Date(ts[i]);
+    const hh=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+    const vals=cols.map(c=>(H[c.key][i]!=null)?+H[c.key][i]:null);
+    const ok=vals.filter(v=>v!=null);
+    let sp=null;
+    if(ok.length>=2){
+      let sx=0,sy=0; ok.forEach(v=>{sx+=Math.cos(rad(v));sy+=Math.sin(rad(v));});
+      const mean=Math.atan2(sy,sx)*180/Math.PI;
+      let s2=0; ok.forEach(v=>{const r=wrap180(v-mean); s2+=r*r;});
+      sp=Math.sqrt(s2/ok.length); spreads.push(sp);
+    }
+    rows+=`<div class="mono" style="display:flex;gap:6px;font-size:13px;color:#12283A;padding:3px 0;border-top:1px solid #E2EAF0">`+
+      `<div style="flex:0 0 44px">${hh}</div>`+
+      vals.map(v=>`<div style="${cell}">${v!=null?String(Math.round(v)).padStart(3,"0"):"\u2013"}</div>`).join("")+
+      `<div style="${cell};font-weight:800">${sp!=null?Math.round(sp)+"\u00B0":"\u2013"}</div></div>`;
+  }
+  host.innerHTML=rows;
+  if(vd){
+    if(!spreads.length){ vd.textContent="The cached runs do not cover the race window. Tap Refresh."; }
+    else{
+      const m=spreads.reduce((a,b)=>a+b,0)/spreads.length;
+      const word=m<=8?"Models agree closely":(m<=18?"Models broadly agree":"Models disagree");
+      const tail=m<=8?"a day to trust the forecast machinery.":(m<=18?"treat the forecast as a fair prior.":"trust your own tacks over any model today.");
+      vd.innerHTML=`<b>${word}</b> (mean spread \u00B1${m.toFixed(0)}\u00B0 across the window): ${tail}`;
+    }
+  }
+}
+// ---------- Dublin Airport METAR and TAF (v491) ----------
+// An independent observation every half hour, six times the buoy's cadence, plus the airfield
+// forecaster's explicit statement of WHEN the wind will change (FM, BECMG, TEMPO), which is
+// the front warning the rapid-change guard otherwise has to infer from model wiggles.
+// Land station 10 km from the bay: indicative, never the racecourse wind.
+const APT={metar:null,taf:null,t:0};
+function aptIngest(m,t){
+  APT.metar=(Array.isArray(m)&&m[0])?m[0]:null;
+  APT.taf=(Array.isArray(t)&&t[0])?t[0]:null;
+  APT.t=Date.now();
+  window.aptOkAt=Date.now();
+  try{ localStorage.setItem("cc_apt",JSON.stringify(APT)); }catch(e){}
+  aptRender();
+}
+function aptLoad(){ try{ const r=localStorage.getItem("cc_apt"); if(r){ const o=JSON.parse(r);
+  APT.metar=o.metar; APT.taf=o.taf; APT.t=o.t||0; } }catch(e){} }
+function aptFetch(){
+  const st=$("aptStat");
+  if(st)st.textContent="fetching\u2026";
+  const q=u=>fetch(u).then(r=>{ if(!r.ok)throw new Error("HTTP "+r.status); return r.json(); });
+  Promise.all([
+    q("https://aviationweather.gov/api/data/metar?ids=EIDW&format=json"),
+    q("https://aviationweather.gov/api/data/taf?ids=EIDW&format=json")
+  ]).then(([m,t])=>{ aptIngest(m,t);
+    if(st)st.textContent="METAR and TAF for EIDW, via aviationweather.gov.";
+  }).catch(e=>{
+    if(st)st.textContent="Fetch failed ("+e.message+"). If this repeats on data, the API is blocking browser requests and this page cannot work; tell Claude."+(APT.metar?" Showing the last cached report.":"");
+    aptRender();
+  });
+}
+function aptHHMM(sec){ const d=new Date(sec*1000);
+  return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function aptWind(o){ if(!o)return "\u2013";
+  const dd=(o.wdir==null||o.wdir==="VRB")?"VRB":String(Math.round(+o.wdir)).padStart(3,"0")+"\u00B0";
+  const ss=(o.wspd!=null)?Math.round(+o.wspd)+" kt":"";
+  const gg=(o.wgst!=null)?" g"+Math.round(+o.wgst):"";
+  return dd+(ss?" "+ss:"")+gg; }
+function aptRender(){
+  const hm=$("aptMetar"), ht=$("aptTaf"); if(!hm||!ht)return;
+  const m=APT.metar;
+  if(!m){ hm.innerHTML=`<div style="font-size:12px;color:#3A7D5E">No observation yet. Tap Refresh.</div>`; }
+  else{
+    const age=m.obsTime?Math.round((Date.now()-m.obsTime*1000)/60000):null;
+    const rows=[
+      ["Observed", m.obsTime?`${aptHHMM(m.obsTime)}${age!=null?` (${age} min ago)`:""}`:"\u2013"],
+      ["Wind", aptWind(m)],
+      ["QNH", (m.altim!=null)?Math.round(+m.altim)+" hPa":"\u2013"],
+      ["Visibility", (m.visib!=null)?m.visib+" SM":"\u2013"],
+      ["Weather", m.wxString||"nil"],
+      ["Temp", (m.temp!=null)?Math.round(+m.temp)+"\u00B0C":"\u2013"]
+    ];
+    hm.innerHTML=rows.map(r=>`<div style="display:flex;gap:8px;font-size:13px;color:#12283A;padding:2px 0">`+
+      `<div style="flex:0 0 84px;color:#48627A">${r[0]}</div><div class="mono" style="flex:1;font-weight:700">${r[1]}</div></div>`).join("")+
+      `<div class="mono" style="font-size:10px;color:#48627A;margin-top:5px;word-break:break-all">${m.rawOb||""}</div>`;
+  }
+  const t=APT.taf, g=(()=>{try{return trendWindow();}catch(e){return null;}})();
+  if(!t||!t.fcsts||!t.fcsts.length){ ht.innerHTML=`<div style="font-size:12px;color:#3A7D5E">No TAF yet. Tap Refresh.</div>`; return; }
+  const w0=g?g[0]-3600000:Date.now()-3600000, w1=g?g[1]:Date.now()+3*3600000;
+  const per=t.fcsts.filter(f=>f.timeFrom*1000<w1&&f.timeTo*1000>w0);
+  let flag="";
+  per.forEach(f=>{ if(f.fcstChange)flag=`<div style="font-size:12px;font-weight:800;color:#12283A;margin-bottom:4px">Wind change expected in the race window (${f.fcstChange}).</div>`; });
+  const rows=per.map(f=>`<div style="display:flex;gap:8px;font-size:13px;color:#12283A;padding:2px 0;border-top:1px solid #E2EAF0">`+
+    `<div class="mono" style="flex:0 0 96px">${aptHHMM(f.timeFrom)}\u2013${aptHHMM(f.timeTo)}</div>`+
+    `<div style="flex:0 0 58px;color:#48627A">${f.fcstChange||"base"}</div>`+
+    `<div class="mono" style="flex:1;font-weight:700">${aptWind(f)}</div></div>`).join("");
+  ht.innerHTML=flag+(rows||`<div style="font-size:12px;color:#3A7D5E">The current TAF has no period covering the race window.</div>`)+
+    (t.rawTAF?`<div class="mono" style="font-size:10px;color:#48627A;margin-top:5px;word-break:break-all">${t.rawTAF}</div>`:"");
 }
 // ---------- TDC engine 4a: forecast calibration from the 6-hour trend (v471) ----------
 // The trends chart already pairs buoy readings with the forecast over the trailing six hours.
@@ -3532,6 +3719,42 @@ function fcPageRender(){
     n++;
   }
   host.innerHTML=n?rows:`<div style="font-size:12px;color:#3A7D5E;padding:6px 0">The cached forecast does not cover the race window. Tap Refresh.</div>`;
+  // Pressure trace: falling fast means front. Drawn from 6 h back to 12 h ahead so the slope
+  // is readable; the wind table's window is too short to show pressure moving.
+  try{
+    const ph=$("fcPress");
+    if(ph){
+      const P=FC.data.pmsl||[];
+      const nowMs=Date.now(), p0=nowMs-6*3600000, p1=nowMs+12*3600000;
+      const seq=[]; for(let i=0;i<ts.length;i++){ if(ts[i]>=p0&&ts[i]<=p1&&P[i]!=null)seq.push({t:ts[i],p:+P[i]}); }
+      if(seq.length<3){ ph.style.display="none"; }
+      else{
+        ph.style.display="";
+        const Wp=340,Hp=84,Lp=34,Rp=6,Tp=8,Bp=16,PWp=Wp-Lp-Rp,PHp=Hp-Tp-Bp;
+        const lo=Math.floor(Math.min(...seq.map(q=>q.p))-0.5), hi=Math.ceil(Math.max(...seq.map(q=>q.p))+0.5);
+        const Xp=t=>Lp+PWp*(t-p0)/(p1-p0), Yp=v=>Tp+PHp*(1-(v-lo)/Math.max(1,hi-lo));
+        let gp=`<svg viewBox="0 0 ${Wp} ${Hp}" style="width:100%;display:block">`;
+        try{ const gw=trendWindow(), b0=Math.max(gw[0],p0), b1=Math.min(gw[1],p1);
+          if(b1>b0)gp+=`<rect x="${Xp(b0).toFixed(1)}" y="${Tp}" width="${(Xp(b1)-Xp(b0)).toFixed(1)}" height="${PHp}" fill="rgba(72,98,122,.12)"/>`; }catch(e){}
+        gp+=`<line x1="${Xp(nowMs).toFixed(1)}" y1="${Tp}" x2="${Xp(nowMs).toFixed(1)}" y2="${Tp+PHp}" stroke="#48627A" stroke-width="1.2"/>`;
+        gp+=`<text x="${Lp-3}" y="${Yp(hi)+3}" font-size="8" text-anchor="end" fill="#48627A">${hi}</text>`;
+        gp+=`<text x="${Lp-3}" y="${Yp(lo)+3}" font-size="8" text-anchor="end" fill="#48627A">${lo}</text>`;
+        gp+=`<path d="${seq.map((q,i)=>(i?"L":"M")+Xp(q.t).toFixed(1)+","+Yp(q.p).toFixed(1)).join("")}" fill="none" stroke="#0E7C94" stroke-width="1.8"/>`;
+        // 3-hour tendency about now, the standard measure
+        let tend="";
+        const at=t=>{ let best=null,bd=1e18; for(const q of seq){ const d=Math.abs(q.t-t); if(d<bd){bd=d;best=q;} } return bd<5400000?best.p:null; };
+        const pn=at(nowMs), pb=at(nowMs-3*3600000);
+        if(pn!=null&&pb!=null){
+          const d3=pn-pb, a=Math.abs(d3);
+          const word=a<1.5?"steady":(a<3.5?(d3<0?"falling":"rising"):(d3<0?"falling fast":"rising fast"));
+          tend=`${Math.round(pn)} hPa \u00B7 ${word}${a>=1.5?` (${d3>0?"+":""}${d3.toFixed(1)} hPa/3h)`:""}`;
+          if(a>=3.5&&d3<0)tend+=" \u00B7 front weather";
+        }
+        gp+=`</svg>`;
+        ph.innerHTML=gp+(tend?`<div style="font-size:11px;color:#48627A;padding:2px 6px 0">${tend}</div>`:``);
+      }
+    }
+  }catch(e){}
   if(tr){ const t=window.TREND;
     tr.textContent=(t!=null&&isFinite(t))?`Trend across the window: ${t>0?"+":""}${(+t).toFixed(0)}\u00B0/h (veering positive).`:""; }
   if(cal){
@@ -5911,7 +6134,13 @@ function buildPickers(){
      else trendFetch();
    };
    const db=$("dbbFetch"); if(db)db.onclick=dbbFetchAll;
-   { const fb=$("fcPageRefresh"); if(fb)fb.onclick=()=>{ try{trendFetch();}catch(e){} try{dbbFetchAll();}catch(e){} };
+   { const ab=$("aptRefresh"); if(ab)ab.onclick=()=>refreshFlash(ab,aptFetch,["aptOkAt"]);
+     try{ aptLoad(); aptRender(); }catch(e){}
+     const mb=$("mdlRefresh"); if(mb)mb.onclick=()=>refreshFlash(mb,mdlFetch,["mdlOkAt"]);
+     try{ mdlLoad(); mdlRender(); }catch(e){}
+     const fb=$("fcPageRefresh"); if(fb)fb.onclick=()=>refreshFlash(fb,
+       ()=>{ try{trendFetch();}catch(e){} try{dbbFetchAll();}catch(e){} },
+       ["fcOkAt","dbbOkAt","dbbTrendOkAt"]);
      const ct=$("condtab"); if(ct)ct.addEventListener("toggle",()=>{ if(ct.open){ try{fcPageRender();}catch(e){} setTimeout(()=>{try{drawTideCurve();}catch(e){}},60); } }); }
    const bdr=$("bdRefresh"); if(bdr)bdr.onclick=dbbFetchAll;
    const rb=$("trRate"); if(rb){rb.onchange=trendManual; rb.oninput=null;}
