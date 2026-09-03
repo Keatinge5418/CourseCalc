@@ -95,7 +95,7 @@
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--paper);color:var(--ink);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  padding:env(safe-area-inset-top) 10px calc(env(safe-area-inset-bottom) + 24px)}
+  padding:calc(env(safe-area-inset-top) + 22px) 10px calc(env(safe-area-inset-bottom) + 24px)}
 .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
 header{padding:12px 14px 10px;background:#FFF6D0;border-radius:12px;margin:6px 0 10px}
 .notes{background:#FFF6D0;border-radius:12px;padding:10px 14px;margin:10px 0}
@@ -110,6 +110,8 @@ header{padding:12px 14px 10px;background:#FFF6D0;border-radius:12px;margin:6px 0
 .fam-wind > summary{color:var(--wind)} .fam-tide > summary{color:var(--tide)}
 .fam-boat > summary{color:var(--boat)} .fam-race > summary{color:var(--race)}
 .fam-util > summary{color:var(--util)}
+.fam-offshore{background:#DDEBF7; border:1px solid #4A7FB5; border-width:1px}
+.fam-offshore > summary{color:#3E6E9E}
 /* DARK VARIANTS. Some tabs are dark by design and their content is written in white: the race
    timer, the GPS display, the tides card. Tinting them pale left white text on a pale ground,
    invisible. A family therefore needs both a light and a dark form, and the dark one keeps the
@@ -135,7 +137,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
 .legpanel .why .whyhead{font-weight:800;font-size:13px}
 .legpanel .roundline{grid-column:1/-1;font-weight:700;font-size:14px;line-height:1.45;margin:4px 0 2px}
 .notes summary{font-weight:800;color:#111;cursor:pointer;font-size:15px;
-  display:flex;align-items:center;min-height:48px;padding:0 14px;margin:-10px -14px 8px;
+  display:flex;align-items:center;min-height:56px;padding:0 14px;margin:-10px -14px 8px;
   background:rgba(0,0,0,.06);border-radius:12px 12px 0 0}
 .notes:not([open]) summary{margin:-10px -14px;border-radius:12px}
 .fam-race-dark summary, .fam-tide-dark summary, .fam-boat-dark summary{background:rgba(255,255,255,.12)}
@@ -753,6 +755,15 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        copied. Its controls (Tide/Wind/Both, orientation, the wind slider and the restore R)
        drive global state, so they act on the entire app from wherever they live. The two mini
        charts are gone: this chart is the same picture, larger. -->
+  <div class="gpage" id="gpage3">
+    <div class="bpage-head" style="color:var(--muted-dark)">COURSE CHART</div>
+  <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
+  <!-- v418: the wind slider and its restore button are gone from this page. Page 2 already has
+       one, it drives the same global wind, and this page is now a plan view rather than a place
+       you adjust things. The leg plan for the chosen leg sits under the chart instead. -->
+  <div id="mapPlan" style="margin-top:8px"></div>
+  </div>
+
   <div class="gpage" id="gpage2">
     <div class="bpage-head" style="color:var(--muted-dark)">LEG CHART</div>
   <!-- Light ink: this row was #12283A, right on the light Course Analysis tab but near-black on
@@ -809,14 +820,6 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <!-- PAGE 3: the Course Chart, moved out of its own tab. The whole course on the bay, with the
        same wind slider that drives the app everywhere else. The map is the elastic block here,
        so the page is exactly one screen like the other two. -->
-  <div class="gpage" id="gpage3">
-    <div class="bpage-head" style="color:var(--muted-dark)">COURSE CHART</div>
-  <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
-  <!-- v418: the wind slider and its restore button are gone from this page. Page 2 already has
-       one, it drives the same global wind, and this page is now a plan view rather than a place
-       you adjust things. The leg plan for the chosen leg sits under the chart instead. -->
-  <div id="mapPlan" style="margin-top:8px"></div>
-  </div>
 
   <!-- Instruments page (v439). This was the Tuning tab; it is a page of the GPS Display now, so
        the sequence and the chart it feeds are in one place rather than two tabs apart.
@@ -826,14 +829,14 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        maths downstream never changes, only the provenance and the confidence. -->
   <div class="gpage" id="gpage_inst">
     <div id="instHead" class="bpage-head" style="color:var(--muted-dark)">INSTRUMENTS</div>
-    <div id="instWrap" style="background:#1C3D61;border:1px solid #2E5680;border-radius:12px;padding:10px 12px;color:#fff;flex:1 1 auto;min-height:0;overflow-y:auto">
+    <div id="instWrap" style="background:#1C3D61;border:1px solid #2E5680;border-radius:12px;padding:7px 9px;color:#fff;flex:1 1 auto;min-height:0;overflow-y:auto;font-size:13px;line-height:1.35">
       <div id="instSrc" style="margin-bottom:8px"></div>
 
   <div id="tuneWrap" style="display:flex;flex-direction:column">
-  <div id="tuneCap" style="margin-top:6px"></div>
+  <div id="tuneCap" style="margin-top:3px"></div>
   <!-- Lives outside #tuneCap deliberately: that div's innerHTML is rebuilt on every render,
        which would blow away half-typed numbers and steal focus mid-entry. -->
-  <div id="beatIn" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18)">
+  <div id="beatIn" style="margin-top:5px;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18)">
     <div style="font-size:10px;letter-spacing:.06em;color:#C6E4D3;font-weight:800">READ OFF THE BOAT, BEFORE YOU TAP TO STOP</div>
     <div style="display:flex;gap:8px;margin-top:5px">
       <div style="flex:1"><label style="color:#C6E4D3">Log kt</label><input id="beatLog" type="number" inputmode="decimal" step="0.1" placeholder="Speed from Log" style="width:100%;box-sizing:border-box"></div>
@@ -841,18 +844,21 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     </div>
     <div id="beatInMsg" style="display:none"></div>
   </div>
-  <div id="tuneCmp" style="margin-top:8px"></div>
-  <div id="tuneAct" style="margin-top:8px"></div>
+  <div id="tuneCmp" style="margin-top:5px"></div>
+  <div id="tuneAct" style="margin-top:5px"></div>
   </div>
     </div>
   </div>
 
 
-    <!-- The offshore map, folded in as the fifth page in v457: it is a racing view like the
-       other four, and nesting a bundle inside a bundle would have meant two scrollers
-       fighting for the same vertical gesture. -->
-  <div class="gpage" id="gpage_map">
-    <div class="bpage-head" style="color:var(--muted-dark)">OFFSHORE MAP</div>
+  </div>
+</details>
+
+<details class="notes bundle fam-offshore" id="offshoretab"><summary>Offshore</summary>
+  <div class="bundleScroll" id="offScroll" style="height:calc(100dvh - var(--offoff,96px))">
+    <!-- The offshore map: its own tab since v486, passage-making rather than racing. -->
+  <div class="bpage" id="gpage_map">
+    <div class="bpage-head" style="color:#48627A">OFFSHORE MAP</div>
 
   <div id="map2" style="flex:1 1 auto;min-height:200px;margin-top:10px;border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:#dfeaf0"></div>
   <div style="display:flex;gap:8px;margin-top:8px;align-items:stretch">
@@ -860,10 +866,9 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <button class="pick" id="gps2Clear" style="flex:1">Clear Track</button>
     <button class="pick" id="gps2Dl" style="flex:1">Download</button>
   </div>
-  <div id="gps2Stats" style="font-size:12px;color:var(--muted-dark);line-height:1.5;margin-top:6px"></div>
-  
+  <div id="gps2Stats" style="font-size:12px;color:#48627A;line-height:1.5;margin-top:6px"></div>
   </div>
-</div>
+  </div>
 </details>
 
 
@@ -4925,7 +4930,7 @@ function gpsPagesInit(){
   }
 }
 function gps2Init(){
-  const tab=$("gps2tab");
+  const tab=$("offshoretab");
   if(tab)tab.addEventListener("toggle",()=>{ if(tab.open){ gps2Render(); setTimeout(()=>{ if(MAP2)MAP2.invalidateSize(); gps2Fit(); },60); } });
   const b=$("gps2Fit"); if(b)b.onclick=gps2Fit;
   const c=$("gps2Clear"); if(c)c.onclick=()=>{ try{trackClear();}catch(e){} gps2Render(); };
@@ -4933,6 +4938,7 @@ function gps2Init(){
   try{gpsPagesInit();}catch(e){}
   try{prePagesInit();}catch(e){}
   try{ bundlesInit(); bundle("condtab","condScroll","--condoff");
+       bundle("offshoretab","offScroll","--offoff");
        bundle("coursetab","courseScroll","--courseoff");
        bundle("boattab","boatScroll","--boatoff");
        bundle("sdtab","sdScroll","--sdoff"); }catch(e){}
