@@ -431,6 +431,9 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 </style>
 </head>
 <body>
+<!-- Status bar scrim: the app scrolls under the iOS clock by design (black-translucent), so
+     this fixed strip masks whatever passes beneath and the clock always sits on clean paper. -->
+<div id="topScrim" style="position:fixed;top:0;left:0;right:0;height:54px;background:var(--paper);z-index:999;pointer-events:none"></div>
 <header style="position:relative">
   <div class="eyebrow" id="eyebrow">Dublin Bay SC</div>
   <h1>CourseCalc <small>2026 card v1.1</small></h1>
