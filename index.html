@@ -300,35 +300,34 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 .bundleScroll{overflow-y:auto;overflow-x:hidden;scroll-snap-type:y mandatory;
   -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .bundleScroll > .bpage{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
-  display:flex;flex-direction:column;box-sizing:border-box;overflow-y:auto;overflow-x:hidden}
+  display:flex;flex-direction:column;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;padding-bottom:12px}
 .bundle > summary{min-height:50px;display:list-item;padding:14px 4px;font-size:15px}
 /* The two tide pages were written in white for the old dark green tab. Rather than recolour
    every label inside them, they keep a dark surface of their own within the bundle: the family
    allows shades, and this is the darkest of them. */
 /* The trend chart stretches to fill its page even when empty, so the page does not look broken
    before the first Refresh. Same for the tide curve and the stream chart. */
-#condtab #tideCurve{flex:2 1 auto;min-height:100px;overflow:hidden}
-#condtab #tideWrap{flex:3 1 auto;min-height:140px;overflow:hidden;margin-top:4px}
+#condtab #tideCurve{flex:0 0 auto;height:150px;overflow:hidden}
+#condtab #tideWrap{flex:0 0 auto;margin-top:4px}
 /* one type system for the weather pages: header rows, mono values, captions, note lines */
 .wxh{display:flex;gap:8px;font-size:10px;letter-spacing:.06em;font-weight:800;color:#48627A}
-.wxr{display:flex;gap:8px;font-size:15px;color:#12283A;padding:3px 0;border-top:1px solid #E2EAF0}
+.wxr{display:flex;gap:8px;font-size:13px;color:#12283A;padding:3px 0;border-top:1px solid #E2EAF0}
 .wxcap{font-size:12px;color:#3A7D5E}
 .wxnote{font-size:12px;color:#12283A}
-#condtab #tideFlow{height:100%}
 #condtab .bpage > svg{flex:1 1 auto;min-height:0;height:auto}
 .bpage-head{font-size:var(--fs-label);letter-spacing:.06em;font-weight:800;opacity:.75;
   padding:2px 2px 6px;flex:0 0 auto}
 #preScroll{height:calc(100dvh - var(--preoff, 96px));overflow-y:auto;overflow-x:hidden;
   scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #preScroll .ppage{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
-  display:flex;flex-direction:column;box-sizing:border-box;overflow-y:auto;overflow-x:hidden}
+  display:flex;flex-direction:column;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;padding-bottom:12px}
 /* Page 2's chart is the elastic block, so it uses the height the merge freed instead of leaving
    it blank below the buttons. Page 1 keeps its natural layout: a clock that stretched would be
    worse, not better. */
 #ppage2 #startWrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 #ppage2 #startView{flex:1 1 auto;min-height:0;height:auto;width:100%}
 #gpsScroll .gpage{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
-  display:flex;flex-direction:column;justify-content:flex-start;box-sizing:border-box}
+  display:flex;flex-direction:column;justify-content:flex-start;box-sizing:border-box;padding-bottom:12px}
 /* The charts take whatever is left after the fixed-height blocks, so a page is always exactly
    full and never overflows, on any device, without a pixel guess. */
 #gpsScroll .garmin-compass-wrap{display:flex;flex-direction:column;min-height:0}
@@ -511,7 +510,6 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div class="inrow" style="margin-bottom:8px;align-items:flex-end">
     <div style="flex:1"><button class="pick" id="fcPageRefresh" style="width:100%">Refresh</button></div>
   </div>
-  <div class="wxcap" style="margin:-2px 0 8px">One Refresh pulls everything: forecast, five models, buoy and airport. Table is the race window, start minus one hour to plus three; \u00B1 is the spread across the five models for that hour.</div>
   <div id="fcTable" style="background:#fff;border-radius:10px;padding:8px 10px"></div>
   <div id="fcMdlVerdict" class="wxnote" style="margin-top:6px;cursor:pointer"></div>
   <div id="fcMdlDetail" style="display:none;background:#fff;border-radius:10px;padding:8px 10px;margin-top:6px"></div>
@@ -524,29 +522,24 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div class="bpage">
     <div class="bpage-head">NOW</div>
 
-  <div class="inrow" style="margin-bottom:8px">
-    <div style="flex:1"><label>Wind from</label><div class="buoytile" id="bdWind">&ndash;</div></div>
-    <div style="flex:1"><label>Gusts from</label><div class="buoytile" id="bdGust">&ndash;</div></div>
+  <div style="font-weight:700;color:#0B5138;font-size:12px;margin:8px 0 2px">Dublin Bay buoy</div>
+  <div style="background:#fff;border-radius:10px;padding:6px 10px">
+    <div class="wxr" style="border-top:none"><div style="flex:0 0 104px;color:#48627A">Wind from</div><div class="mono" id="bdWind" style="flex:1;font-weight:700">&ndash;</div></div>
+    <div class="wxr" style="border-top:none"><div style="flex:0 0 104px;color:#48627A">Gusts from</div><div class="mono" id="bdGust" style="flex:1;font-weight:700">&ndash;</div></div>
+    <div class="wxr" style="border-top:none"><div style="flex:0 0 104px;color:#48627A">Avg wind (kt)</div><div class="mono" id="bdAvgWind" style="flex:1;font-weight:700">&ndash;</div></div>
+    <div class="wxr" style="border-top:none"><div style="flex:0 0 104px;color:#48627A">Avg gust (kt)</div><div class="mono" id="bdGustSpd" style="flex:1;font-weight:700">&ndash;</div></div>
+    <div class="wxr" style="border-top:none"><div style="flex:0 0 104px;color:#48627A">Wave</div><div class="mono" id="bdWave" style="flex:1;font-weight:700">&ndash;</div></div>
+    <div class="wxr" style="border-top:none"><div style="flex:0 0 104px;color:#48627A">Water</div><div class="mono" id="bdTemp" style="flex:1;font-weight:700">&ndash;</div></div>
+    <div class="wxr" style="border-top:none"><div style="flex:0 0 104px;color:#48627A">Sea state</div><div class="mono" id="bdSea" style="flex:1;font-weight:700">&ndash;</div></div>
   </div>
-  <div class="inrow" style="margin-bottom:8px">
-    <div style="flex:1"><label>Avg wind (kt)</label><div class="buoytile" id="bdAvgWind">&ndash;</div></div>
-    <div style="flex:1"><label>Avg gust (kt)</label><div class="buoytile" id="bdGustSpd">&ndash;</div></div>
-  </div>
-  <div class="inrow" style="margin-bottom:8px">
-    <div style="flex:1"><label>Wave height</label><div class="buoytile" id="bdWave" style="font-size:19px">&ndash;</div></div>
-    <div style="flex:1"><label>Water temp</label><div class="buoytile" id="bdTemp" style="font-size:19px">&ndash;</div></div>
-  </div>
-  <div class="inrow" style="margin-bottom:4px">
-    <div style="flex:1"><label>Sea state (Douglas)</label><div class="buoytile" id="bdSea" style="font-size:17px">&ndash;</div></div>
-  </div>
-  <div style="font-weight:700;color:#0B5138;font-size:12px;margin:8px 0 2px">6-hour trend</div>
-  <div class="inrow" style="margin-bottom:4px">
-    <div style="flex:1"><label>Avg direction</label><div class="buoytile" id="bdAvgDir6">&ndash;</div></div>
-    <div style="flex:1"><label>Avg speed (kt)</label><div class="buoytile" id="bdAvgSpd6">&ndash;</div></div>
-    <div style="flex:1"><label>Max speed (kt)</label><div class="buoytile" id="bdMaxSpd6">&ndash;</div></div>
+  <div style="font-weight:700;color:#0B5138;font-size:12px;margin:8px 0 2px">6-hour trend (buoy)</div>
+  <div style="background:#fff;border-radius:10px;padding:6px 10px">
+    <div class="wxr" style="border-top:none"><div style="flex:0 0 104px;color:#48627A">Avg direction</div><div class="mono" id="bdAvgDir6" style="flex:1;font-weight:700">&ndash;</div></div>
+    <div class="wxr" style="border-top:none"><div style="flex:0 0 104px;color:#48627A">Avg speed (kt)</div><div class="mono" id="bdAvgSpd6" style="flex:1;font-weight:700">&ndash;</div></div>
+    <div class="wxr" style="border-top:none"><div style="flex:0 0 104px;color:#48627A">Max speed (kt)</div><div class="mono" id="bdMaxSpd6" style="flex:1;font-weight:700">&ndash;</div></div>
   </div>
   <div style="font-weight:700;color:#0B5138;font-size:12px;margin:8px 0 2px">Dublin Airport (EIDW)</div>
-  <div id="aptMetar" style="background:#fff;border-radius:10px;padding:8px 10px"></div>
+  <div id="aptMetar" style="background:#fff;border-radius:10px;padding:6px 10px"></div>
   <div class="wxcap" style="font-size:11px;margin-top:4px">Land station 10 km from the bay; indicative, not the racecourse wind.</div>
   </div>
   <div class="bpage">
@@ -557,7 +550,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   <div id="tideDay" class="tiderow"></div>
   <div id="tideNow" class="tidenow" style="display:none"></div>
-<div id="tideWrap" style="position:relative"><div id="tideFlow"></div><div style="position:absolute;top:16px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="tideIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="tideOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="tideZlab" style="position:absolute;bottom:12px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
+<div id="tideWrap" style="position:relative"><div id="tideFlow"></div><div id="tideWindBubble" style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.92);border:1.5px solid var(--rule);display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none"><svg id="tideWindArrow" viewBox="0 0 24 24" style="width:26px;height:26px"><path d="M12 3 L12 17 M12 21 L7.5 13.5 L12 16 L16.5 13.5 Z" fill="#12283A" stroke="#12283A" stroke-width="2.4" stroke-linecap="round"/></svg><div id="tideWindLbl" class="mono" style="font-size:11px;font-weight:800;color:#12283A;margin-top:-2px">\u2013</div></div><div style="position:absolute;top:16px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="tideIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="tideOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="tideZlab" style="position:absolute;bottom:12px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
   <div style="margin:6px 0 0">
     <input id="tflow" type="range" min="0" max="6" step="0.5" value="0" style="width:100%;display:block">
   </div>
@@ -2356,6 +2349,10 @@ function tideMarkArrows(px,off,range,skip,sc){
   return s;
 }
 function drawTideFlow(){
+  try{ const wb=$("tideWindArrow"), wl=$("tideWindLbl");
+    if(wb&&wl){ const wd=windDir();
+      wb.style.transform=`rotate(${Math.round(wd)}deg)`;
+      wl.textContent=String(Math.round(norm(wd))).padStart(3,"0")+"\u00B0"; } }catch(e){}
   const el=$("tideFlow"); if(!el)return;
   const base=(TIDECTX&&TIDECTX.off!==undefined)?TIDECTX.off:0;
   const range=(TIDECTX&&TIDECTX.range)?TIDECTX.range:MSR;
@@ -2376,7 +2373,7 @@ function drawTideFlow(){
   const LO=[[-6.15,66],[-6.13333,212],[-6.11667,360],[-6.10,507],[-6.08333,652]];
   const pw=(pairs,v)=>{let a=pairs[0],b=pairs[1];if(v>=pairs[pairs.length-1][0]){a=pairs[pairs.length-2];b=pairs[pairs.length-1];}else for(let i=1;i<pairs.length;i++){if(v<=pairs[i][0]){a=pairs[i-1];b=pairs[i];break;}}return a[1]+(v-a[0])/(b[0]-a[0])*(b[1]-a[1]);};
   const px=p=>[pw(LO,p[1]),pw(LA,p[0])];
-  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;display:block;border-radius:10px">`;
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block;border-radius:10px">`;
   s+=`<image href="data:image/jpeg;base64,${CHART}" x="0" y="0" width="${W}" height="${H}"/>`;
   s+=tideMarkArrows(px,off,range);
   s+=courseOverlay(px);
@@ -2466,12 +2463,12 @@ const TIDE_MONTHS=["January","February","March","April","May","June","July","Aug
 function fmtTideDate(dateStr){
   const d=new Date(dateStr+"T12:00:00");
   if(isNaN(d.getTime()))return "";
-  return `${TIDE_WEEKDAYS[d.getDay()]}, ${String(d.getDate()).padStart(2,"0")}-${TIDE_MONTHS[d.getMonth()]}-${d.getFullYear()}`;
+  return `${TIDE_WEEKDAYS[d.getDay()].slice(0,3)} ${String(d.getDate()).padStart(2,"0")} ${TIDE_MONTHS[d.getMonth()].slice(0,3)}`;
 }
 function renderTide(){
   const ds=$("rdate").value, ts=$("rtime").value||"14:00";
   const sub=$("tideSubtitle");
-  if(sub)sub.textContent=ds?`Dun Laoghaire (Dublin North Wall) \u00B7 ${fmtTideDate(ds)}`:"Dun Laoghaire (Dublin North Wall)";
+  if(sub)sub.textContent=ds?`Dun Laoghaire \u00B7 ${fmtTideDate(ds)}`:"Dun Laoghaire";
   const st=ds?tideState(ds,ts):null;
   if(!st){$("tideDay").innerHTML='<div class="tev">No table data (covers Apr\u2013Oct 2026)</div>';$("tideNow").textContent="";return;}
   $("tideDay").innerHTML=st.ev.map(e=>{
@@ -3291,7 +3288,7 @@ function drawWindDirChart(){
     host.innerHTML=`<div style="font-size:12px;color:#3A7D5E;padding:10px 0">No history yet \u2014 tap Refresh above to pull the forecast and the buoy.</div>`;
     return;
   }
-  const W=320,H=170,L=34,R=10,T=10,B=24, PW=W-L-R, PH=H-T-B;
+  const W=320,H=130,L=34,R=10,T=10,B=24, PW=W-L-R, PH=H-T-B;
   const Y=d=>T+PH-(d/360)*PH;
   let g=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:420px;display:block;margin:0 auto">`;
   [0,90,180,270,360].forEach(d=>{
@@ -3539,7 +3536,7 @@ function mdlDetailHTML(t0,t1){
     const d=new Date(C.ts[i]);
     const hh=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
     const sp=mdlSpreadAt(C.ts[i]);
-    out+=`<div class="mono wxr" style="gap:6px;font-size:13px"><div style="flex:0 0 44px">${hh}</div>`+
+    out+=`<div class="mono wxr" style="gap:6px"><div style="flex:0 0 44px">${hh}</div>`+
       keys.map(k=>`<div style="${cell}">${C.H[k][i]!=null?String(Math.round(+C.H[k][i])).padStart(3,"0"):"\u2013"}</div>`).join("")+
       `<div style="${cell};font-weight:800">${sp!=null?Math.round(sp)+"\u00B0":"\u2013"}</div></div>`;
   }
@@ -3674,8 +3671,8 @@ function aptRender(){
       ["Weather", m.wxString||"nil"],
       ["Temp", (m.temp!=null)?Math.round(+m.temp)+"\u00B0C":"\u2013"]
     ];
-    hm.innerHTML=rows.map(r=>`<div style="display:flex;gap:8px;font-size:13px;color:#12283A;padding:2px 0">`+
-      `<div style="flex:0 0 84px;color:#48627A">${r[0]}</div><div class="mono" style="flex:1;font-weight:700">${r[1]}</div></div>`).join("")+
+    hm.innerHTML=rows.map(r=>`<div class="wxr" style="border-top:none">`+
+      `<div style="flex:0 0 104px;color:#48627A">${r[0]}</div><div class="mono" style="flex:1;font-weight:700">${r[1]}</div></div>`).join("")+
       `<div class="mono" style="font-size:10px;color:#48627A;margin-top:5px;word-break:break-all">${m.rawOb||""}</div>`;
   }
   if(!ht)return;
@@ -3812,7 +3809,7 @@ function fcPageRender(){
       if(seq.length<3){ ph.style.display="none"; }
       else{
         ph.style.display="";
-        const Wp=340,Hp=84,Lp=34,Rp=6,Tp=8,Bp=16,PWp=Wp-Lp-Rp,PHp=Hp-Tp-Bp;
+        const Wp=340,Hp=124,Lp=34,Rp=6,Tp=8,Bp=16,PWp=Wp-Lp-Rp,PHp=Hp-Tp-Bp;
         const lo=Math.floor(Math.min(...seq.map(q=>q.p))-0.5), hi=Math.ceil(Math.max(...seq.map(q=>q.p))+0.5);
         const Xp=t=>Lp+PWp*(t-p0)/(p1-p0), Yp=v=>Tp+PHp*(1-(v-lo)/Math.max(1,hi-lo));
         let gp=`<svg viewBox="0 0 ${Wp} ${Hp}" style="width:100%;display:block">`;
@@ -6633,19 +6630,8 @@ function courseCentre(){
 
 const MAPZ=makeZoom({hostId:"mapWrap",inId:"mapIn",outId:"mapOut",labId:"mapZlab",
   w:MAPW,h:MAPH,get:()=>$("map"),centre:courseCentre});
-const TIDECROP=(function(){
-  // Default frame: the racing box, South Bar to Bullock north-south and Merrion to Poldy
-  // east-west, padded so badges and arrows at the corner marks stay inside.
-  const ks=["E","L","P","R"], pad=26;
-  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
-  ks.forEach(k=>{ const m=MARKS[k]; if(!m)return; const q=chartPx([m[1],m[2]]);
-    x0=Math.min(x0,q[0]); y0=Math.min(y0,q[1]); x1=Math.max(x1,q[0]); y1=Math.max(y1,q[1]); });
-  if(!(x1>x0))return {x:0,y:150,w:676,h:832};
-  x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad);
-  return {x:x0,y:y0,w:Math.min(MAPW,x1+pad)-x0,h:Math.min(MAPH,y1+pad)-y0};
-})();
 const TIDEZ=makeZoom({hostId:"tideWrap",inId:"tideIn",outId:"tideOut",labId:"tideZlab",
-  w:MAPW,h:MAPH,crop:TIDECROP,fitCourse:true,
+  w:MAPW,h:MAPH,fitCourse:true,
   get:()=>{const d=$("tideFlow");return d?d.querySelector("svg"):null;},centre:courseCentre});
 function mapApply(){ MAPZ.apply(); MAPZ.btns(); if(typeof POSVIEW!=="undefined")posBtns(); }
 function mapInit(){ MAPZ.init(); TIDEZ.init(); }
@@ -10090,12 +10076,13 @@ function legSwipeInit(){
     el.addEventListener("keydown",e=>{ if(e.key==="Enter"){apply();el.blur();} });
   });
   const nb=$("rdtNowBtn");
-  if(nb)nb.onclick=()=>{
+  if(nb)nb.onclick=()=>refreshFlash(nb,()=>{
     const now=new Date(), p2=n=>String(n).padStart(2,"0");
     if(rd)rd.value=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}`;
     if(rt)rt.value=`${p2(now.getHours())}:${p2(now.getMinutes())}`;
     apply();                                    // same user-override path as typing: TIME.src="user"
-  };
+    return true;                                // promise mode: instant green
+  });
 }
 { // Wind kt and Gusts kt: typing is a manual override, and it survives a re-render.
   const sp=$("wspd"), gs=$("wgst");
