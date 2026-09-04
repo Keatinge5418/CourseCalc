@@ -309,6 +309,11 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
    before the first Refresh. Same for the tide curve and the stream chart. */
 #condtab #tideCurve{flex:2 1 auto;min-height:100px;overflow:hidden}
 #condtab #tideWrap{flex:3 1 auto;min-height:140px;overflow:hidden;margin-top:4px}
+/* one type system for the weather pages: header rows, mono values, captions, note lines */
+.wxh{display:flex;gap:8px;font-size:10px;letter-spacing:.06em;font-weight:800;color:#48627A}
+.wxr{display:flex;gap:8px;font-size:15px;color:#12283A;padding:3px 0;border-top:1px solid #E2EAF0}
+.wxcap{font-size:12px;color:#3A7D5E}
+.wxnote{font-size:12px;color:#12283A}
 #condtab #tideFlow{height:100%}
 #condtab .bpage > svg{flex:1 1 auto;min-height:0;height:auto}
 .bpage-head{font-size:var(--fs-label);letter-spacing:.06em;font-weight:800;opacity:.75;
@@ -506,8 +511,10 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div class="inrow" style="margin-bottom:8px;align-items:flex-end">
     <div style="flex:1"><button class="pick" id="fcPageRefresh" style="width:100%">Refresh</button></div>
   </div>
-  <div style="font-size:12px;color:#3A7D5E;margin:-2px 0 8px">Open-Meteo hourly forecast for Dun Laoghaire across the race window, one hour before your start to three hours after.</div>
+  <div class="wxcap" style="margin:-2px 0 8px">One Refresh pulls everything: forecast, five models, buoy and airport. Table is the race window, start minus one hour to plus three; \u00B1 is the spread across the five models for that hour.</div>
   <div id="fcTable" style="background:#fff;border-radius:10px;padding:8px 10px"></div>
+  <div id="fcMdlVerdict" class="wxnote" style="margin-top:6px;cursor:pointer"></div>
+  <div id="fcMdlDetail" style="display:none;background:#fff;border-radius:10px;padding:8px 10px;margin-top:6px"></div>
   <div id="dbbDirChart" style="background:#fff;border-radius:10px;padding:8px 4px;margin-top:8px"></div>
   <div id="fcPress" style="background:#fff;border-radius:10px;padding:6px 4px;margin-top:8px"></div>
   <div id="fcTrendLine" style="font-size:12px;color:#12283A;margin-top:8px"></div>
@@ -515,17 +522,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
 
   <div class="bpage">
-    <div class="bpage-head">MODELS</div>
-  <div class="inrow" style="margin-bottom:8px;align-items:flex-end">
-    <div style="flex:1"><button class="pick" id="mdlRefresh" style="width:100%">Refresh</button></div>
-  </div>
-  <div id="mdlStat" style="font-size:12px;color:#3A7D5E;margin:-2px 0 8px">Five models side by side for the race window. Agreement is a confidence signal: a spread day is a day to trust your own tacks sooner.</div>
-  <div id="mdlTable" style="background:#fff;border-radius:10px;padding:8px 10px"></div>
-  <div id="mdlVerdict" style="font-size:12px;color:#12283A;margin-top:8px"></div>
-  </div>
-
-  <div class="bpage">
-    <div class="bpage-head">WIND NOW</div>
+    <div class="bpage-head">NOW</div>
 
   <div class="inrow" style="margin-bottom:8px">
     <div style="flex:1"><label>Wind from</label><div class="buoytile" id="bdWind">&ndash;</div></div>
@@ -548,17 +545,9 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <div style="flex:1"><label>Avg speed (kt)</label><div class="buoytile" id="bdAvgSpd6">&ndash;</div></div>
     <div style="flex:1"><label>Max speed (kt)</label><div class="buoytile" id="bdMaxSpd6">&ndash;</div></div>
   </div>
-  </div>
-  <div class="bpage">
-    <div class="bpage-head">DUBLIN AIRPORT</div>
-  <div class="inrow" style="margin-bottom:8px;align-items:flex-end">
-    <div style="flex:1"><button class="pick" id="aptRefresh" style="width:100%">Refresh</button></div>
-  </div>
-  <div id="aptStat" style="font-size:12px;color:#3A7D5E;margin:-2px 0 8px">METAR observation and TAF forecast for EIDW, via aviationweather.gov.</div>
+  <div style="font-weight:700;color:#0B5138;font-size:12px;margin:8px 0 2px">Dublin Airport (EIDW)</div>
   <div id="aptMetar" style="background:#fff;border-radius:10px;padding:8px 10px"></div>
-  <div style="font-weight:700;color:#0B5138;font-size:12px;margin:8px 0 2px">TAF across the race window</div>
-  <div id="aptTaf" style="background:#fff;border-radius:10px;padding:8px 10px;flex:1 1 auto;min-height:0;overflow-y:auto"></div>
-  <div style="font-size:11px;color:#3A7D5E;margin-top:6px">Land station 10 km from the bay; indicative, not the racecourse wind.</div>
+  <div class="wxcap" style="font-size:11px;margin-top:4px">Land station 10 km from the bay; indicative, not the racecourse wind.</div>
   </div>
   <div class="bpage">
     <div class="bpage-head">TIDES</div>
@@ -575,7 +564,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div id="tideCurve" style="background:#fff;border-radius:10px;padding:6px 4px;margin-top:6px"></div>
   </div>
   <div class="bpage">
-    <div class="bpage-head">WEATHER SETTINGS</div>
+    <div class="bpage-head">WIND MODEL</div>
 
 
 
@@ -609,15 +598,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div style="flex:1.2"><button class="pick" id="trFetch" style="width:100%">Forecast</button></div>
 </div>
 <div id="trStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px">No trend set: oscillating model only.</div>
-<div id="trLinks" class="inrow" style="margin:-2px 0 8px;display:none">
-  <div style="flex:1"><button class="pick" id="trManual" style="width:100%">Get forecast</button></div>
-</div>
 <div id="bandStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px"></div>
-<div id="trPasteWrap" style="display:none;margin:0 0 8px">
-  <div style="font-size:12px;color:#48627A;margin-bottom:4px">The forecast page should have opened in your browser: select all, copy, come back, and paste it below. If it did not open, <a id="trOpen" href="#" target="_blank" rel="noopener" style="color:#0E7C94;text-decoration:underline">tap here</a>.</div>
-  <textarea id="trPaste" rows="3" placeholder="Paste the forecast data here" style="width:100%;font-size:12px;padding:8px;border:1.5px solid var(--rule);border-radius:10px;box-sizing:border-box"></textarea>
-  <button class="pick" id="trPasteGo" style="width:100%;margin-top:4px">Use pasted forecast</button>
-</div>
 <div id="wsOut" style="font-size:13px;line-height:1.5"></div>
   </div>
   </div>
@@ -3219,7 +3200,7 @@ function trendFetch(){
     .catch(e=>{
       window.fcFailed=true; done();
       if(!st)return;
-      st.textContent=`Forecast did not load (${e.message}). Tap Get forecast, or type a trend in the box.`;
+      st.textContent=`Forecast did not load (${e.message}). Offline: type a trend in the box and the app carries on.`;
     });
 }
 // A second, independent live-wind source alongside instruments/forecast: the Dublin Bay Buoy
@@ -3518,6 +3499,7 @@ function mdlIngest(j){
   if(!H||!H.time)throw new Error("no hourly data");
   MDL.data=H; MDL.stamp=Date.now();
   window.mdlOkAt=Date.now();
+  try{fcPageRender();}catch(e){}
   try{ localStorage.setItem("cc_mdl",JSON.stringify({data:H,stamp:MDL.stamp})); }catch(e){}
   mdlRender();
 }
@@ -3527,6 +3509,51 @@ function mdlFetch(){
   fetch(mdlUrl()).then(r=>{ if(!r.ok)throw new Error("HTTP "+r.status); return r.json(); })
     .then(j=>{ mdlIngest(j); if(st)st.textContent="Five models side by side for the race window."; })
     .catch(e=>{ if(st)st.textContent="Fetch failed ("+e.message+")."+(MDL.data?" Showing the last cached run.":""); mdlRender(); });
+}
+function mdlCols(){
+  const H=MDL.data; if(!H)return null;
+  const cols=MDL_LIST.map(m=>"wind_direction_10m_"+m[0]).filter(k=>H[k]);
+  return cols.length?{H,cols,ts:H.time.map(x=>new Date(x).getTime())}:null;
+}
+function mdlSpreadAt(tms){
+  const C=mdlCols(); if(!C)return null;
+  let bi=-1,bd=1e18;
+  for(let i=0;i<C.ts.length;i++){ const d=Math.abs(C.ts[i]-tms); if(d<bd){bd=d;bi=i;} }
+  if(bi<0||bd>2700000)return null;
+  const ok=C.cols.map(k=>C.H[k][bi]).filter(v=>v!=null).map(Number);
+  if(ok.length<2)return null;
+  let sx=0,sy=0; ok.forEach(v=>{sx+=Math.cos(rad(v));sy+=Math.sin(rad(v));});
+  const mean=Math.atan2(sy,sx)*180/Math.PI;
+  let s2=0; ok.forEach(v=>{const r=wrap180(v-mean); s2+=r*r;});
+  return Math.sqrt(s2/ok.length);
+}
+function mdlDetailHTML(t0,t1){
+  const C=mdlCols(); if(!C)return "";
+  const labs=MDL_LIST.filter(m=>C.H["wind_direction_10m_"+m[0]]).map(m=>m[1]);
+  const keys=MDL_LIST.filter(m=>C.H["wind_direction_10m_"+m[0]]).map(m=>"wind_direction_10m_"+m[0]);
+  const cell='flex:1;text-align:right';
+  let out=`<div class="wxh" style="gap:6px"><div style="flex:0 0 44px">TIME</div>`+
+    labs.map(l=>`<div style="${cell}">${l}</div>`).join("")+`<div style="${cell}">\u00B1</div></div>`;
+  for(let i=0;i<C.ts.length;i++){
+    if(C.ts[i]<t0-1800000||C.ts[i]>t1+1800000)continue;
+    const d=new Date(C.ts[i]);
+    const hh=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+    const sp=mdlSpreadAt(C.ts[i]);
+    out+=`<div class="mono wxr" style="gap:6px;font-size:13px"><div style="flex:0 0 44px">${hh}</div>`+
+      keys.map(k=>`<div style="${cell}">${C.H[k][i]!=null?String(Math.round(+C.H[k][i])).padStart(3,"0"):"\u2013"}</div>`).join("")+
+      `<div style="${cell};font-weight:800">${sp!=null?Math.round(sp)+"\u00B0":"\u2013"}</div></div>`;
+  }
+  return out;
+}
+function mdlVerdictText(t0,t1){
+  const C=mdlCols(); if(!C)return "";
+  const sp=[]; for(let i=0;i<C.ts.length;i++){ if(C.ts[i]<t0||C.ts[i]>t1)continue;
+    const v=mdlSpreadAt(C.ts[i]); if(v!=null)sp.push(v); }
+  if(!sp.length)return "";
+  const m=sp.reduce((a,b)=>a+b,0)/sp.length;
+  const word=m<=8?"Models agree closely":(m<=18?"Models broadly agree":"Models disagree");
+  const tail=m<=8?"a day to trust the forecast machinery.":(m<=18?"treat the forecast as a fair prior.":"trust your own tacks over any model today.");
+  return `<b>${word}</b> (five models, mean spread \u00B1${m.toFixed(0)}\u00B0): ${tail}`;
 }
 function mdlRender(){
   const host=$("mdlTable"), vd=$("mdlVerdict"); if(!host)return;
@@ -3600,28 +3627,27 @@ function aptFetch(){
       // reshape to the METAR fields aptRender already reads
       return [{
         icaoId:"EIDW",
-        obsTime:d.utc_valid?Math.floor(new Date(d.utc_valid+"Z").getTime()/1000):
-                (d.local_valid?Math.floor(new Date(d.local_valid).getTime()/1000):null),
+        obsTime:(function(){
+          if(d.utc_valid){ const p=Date.parse(d.utc_valid.endsWith("Z")?d.utc_valid:d.utc_valid+"Z"); if(isFinite(p))return Math.floor(p/1000); }
+          const mm=(d.raw||"").match(/\b(\d{2})(\d{2})(\d{2})Z\b/);
+          if(mm){ const n=new Date(), c=new Date(Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),+mm[1],+mm[2],+mm[3]));
+            if(c.getTime()-Date.now()>36e5)c.setUTCMonth(c.getUTCMonth()-1);   // month boundary
+            return Math.floor(c.getTime()/1000); }
+          return null; })(),
         wdir:(d.drct!=null)?+d.drct:null,
         wspd:(d.sknt!=null)?+d.sknt:null,
         wgst:(d.gust!=null)?+d.gust:null,
         altim:(d.mslp!=null)?+d.mslp:((d.alti!=null)?Math.round(+d.alti*33.8639*10)/10:null),
-        visib:(d.vsby!=null)?String(d.vsby):null,
+        visib:(d.vsby!=null)?(+d.vsby*1.609344).toFixed(1)+" km":null,
         wxString:d.wxcodes||null,
         temp:(d.tmpf!=null)?Math.round(((+d.tmpf-32)*5/9)*10)/10:null,
         rawOb:d.raw||""
       }];
     });
-  // The TAF half died with aviationweather.gov; try the mesonet's TAF service, and if nothing
-  // usable returns, the page carries the observation alone.
-  const tp=q("https://mesonet.agron.iastate.edu/api/1/taf.json?station=EIDW")
-    .then(j=>{
-      const D=(j&&(j.data||j.tafs))||[]; const t=D[0];
-      if(!t||!t.fcsts)throw new Error("no taf");
-      return [t];
-    }).catch(()=>null);
-  Promise.all([mp,tp]).then(([m,t])=>{ aptIngest(m,t||[]);
-    if(st)st.textContent="EIDW observation via the Iowa mesonet"+((t&&t.length)?" with TAF.":"; no TAF available from this source.");
+  // TAF confirmed unavailable from any browser-reachable source (v495 test), so the page is
+  // the observation alone; the front warning lives in the pressure trace and the Models spread.
+  mp.then(m=>{ aptIngest(m,[]);
+    if(st)st.textContent="EIDW observation via the Iowa mesonet, every half hour.";
   }).catch(e=>{
     if(st)st.textContent="Fetch failed ("+e.message+"). This source is blocked too; the page comes out next build. "+(APT.metar?"Showing the last cached report.":"");
     aptRender();
@@ -3635,7 +3661,7 @@ function aptWind(o){ if(!o)return "\u2013";
   const gg=(o.wgst!=null)?" g"+Math.round(+o.wgst):"";
   return dd+(ss?" "+ss:"")+gg; }
 function aptRender(){
-  const hm=$("aptMetar"), ht=$("aptTaf"); if(!hm||!ht)return;
+  const hm=$("aptMetar"), ht=$("aptTaf"); if(!hm)return;
   const m=APT.metar;
   if(!m){ hm.innerHTML=`<div style="font-size:12px;color:#3A7D5E">No observation yet. Tap Refresh.</div>`; }
   else{
@@ -3644,7 +3670,7 @@ function aptRender(){
       ["Observed", m.obsTime?`${aptHHMM(m.obsTime)}${age!=null?` (${age} min ago)`:""}`:"\u2013"],
       ["Wind", aptWind(m)],
       ["QNH", (m.altim!=null)?Math.round(+m.altim)+" hPa":"\u2013"],
-      ["Visibility", (m.visib!=null)?m.visib+" SM":"\u2013"],
+      ["Visibility", (m.visib!=null)?m.visib:"\u2013"],
       ["Weather", m.wxString||"nil"],
       ["Temp", (m.temp!=null)?Math.round(+m.temp)+"\u00B0C":"\u2013"]
     ];
@@ -3652,6 +3678,7 @@ function aptRender(){
       `<div style="flex:0 0 84px;color:#48627A">${r[0]}</div><div class="mono" style="flex:1;font-weight:700">${r[1]}</div></div>`).join("")+
       `<div class="mono" style="font-size:10px;color:#48627A;margin-top:5px;word-break:break-all">${m.rawOb||""}</div>`;
   }
+  if(!ht)return;
   const t=APT.taf, g=(()=>{try{return trendWindow();}catch(e){return null;}})();
   if(!t||!t.fcsts||!t.fcsts.length){ ht.innerHTML=`<div style="font-size:12px;color:#3A7D5E">No TAF from this source.</div>`; return; }
   const w0=g?g[0]-3600000:Date.now()-3600000, w1=g?g[1]:Date.now()+3*3600000;
@@ -3722,7 +3749,7 @@ function fcCalUpdate(testPts){
     let s2=0; for(let i=0;i<ds.length;i++){ const r=wrap180(ds[i]-bias); s2+=wsArr[i]*r*r; }
     const spread=Math.sqrt(s2/sw);
     FCCAL={bias:+bias.toFixed(1), spread:+spread.toFixed(1), n:ds.length,
-           ok:!rapid, reason:rapid?"forecast signals rapid change; raw forecast in use":"", t:now};
+           ok:!rapid, reason:rapid?"forecast signals rapid change":"", t:now};
   }
   window.FCCAL=FCCAL;
   // a changed bias moves the used wind, but only when the forecast is what is in use
@@ -3743,8 +3770,8 @@ function fcPageRender(){
   const ts=FC.data.time.map(x=>new Date(x).getTime());
   const cell='flex:1;text-align:right';
   const hasCorr=FCCAL.ok&&FCCAL.bias!=null;
-  let rows=`<div style="display:flex;gap:8px;font-size:10px;letter-spacing:.06em;font-weight:800;color:#48627A">`+
-    `<div style="flex:1">TIME</div><div style="${cell}">DIR</div><div style="${cell}">CORR</div><div style="${cell}">KT</div><div style="${cell}">GUST</div></div>`;
+  let rows=`<div class="wxh">`+
+    `<div style="flex:1">TIME</div><div style="${cell}">DIR</div><div style="${cell}">CORR</div><div style="${cell}">\u00B1</div><div style="${cell}">KT</div><div style="${cell}">GUST</div></div>`;
   let n=0;
   for(let i=0;i<ts.length;i++){
     if(ts[i]<t0-1800000||ts[i]>t1+1800000)continue;
@@ -3754,13 +3781,26 @@ function fcPageRender(){
     const sp=(FC.data.spd[i]!=null)?Math.round(+FC.data.spd[i]):null;
     const gu=(FC.data.gst[i]!=null)?Math.round(+FC.data.gst[i]):null;
     const cd=hasCorr?String(Math.round(fcCorr(+FC.data.dir[i]))).padStart(3,"0")+"\u00B0":"\u2013";
-    rows+=`<div class="mono" style="display:flex;gap:8px;font-size:15px;color:#12283A;padding:3px 0;border-top:1px solid #E2EAF0">`+
+    const ms=mdlSpreadAt(ts[i]);
+    rows+=`<div class="mono wxr">`+
       `<div style="flex:1">${hh}</div><div style="${cell}">${String(dir).padStart(3,"0")}\u00B0</div>`+
       `<div style="${cell};font-weight:800">${cd}</div>`+
+      `<div style="${cell}">${ms!=null?Math.round(ms)+"\u00B0":"\u2013"}</div>`+
       `<div style="${cell}">${sp!=null?sp:"\u2013"}</div><div style="${cell}">${gu!=null?gu:"\u2013"}</div></div>`;
     n++;
   }
   host.innerHTML=n?rows:`<div style="font-size:12px;color:#3A7D5E;padding:6px 0">The cached forecast does not cover the race window. Tap Refresh.</div>`;
+  const mv=$("fcMdlVerdict"), md=$("fcMdlDetail");
+  if(mv){
+    const vt=mdlVerdictText(t0,t1);
+    mv.innerHTML=vt?vt+` <span style="color:#48627A">\u00B7 tap for the five models</span>`:"";
+    mv.onclick=()=>{ if(!md)return;
+      const open=md.style.display!=="none";
+      md.style.display=open?"none":"";
+      if(!open)md.innerHTML=mdlDetailHTML(t0,t1);
+    };
+    if(md&&md.style.display!=="none")md.innerHTML=mdlDetailHTML(t0,t1);
+  }
   // Pressure trace: falling fast means front. Drawn from 6 h back to 12 h ahead so the slope
   // is readable; the wind table's window is too short to show pressure moving.
   try{
@@ -6176,14 +6216,13 @@ function buildPickers(){
      else trendFetch();
    };
    const db=$("dbbFetch"); if(db)db.onclick=dbbFetchAll;
-   { const ab=$("aptRefresh"); if(ab)ab.onclick=()=>refreshFlash(ab,aptFetch,["aptOkAt"]);
+   {
      try{ aptLoad(); aptRender(); }catch(e){}
-     const mb=$("mdlRefresh"); if(mb)mb.onclick=()=>refreshFlash(mb,mdlFetch,["mdlOkAt"]);
      try{ mdlLoad(); mdlRender(); }catch(e){}
      const fb=$("fcPageRefresh"); if(fb)fb.onclick=()=>refreshFlash(fb,
-       ()=>{ try{trendFetch();}catch(e){} try{dbbFetchAll();}catch(e){} },
-       ["fcOkAt","dbbOkAt","dbbTrendOkAt"]);
-     const ct=$("condtab"); if(ct)ct.addEventListener("toggle",()=>{ if(ct.open){ try{fcPageRender();}catch(e){} setTimeout(()=>{try{drawTideCurve();}catch(e){}},60); } }); }
+       ()=>{ try{trendFetch();}catch(e){} try{dbbFetchAll();}catch(e){} try{mdlFetch();}catch(e){} try{aptFetch();}catch(e){} },
+       ["fcOkAt","dbbOkAt","dbbTrendOkAt","mdlOkAt","aptOkAt"]);
+     const ct=$("condtab"); if(ct)ct.addEventListener("toggle",()=>{ if(ct.open){ try{fcPageRender();}catch(e){} try{aptRender();}catch(e){} setTimeout(()=>{try{drawTideCurve();}catch(e){}},60); } }); }
    const bdr=$("bdRefresh"); if(bdr)bdr.onclick=dbbFetchAll;
    const rb=$("trRate"); if(rb){rb.onchange=trendManual; rb.oninput=null;}
    const mf=$("trManual"); if(mf)mf.onclick=getForecastManual;
