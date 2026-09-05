@@ -9108,12 +9108,12 @@ function drawLeg(r,idx,wdir,wspd){
   let leadHTML="",breakdownHTML="",nextHTML="";
   try{
     const advNow=computeLegAdvice(r,idx,wdir,wspd);
-    leadHTML=adviceSentenceHTML(advNow);
+    leadHTML=adviceSentenceHTML(advNow,{short:true});
     breakdownHTML=adviceBreakdownHTML(advNow);
     let advNext=null;
     if(idx+1<r.legs.length){
       advNext=computeLegAdvice(r,idx+1,wdir,wspd);
-      nextHTML=adviceSentenceHTML(advNext,{prefix:"Then ",muted:true});
+      nextHTML=adviceSentenceHTML(advNext,{prefix:"Then ",muted:true,short:true,keepSteer:true});
     }
     breakdownHTML=angleNoteHTML(L,wspd)+spinnakerCallHTML(advNow,r,idx,wdir,wspd,L.twa)+breakdownHTML;
   }catch(e){}
@@ -9136,7 +9136,7 @@ function drawLeg(r,idx,wdir,wspd){
     <div>Est<br><b class="mono">${Math.round(estMin)}${estSplit}</b></div>`;
   const secHead=t=>`<div class="span" style="font-size:10px;letter-spacing:.06em;font-weight:800;color:#6B5A20;margin:4px 0 2px">${t}</div>`;
   let startHTML=leadHTML;
-  if(!startHTML&&idx===0){ try{ startHTML=firstLegHTML(r,wdir,wspd,{noEdge:true}); }catch(e){ startHTML=""; } }
+  if(!startHTML&&idx===0){ try{ startHTML=firstLegHTML(r,wdir,wspd,{noEdge:true,short:true}); }catch(e){ startHTML=""; } }
   const ts=$("tacStart"); if(ts)ts.innerHTML=startHTML?secHead("START MARK \u00B7 ROUNDING")+startHTML:"";
   const te=$("tacEnd"); if(te)te.innerHTML=nextHTML?secHead("END MARK \u00B7 APPROACH AND ROUNDING")+nextHTML:"";
   $("leginfo").innerHTML=secHead("THIS LEG")+(sideTxt?`<div class="why">${sideTxt}</div>`:"")+routesHTML+`
@@ -9145,7 +9145,7 @@ function drawLeg(r,idx,wdir,wspd){
     <div>Sail<br><b>${L.sail}</b></div>
     <div class="row2">Dist (course)<br><b class="mono">${dPref.toFixed(1)}'${splitTxt}</b></div>
     <div class="row2">Tgt VMG<br><b class="mono">${L.smg.toFixed(1)}kt</b></div>
-    <div class="row2">Est<br><b class="mono">${Math.round(estMin)} min${estSplit}</b></div>`+breakdownHTML;
+    <div class="row2">Est<br><b class="mono">${Math.round(estMin)} min</b></div>`+breakdownHTML;
   const lr=$("legRow1"); if(lr)lr.innerHTML=row1HTML;
   // GPS Display page 3: the same summary under the bay chart, plus the leg's own verdict, so the
   // chosen leg can be read in context of the whole course without leaving the page.
@@ -9158,19 +9158,18 @@ function drawLeg(r,idx,wdir,wspd){
       const est2=Math.round((L2.time||0)*60);
       row2HTML=`
     <div>Leg<br><b>${legAbbr(L2.pos)}</b></div>
-    <div>TWA/AW<br><b class="mono">${Math.round(L2.twa)}\u00B0${L2.tack}${Math.round(L2.awa)}\u00B0</b></div>
+    <div>TWA/AW<br><b class="mono">${Math.round(L2.sTwa!=null?L2.sTwa:L2.twa)}\u00B0${L2.tack}${Math.round(L2.sAwa!=null?L2.sAwa:L2.awa)}\u00B0</b></div>
     <div>Sail<br><b>${sailAbbr(L2.sail)}</b></div>
     <div>Est<br><b class="mono">${est2}</b></div>`;
     }
     mp.innerHTML=
-    `<div style="background:#FBEEB0;border-radius:14px;padding:7px;margin-bottom:6px">
-       <div class="tot leginfo" id="legRow3" style="margin:0">${row1HTML}</div>
+    `<div style="background:#FBEEB0;border-radius:14px;padding:8px 10px;margin-bottom:6px">
+       <div style="font-size:13px;font-weight:800;color:#3A2A00;text-align:center">Leg ${idx+1} of ${r.legs.length}${(L.from||L.to)?` \u00B7 ${(L.from&&(L.from.name||L.from.lbl))||"start"} \u2192 ${(L.to&&(L.to.name||L.to.lbl))||"finish"}`:``}</div>
      </div>
-     <div style="background:#FBEEB0;border-radius:14px;padding:8px 10px;margin-bottom:6px">
-       <div style="font-size:13px;font-weight:800;color:#3A2A00">Leg ${idx+1} of ${r.legs.length}${(L.from||L.to)?` \u00B7 ${(L.from&&(L.from.name||L.from.lbl))||"start"} \u2192 ${(L.to&&(L.to.name||L.to.lbl))||"finish"}`:``}</div>
+     <div style="background:#FBEEB0;border-radius:14px;padding:7px;margin-bottom:6px">
+       <div class="tot leginfo" id="legRow3" style="margin:0">${row1HTML}</div>
      </div>`+
     (row2HTML?`<div style="background:#FBEEB0;border-radius:14px;padding:7px">
-       <div style="font-size:10px;letter-spacing:.06em;font-weight:800;color:#6B5A20;padding:0 3px 2px">NEXT LEG</div>
        <div class="tot leginfo" id="legRow4" style="margin:0">${row2HTML}</div>
      </div>`:``);
   }
@@ -9520,10 +9519,14 @@ function adviceSentenceHTML(a,opts){
     ? `margin-top:6px;font-size:12px;line-height:1.5;color:#48627A;font-style:italic`
     : `margin-top:6px;font-size:12px;line-height:1.55;color:#12283A`;
   const lead=o.prefix?`${o.prefix}arrive`:`Arrive`;
+  // short: the rounding itself, nothing the tables beside it already say. keepSteer keeps the
+  // one figure that appears nowhere else on the Tactics page, the next leg's exit heading.
+  const tail=o.short?(o.keepSteer?` Steer ${HoTxt}.`:``)
+                    :` Steer ${HoTxt}${awaTxt}.${tailTxt}${a.sail?` Sail ${a.sail}.`:""}`;
   return `<div class="span" style="${sty}">`+
     `${lead} ${a.markName} on ${a.arrivalTack.charAt(0).toUpperCase()+a.arrivalTack.slice(1)}, `+
     `leave the mark to ${a.roundHand.charAt(0).toUpperCase()+a.roundHand.slice(1)}, ${a.manoeuvre1}, `+
-    `${stayOrGo}. Steer ${HoTxt}${awaTxt}.${tailTxt}${a.sail?` Sail ${a.sail}.`:""}</div>`;
+    `${stayOrGo}.${tail}</div>`;
 }
 function firstLegHTML(r,wdir,wspd,opts){
   // Leg 1 (the start): computeLegAdvice has no arrival concept here, so this is a bespoke,
@@ -9544,6 +9547,8 @@ function firstLegHTML(r,wdir,wspd,opts){
     }
   }
   if(opts&&opts.noEdge)edgeLine="";
+  if(opts&&opts.short)return `<div class="span" style="margin-top:6px;font-size:12px;line-height:1.55;color:#12283A">`+
+    `Off the line: ${L.pos.toLowerCase()}, steer ${HoTxt}.</div>${edgeLine}`;
   return `<div class="span" style="margin-top:6px;font-size:12px;line-height:1.55;color:#12283A">`+
     `Off the line: ${L.pos.toLowerCase()}, steer ${HoTxt}, ${L.dist.toFixed(1)} NM.${L.sail?` Sail ${L.sail}.`:""}</div>${edgeLine}`;
 }
