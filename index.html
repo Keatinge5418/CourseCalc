@@ -336,7 +336,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
    guess. Page 1: the compass arc. Page 2: the leg chart. Everything else keeps its natural
    height. min-height:0 is required or a flex child refuses to shrink below its content. */
 #gpsScroll #garminCompass{flex:1 1 auto;min-height:90px}
-#gpage3 #mapWrap{flex:1 1 auto;min-height:0;overflow:hidden}
+#gpage3 #mapWrap{flex:0 0 auto}
 /* On a very short screen the fixed blocks alone exceed the page, so the arc collapses to nothing
    and the page still overflows. Give the arc no floor there and let the six readouts tighten:
    a small arc beats a page you have to scroll inside. */
@@ -358,13 +358,13 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 /* Chart at the TOP of the page, not centred: the plan sits under it and the two read as one
    block rather than floating apart. */
 #gpage3{justify-content:flex-start}
-#gpage3 #mapWrap{flex:0 1 auto;min-height:0;display:flex;align-items:flex-start;justify-content:center}
+
 #mapPlan{flex:0 0 auto}
 #gpage3 #map{flex:0 1 auto;min-height:0;max-height:100%;width:100%;height:auto}
 /* The summary row inherits .tot, which is built for a light tab: ink2 labels and near-black
    values disappear on the GPS Display's dark ground. Give it the same light card the tiles use,
    and four equal columns so Leg / TWA-AW / Sail / Est sit on one line instead of wrapping. */
-#legRow1,#legRow3{display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between;gap:8px;padding:7px 9px;
+#legRow1,#legRow3,#legRow4{display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between;gap:8px;padding:7px 9px;
   background:#F2F7FA;border:1.5px solid #B7C2CC;border-radius:11px;font-size:11px;
   color:#48627A;flex:0 0 auto;text-align:center}
 #legRow1 b{font-size:14px;color:#12283A;white-space:nowrap}
@@ -372,16 +372,16 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
    down there rather than abbreviating further: the words are already as short as they can be and
    stay readable. */
 @media (max-width:360px){
-  #legRow1,#legRow3{gap:5px;padding:6px 7px}
-  #legRow1 b,#legRow3 b{font-size:12px}
-  #legRow1,#legRow3{font-size:10px}
+  #legRow1,#legRow3,#legRow4{gap:5px;padding:6px 7px}
+  #legRow1 b,#legRow3 b,#legRow4 b{font-size:12px}
+  #legRow1,#legRow3,#legRow4{font-size:10px}
 }
-#legRow1 > div,#legRow3 > div{min-width:0;overflow:hidden}
+#legRow1 > div,#legRow3 > div,#legRow4 > div{min-width:0;overflow:hidden}
 /* Page 3's copy sits inside a padded yellow panel, so it has less room than page 2's and clipped
    the sail name at 375px. Its own size, rather than shrinking both. Placed after the media block
    so it is not overridden on small screens. */
-#legRow3{gap:5px;padding:6px 7px;font-size:10px}
-#legRow3 b{font-size:12px}
+#legRow3,#legRow4{gap:5px;padding:6px 7px;font-size:10px}
+#legRow3 b,#legRow4 b{font-size:12px}
 /* Four equal buttons across the top of page 2. Grid rather than flex so every column is exactly
    1fr regardless of label length ("Course-up" is twice the width of "Both"). min-width:0 stops
    a long label forcing its column wider, and the smaller font keeps "Course-up" on one line. */
@@ -756,7 +756,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        charts are gone: this chart is the same picture, larger. -->
   <div class="gpage" id="gpage3">
     <div class="bpage-head" style="color:var(--muted-dark)">COURSE CHART</div>
-  <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
+  <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
   <!-- v418: the wind slider and its restore button are gone from this page. Page 2 already has
        one, it drives the same global wind, and this page is now a plan view rather than a place
        you adjust things. The leg plan for the chosen leg sits under the chart instead. -->
@@ -9150,10 +9150,30 @@ function drawLeg(r,idx,wdir,wspd){
   // GPS Display page 3: the same summary under the bay chart, plus the leg's own verdict, so the
   // chosen leg can be read in context of the whole course without leaving the page.
   const mp=$("mapPlan");
-  if(mp)mp.innerHTML=
-    `<div style="background:#FBEEB0;border-radius:14px;padding:7px">
+  if(mp){
+    // Three matching panels: which leg we are on, this leg's summary, the next leg's summary.
+    const L2=(idx+1<r.legs.length)?r.legs[idx+1]:null;
+    let row2HTML="";
+    if(L2){
+      const est2=Math.round((L2.time||0)*60);
+      row2HTML=`
+    <div>Leg<br><b>${legAbbr(L2.pos)}</b></div>
+    <div>TWA/AW<br><b class="mono">${Math.round(L2.twa)}\u00B0${L2.tack}${Math.round(L2.awa)}\u00B0</b></div>
+    <div>Sail<br><b>${sailAbbr(L2.sail)}</b></div>
+    <div>Est<br><b class="mono">${est2}</b></div>`;
+    }
+    mp.innerHTML=
+    `<div style="background:#FBEEB0;border-radius:14px;padding:7px;margin-bottom:6px">
        <div class="tot leginfo" id="legRow3" style="margin:0">${row1HTML}</div>
-     </div>`;
+     </div>
+     <div style="background:#FBEEB0;border-radius:14px;padding:8px 10px;margin-bottom:6px">
+       <div style="font-size:13px;font-weight:800;color:#3A2A00">Leg ${idx+1} of ${r.legs.length}${(L.from||L.to)?` \u00B7 ${(L.from&&(L.from.name||L.from.lbl))||"start"} \u2192 ${(L.to&&(L.to.name||L.to.lbl))||"finish"}`:``}</div>
+     </div>`+
+    (row2HTML?`<div style="background:#FBEEB0;border-radius:14px;padding:7px">
+       <div style="font-size:10px;letter-spacing:.06em;font-weight:800;color:#6B5A20;padding:0 3px 2px">NEXT LEG</div>
+       <div class="tot leginfo" id="legRow4" style="margin:0">${row2HTML}</div>
+     </div>`:``);
+  }
 }
 
 // ---------- Course Chart mini leg panel: leg shape, course to steer, tactical numbers, one side ----------
