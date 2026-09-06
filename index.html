@@ -468,7 +468,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <div style="flex:0 0 58px"><label>&nbsp;</label><button id="rdtNowBtn" class="pick" style="width:100%;padding:0;font-weight:800;font-size:13px" title="Set race date and time to now">NOW</button></div>
   </div>
   <div class="inrow">
-    <div><label>Wind &deg;T</label><input id="wdir" type="number" inputmode="numeric" value="0" min="0" max="359" title="the wind the app is using; type to override"></div>
+    <div><label>Wind &deg;T <span id="windSrcLbl" style="font-weight:700;letter-spacing:0"></span></label><input id="wdir" type="number" inputmode="numeric" value="0" min="0" max="359" title="the wind the app is using; type to override"></div>
     <div><label>Wind kt</label><input id="wspd" type="number" inputmode="numeric" value="10" min="0" max="40"></div>
     <div><label>Gusts kt</label><input id="wgst" type="number" inputmode="numeric" value="15" min="0" max="50"></div>
   </div>
@@ -478,6 +478,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div style="margin-top:12px"><label>Course number</label>
     <div class="numbtns" id="nums"></div>
   </div>
+  <div id="leg1Ask" style="display:none;background:#FBEEB0;border:1px solid #E0C86A;border-radius:10px;padding:9px 11px;margin-top:10px;font-size:13px;color:#12283A"></div>
 
   <!-- Weather settings, merged into Setup in v433. It was a separate tab, but it is part of the
        same ashore job: choose the boat and card, then set the wind that everything else is
@@ -513,6 +514,8 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div id="fcTable" style="background:#fff;border-radius:10px;padding:8px 10px"></div>
   <div id="fcMdlVerdict" class="wxnote" style="margin-top:6px;cursor:pointer"></div>
   <div id="fcMdlDetail" style="display:none;background:#fff;border-radius:10px;padding:8px 10px;margin-top:6px"></div>
+  <div id="fcConv" style="display:none;background:#fff;border-radius:10px;padding:6px 4px;margin-top:8px"></div>
+  <div id="fcConvLine" class="wxnote" style="display:none;margin-top:4px"></div>
   <div id="dbbDirChart" style="background:#fff;border-radius:10px;padding:8px 4px;margin-top:8px"></div>
   <div id="fcPress" style="background:#fff;border-radius:10px;padding:6px 4px;margin-top:8px"></div>
   <div id="fcTrendLine" style="font-size:12px;color:#12283A;margin-top:8px"></div>
@@ -591,6 +594,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div style="flex:1.2"><button class="pick" id="trFetch" style="width:100%">Forecast</button></div>
 </div>
 <div id="trStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px">No trend set: oscillating model only.</div>
+<div id="roLine" class="wxnote" style="display:none;margin:-2px 0 6px"></div>
 <div id="bandStat" style="font-size:12px;color:#48627A;margin:-2px 0 6px"></div>
 <div id="wsOut" style="font-size:13px;line-height:1.5"></div>
   </div>
@@ -836,7 +840,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <!-- Lives outside #tuneCap deliberately: that div's innerHTML is rebuilt on every render,
        which would blow away half-typed numbers and steal focus mid-entry. -->
   <div id="beatIn" style="margin-top:5px;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18)">
-    <div style="font-size:10px;letter-spacing:.06em;color:#C6E4D3;font-weight:800">READ OFF THE BOAT, BEFORE YOU TAP TO STOP</div>
+    <div id="beatInHead" style="font-size:10px;letter-spacing:.06em;color:#C6E4D3;font-weight:800">READ OFF THE BOAT, BEFORE YOU TAP TO STOP</div>
     <div style="display:flex;gap:8px;margin-top:5px">
       <div style="flex:1"><label style="color:#C6E4D3">Log kt</label><input id="beatLog" type="number" inputmode="decimal" step="0.1" placeholder="Speed from Log" style="width:100%;box-sizing:border-box"></div>
       <div style="flex:1"><label style="color:#C6E4D3">Compass &deg;</label><input id="beatHdg" type="number" inputmode="numeric" placeholder="Course from Compass" style="width:100%;box-sizing:border-box"></div>
@@ -2820,6 +2824,7 @@ const WINDSRC={
   typed:   {rank:3, label:"typed"},        // Michael set it, including the slider
   nmea:    {rank:5, label:"instruments"},  // live feed
   solved:  {rank:4, label:"measured"},     // accepted beat test
+  ro:      {rank:3, label:"race officer"}, // on station, reading the water, now
   dbb:     {rank:2, label:"buoy"},
   forecast:{rank:1, label:"forecast"},
   card:    {rank:0, label:"card"}          // the course card's expected wind
@@ -2842,6 +2847,7 @@ function windSet(field,v,src){
   const el=$(field==="dir"?"wdir":field==="spd"?"wspd":"wgst");
   if(el){ const shown=String(Math.round(f.v)); if(el.value!==shown)el.value=shown; }
   try{raceRecEvent("wind",field,{v:f.v,src:f.src});}catch(e){}
+  try{ windTintPaint(); }catch(e){}
 }
 // Age and provenance, which is the whole point of the exercise.
 function windAge(field){ const f=WINDDMC[field||"dir"]; return f&&f.t?Math.round((Date.now()-f.t)/1000):null; }
@@ -2887,6 +2893,11 @@ function windBindInputs(){
   });
 }
 function usedWind(){
+  // The DMC is the single source of truth for the wind in use. The slot store below still
+  // holds each source's raw value (the tables and 4a need them), but a solved tack, a shift
+  // reset or an RO reading writes only to the DMC, so reading the slots here showed the right
+  // colour beside the wrong number.
+  if(WINDDMC.dir&&WINDDMC.dir.v!=null)return WINDDMC.dir.v;
   return WIND.src==="manual"   ? WIND.manual
        : WIND.src==="observed" ? WIND.observed
        : WIND.src==="dbb"      ? WIND.dbb
@@ -2902,10 +2913,224 @@ function windSrcName(src){
 function setUsed(v,src){                        // v degrees, src expected|forecast|observed
   WIND[src]=norm(v); WIND.src=src;              // the slot always keeps the RAW value
   const u=(src==="forecast")?fcCorr(v):norm(v); // 4a: the used wind is the corrected one
+  // A fresh Race Officer observation outranks the forecast, the buoy and the card: the RO is on
+  // station reading the water now. Without this guard the next forecast fetch silently undoes
+  // the RO reading, which is exactly how 5 September was lost.
+  try{
+    if(roFresh() && (WINDSRC[windSrcName(src)]||{rank:0}).rank < WINDSRC.ro.rank){
+      const el0=$("wdir"); if(el0)el0.value=String(Math.round(RO.dir));
+      return;
+    }
+  }catch(e){}
   const el=$("wdir"); if(el)el.value=String(Math.round(u));
   windSet("dir",u,windSrcName(src));
 }
 setBoat("etap28i");
+// ---------- The Race Officer as a wind source (v509) ----------
+// The RO is a professional standing on station reading the water, and every signal they emit is
+// a wind observation the app used to throw away: the announced course letter (a sector), the
+// pinged line's perpendicular, the bearing from the committee vessel to the first mark, and the
+// AP flag (conditions not fit). On 5 September 2026 the wind swung about 100 degrees, the RO saw
+// it, postponed, and announced a matching course, while the app sailed the whole race on a stale
+// forecast. This source exists so that cannot happen again.
+// It only OBSERVES. Every tactical consequence belongs to the TDC, which reads the wind.
+const RO={dir:null, sd:null, t:0, from:null, ap:false, apAt:0, letter:null, letterArmed:false};
+const RO_FRESH_MS=3600000;                       // an RO reading ages out over about an hour
+function roFresh(){ return RO.dir!=null && (Date.now()-RO.t)<RO_FRESH_MS; }
+function roAgeMin(){ return RO.t?Math.round((Date.now()-RO.t)/60000):null; }
+// Sector half-width of a course letter: the card's letters are 22.5 apart, so a letter states
+// the wind to within about 11 degrees either side, before the RO's own judgement is allowed for.
+const RO_LETTER_SD=14;
+function roLetterWind(letter){
+  const row=WINDLTR.find(r=>r[0]===letter);
+  return row?row[1]:null;
+}
+// One entry point for every RO observation, so precedence and recording live in one place.
+function roObserve(dir,sd,from){
+  if(dir==null||isNaN(dir))return false;
+  RO.dir=norm(+dir); RO.sd=sd; RO.t=Date.now(); RO.from=from;
+  try{ raceRecEvent("ro",from,{dir:RO.dir,sd,ap:RO.ap}); }catch(e){}
+  // Sharper observations supersede coarser ones; a fresh reading always beats the forecast.
+  const cur=WINDDMC.dir, curRank=(WINDSRC[cur.src]||{rank:0}).rank;
+  if(curRank<=(WINDSRC.ro.rank)) windSet("dir",RO.dir,"ro");
+  setTimeout(()=>{ try{ roRender(); }catch(e){} },0);
+  return true;
+}
+// The DMC's own statement of what the RO has said. Facts only: what was observed, from which
+// signal, how old, and whether the RO has postponed. Every tactical consequence is the TDC's.
+// ---------- First-leg type from the RO wind, and the shift reset (v510) ----------
+// At the gun the RO's letter gives a wind that owes nothing to the boat, so the first leg
+// classifies outright: rhumb line versus RO wind, no board geometry needed and no circularity.
+// It matters more than any other leg, because a beat and a run give bisectors 180 degrees apart,
+// so a misclassified first leg would set the wind exactly backwards and the gate would then
+// defend the error. Hence: classify silently when the answer is plain, ask only when it is not.
+const LEG1={type:null, twa:null, asked:false, confirmed:null};
+function leg1Classify(route){
+  try{
+    const r=route||((typeof CURROUTE!=="undefined")?CURROUTE:null);
+    if(!r||!r.legs||!r.legs.length)return null;
+    const L=r.legs[0];
+    const w=roFresh()?RO.dir:windDir();
+    if(w==null||!L)return null;
+    const rhumb=(L.co!=null)?L.co:null;            // 'co' is the leg's course over ground
+    if(rhumb==null)return null;
+    const twa=Math.abs(((rhumb-w+540)%360)-180);   // 0 = dead upwind, 180 = dead downwind
+    const type=(twa<=70)?"beat":(twa>=110?"run":"reach");
+    LEG1.twa=twa; LEG1.type=type;
+    // Ask only when being wrong would poison the first bisector: near a boundary, or downwind.
+    // Silent only when the first leg is plainly a beat, which is most starts. Everything else
+    // (runs, reaches, and anything near a boundary) gets one tap, because a misread first leg
+    // sets the wind 180 degrees out and the gate then defends the error.
+    LEG1.needAsk=(type!=="beat")||twa>50;
+    return {type,twa,needAsk:LEG1.needAsk};
+  }catch(e){ return null; }
+}
+function leg1Confirm(type){
+  LEG1.confirmed=type; LEG1.type=type; LEG1.asked=true;
+  // The skipper's confirmation is itself information about the wind, so it is recorded.
+  try{ raceRecEvent("leg1","confirmed",{type,twa:LEG1.twa!=null?Math.round(LEG1.twa):null}); }catch(e){}
+  try{ leg1Render(); }catch(e){}
+}
+function leg1Render(){
+  const el=$("leg1Ask"); if(!el)return;
+  if(!WIND.chosen||!WIND.numChosen){ el.style.display="none"; return; }   // course not complete
+  const r=(typeof CURROUTE!=="undefined")?CURROUTE:null;
+  const c=leg1Classify(r);
+  // Ask when being wrong would bite: a first leg near the beat/run boundary, a downwind start,
+  // or any time the RO's letter has just MOVED the wind, since the first bisector is about to
+  // be set from it.
+  const roMoved=(RO.from==="letter"&&roFresh()&&(Date.now()-RO.t)<600000);
+  if(!c||LEG1.asked||!(c.needAsk||roMoved)){ el.style.display="none"; return; }
+  const nm=(r&&r.legs&&r.legs[0]&&(r.legs[0].to.name||r.legs[0].to.lbl))||"mark 1";
+  el.style.display="";
+  el.innerHTML=`<div style="margin-bottom:6px">First leg to <b>${nm}</b> reads as a <b>${c.type}</b>, `+
+    `${Math.round(c.twa)}\u00B0 off the ${roFresh()?"race officer's":"working"} wind. Confirm:</div>`+
+    `<button class="pick" data-t="beat" style="padding:4px 10px;font-size:12px">Beat</button> `+
+    `<button class="pick" data-t="run" style="padding:4px 10px;font-size:12px">Run</button> `+
+    `<button class="pick" data-t="reach" style="padding:4px 10px;font-size:12px">Reach</button>`;
+  el.querySelectorAll("button").forEach(b=>b.onclick=()=>leg1Confirm(b.dataset.t));
+}
+// ---------- The shift reset: the fix for the 5 September lockout ----------
+// A run of tacks that all miss in the SAME direction is not a run of bad tacks, it is the wind
+// having moved. The old gate rejected each one on its own and the wind could never correct
+// itself: 21 candidates, one confirmed, and a hundred degrees of error held all afternoon.
+const SHIFT={misses:[], resetAt:0};
+const SHIFT_N=3;                                  // consecutive same-signed misses to call it
+const SHIFT_MIN=25;                               // degrees, below this it is just helming
+function shiftNote(signedMiss){
+  SHIFT.misses.push(signedMiss);
+  if(SHIFT.misses.length>SHIFT_N)SHIFT.misses.shift();
+  if(SHIFT.misses.length<SHIFT_N)return null;
+  const allSame=SHIFT.misses.every(m=>m>0)||SHIFT.misses.every(m=>m<0);
+  const allBig=SHIFT.misses.every(m=>Math.abs(m)>=SHIFT_MIN);
+  if(!(allSame&&allBig))return null;
+  const mean=SHIFT.misses.reduce((a,b)=>a+b,0)/SHIFT.misses.length;
+  SHIFT.misses=[]; SHIFT.resetAt=Date.now();
+  return mean;                                     // how far, and which way, the wind has moved
+}
+// Typed log and compass, LIVE during the race (v516). Before the start these two boxes are
+// harvested when a beat run is stopped. After the gun there is no run to stop and no window to
+// declare: both boards are already on record from your tacks, so a typed log speed completes the
+// through-water vector and the tide falls straight out of it. Compass on its own is still worth
+// recording, because the batch layer fits deviation from exactly these.
+function beatLiveMode(){
+  try{ return sailWindowOpen() && !SAIL.window; }catch(e){ return false; }   // racing, not a declared window
+}
+function beatLiveApply(){
+  const lg=$("beatLog"), hd=$("beatHdg"), msg=$("beatInMsg");
+  if(!lg||!hd)return false;
+  const lv=lg.value!==""?+lg.value:null, hv=hd.value!==""?+hd.value:null;
+  const logV=(lv!=null&&isFinite(lv)&&lv>0.2)?lv:null;
+  const hdgV=(hv!=null&&isFinite(hv))?norm(hv):null;
+  if(logV==null&&hdgV==null)return false;
+  let said="";
+  if(hdgV!=null){
+    try{ raceRecEvent("instr","compass",{hdg:Math.round(hdgV)}); }catch(e){}
+    said="compass <b>"+d3(hdgV)+"\u00B0</b> recorded";
+  }
+  if(logV!=null){
+    try{ raceRecEvent("instr","log",{kt:+logV.toFixed(1)}); }catch(e){}
+    let r=null; try{ r=tideRecalcFromLog(logV); }catch(e){}
+    said=(said?said+" \u00B7 ":"")+(r
+      ? `tide solved <b>${d3(r.dir)}\u00B0 ${r.kt.toFixed(1)} kt</b> from your boards`
+      : `log <b>${logV.toFixed(1)} kt</b> recorded \u00B7 need a settled board on each tack before the tide can be solved`);
+  }
+  lg.value=""; hd.value="";
+  if(msg){ msg.style.display=""; msg.style.cssText+=";font-size:11px;color:#C6E4D3;margin-top:5px;line-height:1.4";
+           msg.innerHTML=said; }
+  try{ render(); }catch(e){}
+  try{ tuningCtl(); }catch(e){}          // the instruments panel above shows the new tide at once
+  return true;
+}
+function beatLiveBind(){
+  ["beatLog","beatHdg"].forEach(id=>{
+    const el=$(id); if(!el||el.dataset.liveBound)return;
+    el.dataset.liveBound="1";
+    const go=()=>{ if(beatLiveMode())refreshFlash(el,()=>beatLiveApply()); };
+    el.addEventListener("change",go);
+    el.addEventListener("keydown",e=>{ if(e.key==="Enter"){ go(); el.blur(); } });
+  });
+  const h=$("beatInHead");
+  if(h)h.textContent=beatLiveMode()
+    ? "READ OFF THE BOAT \u00B7 APPLIES AT ONCE"
+    : "READ OFF THE BOAT, BEFORE YOU TAP TO STOP";
+}
+function roRender(){
+  const el=$("roLine"); if(!el)return;
+  const bits=[];
+  if(RO.ap)bits.push("<b>AP up</b> \u00B7 RO judges conditions unsettled");
+  else if(roUnsettled())bits.push("Recently postponed \u00B7 conditions still settling");
+  if(roFresh()){
+    const from={letter:"course letter",line:"start line",cv:"committee vessel"}[RO.from]||RO.from;
+    bits.push(`RO wind ${String(Math.round(RO.dir)).padStart(3,"0")}\u00B0 \u00B1${RO.sd}\u00B0 from the ${from}${(RO.letter&&RO.from==="letter")?" ("+RO.letter+")":""}, ${roAgeMin()} min ago`);
+  }
+  el.innerHTML=bits.length?bits.join(" \u00B7 "):"";
+  el.style.display=bits.length?"":"none";
+}
+function roApSet(up){
+  RO.ap=!!up; if(up){ RO.apAt=Date.now(); RO.letterArmed=true; }
+  // AP coming down means a fresh sequence on the RO's terms: the letter they announce next is
+  // the one that matters, so leave the arming set and let the TDC prompt for confirmation.
+  try{ roRender(); }catch(e){}
+}
+// A letter tapped while a sequence is running is the announced course, not idle planning.
+function roArmFromTimer(){
+  try{ const tgt=rtTarget(); if(tgt==null)return;
+       const rem=(tgt-Date.now())/1000;
+       if(rem<3600)RO.letterArmed=true; }catch(e){}
+}
+// AP up, and a taper after it comes down, means the RO judges conditions unsettled. The DMC
+// carries the flag; the TDC decides what it costs in confidence.
+const RO_AP_TAPER_MS=1200000;                    // 20 minutes after AP comes down
+function roUnsettled(){
+  if(RO.ap)return true;
+  return RO.apAt>0 && (Date.now()-RO.apAt)<(RO_AP_TAPER_MS+ (RO.ap?0:0));
+}
+// Line perpendicular and committee-vessel bearing, the sharper geometry. Both are derived from
+// the pinged line, so they arrive free once the line is set.
+function roFromLine(){
+  try{
+    // BOTH ends must have been pinged. A line the app projected from the wind would feed the
+    // wind straight back to itself, which is worse than useless.
+    if(!START.cv||!START.pin)return false;
+    const L=startLine(); if(!L||L.assumed)return false;
+    const b=brgDist(L.cv,L.pin).brg;             // along the line, CV to pin
+    // The RO sets the line square to the wind, so the wind is perpendicular to it. Of the two
+    // perpendiculars, take the one nearer the working wind.
+    const p1=norm(b-90), p2=norm(b+90), w=windDir();
+    const dir=(angdiff(w,p1)<=angdiff(w,p2))?p1:p2;
+    return roObserve(dir,10,"line");
+  }catch(e){ return false; }
+}
+function roFromCV(markPos){
+  try{
+    if(!START.cv||!markPos)return false;
+    // The RO anchors downwind of mark one, so CV-to-mark points upwind and the wind is FROM
+    // the reciprocal.
+    const dir=norm(brgDist(START.cv,markPos).brg+180);
+    return roObserve(dir,15,"cv");
+  }catch(e){ return false; }
+}
 function suggestLetter(w){let best="A",bd=1e9;WINDLTR.forEach(([l,d])=>{const dd=angdiff(w,d);if(dd<bd){bd=dd;best=l;}});return best;}
 // ---------- wind-shift distribution (beta fit on the stated range) ----------
 function logGamma(x){const g=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];let y=x,t=x+5.5;t-=(x+0.5)*Math.log(t);let s=1.000000000190015;for(let j=0;j<6;j++)s+=g[j]/++y;return -t+Math.log(2.5066282746310005*s/x);}
@@ -3021,6 +3246,21 @@ function fcCacheLoad(){
     const o=JSON.parse(raw); if(o&&o.d&&o.d.time&&o.d.time.length){FC.data=o.d;FC.stamp=o.s||0;FC.cur=o.c||null;}
   }catch(e){}
 }
+// Opening the app must never leave it with no wind. If a forecast was cached ashore and it
+// still covers the race window, apply it immediately, before any fetch and even offline.
+// Nothing here overrides a better source: setUsed's own precedence still decides.
+function fcApplyCached(){
+  try{
+    if(!FC.data||WIND.forecast!==null||WIND.observed!==null||WIND.manual!==null)return false;
+    const gun=trendWindow()[0], f=fcAt(gun);
+    if(!f||f.dir==null)return false;
+    WIND.forecast=norm(f.dir); setUsed(WIND.forecast,"forecast");
+    if(f.spd!=null){ WSPD.forecast=f.spd; setUsedSpd(f.spd,"forecast"); }
+    if(f.gst!=null){ WGST.forecast=f.gst; setUsedGst(f.gst,"forecast"); }
+    try{ trendFromForecast(true); }catch(e){}
+    return true;
+  }catch(e){ return false; }
+}
 function fcCacheSave(){ try{ localStorage.setItem("cc_fc",JSON.stringify({d:FC.data,s:FC.stamp,c:FC.cur})); }catch(e){} }
 // Wall-clock time, this many hours after the gun. The tide already works off the
 // start time on the setup card, so the same field is the right anchor here.
@@ -3073,6 +3313,8 @@ function fcIngest(j){                           // accepts an Open-Meteo reply f
   if(!H||!H.time||!H.wind_direction_10m)throw new Error("no hourly wind in that data");
   FC.data={time:H.time, dir:H.wind_direction_10m, spd:H.wind_speed_10m||[], gst:H.wind_gusts_10m||[], pmsl:H.pressure_msl||[]}; FC.stamp=Date.now();
   window.fcOkAt=Date.now();
+  try{ const gun=trendWindow()[0], f=fcAt(gun);
+       if(f&&!f.clamped)fcConvSnap({om:Math.round(f.dir), corr:Math.round(fcCorr(f.dir))}); }catch(e){}
   const C=j&&j.current;
   FC.cur = (C&&C.wind_direction_10m!=null) ? {dir:+C.wind_direction_10m, spd:+C.wind_speed_10m, gust:(C.wind_gusts_10m!=null?+C.wind_gusts_10m:null), t:C.time||""} : null;
   fcCacheSave();
@@ -3133,7 +3375,35 @@ function fcOverridden(){
   return (WIND.forecast!==null||WSPD.forecast!==null||WGST.forecast!==null)&&
          (WIND.observed!==null||WIND.manual!==null||WIND.dbb!==null||WSPD.manual!==null||WGST.manual!==null);
 }
+// Which source is driving the wind, said in colour so the boxes answer "why does it say that"
+// without opening anything. Red and green are reserved (port/starboard, and the flash treatment),
+// so the scale runs grey (card) through blue (forecast) and teal (buoy) to amber (race officer)
+// and slate (your own instruments or a solved tack), strongest last.
+const WINDTINT={
+  card:    {bg:"#EDF1F4", bd:"#C9D4DC", label:"card"},
+  forecast:{bg:"#E4EEF7", bd:"#9CBBD6", label:"forecast"},
+  dbb:     {bg:"#DDEFEC", bd:"#84BDB4", label:"buoy"},
+  ro:      {bg:"#FBEEB0", bd:"#E0C86A", label:"race officer"},
+  solved:  {bg:"#DDE3EA", bd:"#8FA3B5", label:"measured"},
+  nmea:    {bg:"#DDE3EA", bd:"#8FA3B5", label:"instruments"},
+  typed:   {bg:"#E9E3F2", bd:"#B3A0CF", label:"typed"}
+};
+function windTintPaint(){
+  try{
+    const src=(WINDDMC.dir&&WINDDMC.dir.src)||"card";
+    const t=WINDTINT[src]||WINDTINT.card;
+    ["wdir","wspd","wgst"].forEach(id=>{
+      const el=$(id); if(!el)return;
+      el.style.background=t.bg; el.style.borderColor=t.bd; el.style.color="#12283A";
+    });
+    const lb=$("windSrcLbl");
+    if(lb){ const corr=(src==="forecast"&&FCCAL.ok&&FCCAL.bias!=null);
+      lb.textContent=t.label+(corr?" (corrected)":"");
+      lb.style.color=t.bd; }
+  }catch(e){}
+}
 function windAvail(){
+  try{ windTintPaint(); }catch(e){}
   trRateShow();
   const off=(typeof navigator!=="undefined"&&navigator.onLine===false);
   const fb=$("trFetch");
@@ -3439,6 +3709,79 @@ function fcAt(ms){                                     // forecast wind interpol
   return {dir:norm(D[D.length-1]), spd:S.length?+S[S.length-1]:null, gst:G.length?+G[G.length-1]:null,
           clamped:true, lastTime:T[T.length-1]};
 }
+// ---------- Convergence at the gun (v508) ----------
+// Lagged-ensemble check: every successful fetch snapshots what each source predicts for the
+// CURRENT gun, and the sequence of snapshots through race day shows whether the forecasts are
+// funnelling toward a value (trust the machinery) or being dragged run over run (trust the
+// newest run and your own tacks). Open-Meteo only serves the current run, so the app can only
+// know the history it collected itself: no refreshes through the day, no track.
+const FCCONV_KEYS=[["om","OM"],["corr","CORR"],["ec","EC"],["gfs","GFS"],["icon","ICON"],["ukmo","UKMO"],["knmi","KNMI"]];
+function fcConvLoad(){ try{ return JSON.parse(localStorage.getItem("cc_fcconv")||"[]"); }catch(e){ return []; } }
+function fcConvSave(a){ try{ localStorage.setItem("cc_fcconv",JSON.stringify(a.slice(-40))); }catch(e){} }
+function fcConvSnap(part){
+  try{
+    const gun=trendWindow()[0], now=Date.now();
+    let a=fcConvLoad();
+    const last=a[a.length-1];
+    // one entry per Refresh: fetches landing within two minutes merge
+    if(last&&now-last.t<120000&&Math.abs((last.tgt||0)-gun)<60000){ Object.assign(last,part); }
+    else a.push(Object.assign({t:now,tgt:gun},part));
+    fcConvSave(a);
+    try{ fcConvRender(); }catch(e){}
+  }catch(e){}
+}
+function fcConvRender(){
+  const host=$("fcConv"), vl=$("fcConvLine"); if(!host)return;
+  let gun; try{ gun=trendWindow()[0]; }catch(e){ gun=Date.now(); }
+  const a=fcConvLoad().filter(e=>Math.abs((e.tgt||0)-gun)<2700000&&gun-e.t<64800000&&e.t<=gun+600000);
+  if(a.length<2){ host.style.display="none"; if(vl)vl.style.display="none"; return; }
+  host.style.display=""; if(vl)vl.style.display="";
+  // circular-safe: unwrap every value about the mean of the latest snapshot
+  const lastVals=FCCONV_KEYS.map(k=>a[a.length-1][k[0]]).filter(v=>v!=null);
+  let sx=0,sy=0; lastVals.forEach(v=>{sx+=Math.cos(rad(v));sy+=Math.sin(rad(v));});
+  const ref=lastVals.length?Math.atan2(sy,sx)*180/Math.PI:0;
+  const un=v=>ref+wrap180(v-ref);
+  const t0=a[0].t, t1=gun;
+  const W=340,H=130,L=34,R=8,T=10,B=18,PW=W-L-R,PH=H-T-B;
+  let lo=1e9,hi=-1e9;
+  a.forEach(e=>FCCONV_KEYS.forEach(k=>{ const v=e[k[0]]; if(v!=null){ const u=un(v); lo=Math.min(lo,u); hi=Math.max(hi,u); } }));
+  lo=Math.floor(lo/5)*5-3; hi=Math.ceil(hi/5)*5+3;
+  const X=t=>L+PW*Math.max(0,Math.min(1,(t-t0)/Math.max(60000,t1-t0)));
+  const Y=v=>T+PH*(1-(un(v)-lo)/Math.max(1,hi-lo));
+  let g=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">`;
+  g+=`<text x="${L-3}" y="${(T+8)}" font-size="8" text-anchor="end" fill="#48627A">${Math.round(norm(hi))}\u00B0</text>`;
+  g+=`<text x="${L-3}" y="${(T+PH)}" font-size="8" text-anchor="end" fill="#48627A">${Math.round(norm(lo))}\u00B0</text>`;
+  g+=`<line x1="${X(t1)}" y1="${T}" x2="${X(t1)}" y2="${T+PH}" stroke="#48627A" stroke-width="1.2"/>`;
+  g+=`<text x="${X(t1)-3}" y="${T+8}" font-size="8" text-anchor="end" fill="#48627A">gun</text>`;
+  FCCONV_KEYS.forEach((k,ki)=>{
+    const pts=a.filter(e=>e[k[0]]!=null);
+    if(pts.length<1)return;
+    const bold=k[0]==="corr";
+    const col=bold?"#0E7C94":"#8AA0B4";
+    const d=pts.map((e,i)=>(i?"L":"M")+X(e.t).toFixed(1)+","+Y(e[k[0]]).toFixed(1)).join("");
+    if(pts.length>1)g+=`<path d="${d}" fill="none" stroke="${col}" stroke-width="${bold?2.2:1.1}" ${bold?"":'opacity="0.75"'}/>`;
+    const le=pts[pts.length-1];
+    g+=`<circle cx="${X(le.t).toFixed(1)}" cy="${Y(le[k[0]]).toFixed(1)}" r="${bold?3:1.8}" fill="${col}"/>`;
+  });
+  g+=`</svg>`;
+  host.innerHTML=g;
+  if(vl){
+    const stat=e=>{ const vs=FCCONV_KEYS.map(k=>e[k[0]]).filter(v=>v!=null).map(un);
+      if(!vs.length)return null;
+      const m=vs.reduce((x,y)=>x+y,0)/vs.length;
+      const sp=Math.sqrt(vs.reduce((x,y)=>x+(y-m)*(y-m),0)/vs.length);
+      return {m,sp}; };
+    const f=stat(a[0]), l=stat(a[a.length-1]);
+    if(f&&l){
+      const move=l.m-f.m, tgt=Math.round(norm(l.m));
+      let txt;
+      if(Math.abs(move)>10) txt=`<b>Drifting ${move>0?"right (veering)":"left (backing)"} run over run</b>, now ~${String(tgt).padStart(3,"0")}\u00B0: trust the newest run over the band.`;
+      else if(l.sp<=Math.max(4,f.sp*0.7)) txt=`<b>Converging on ~${String(tgt).padStart(3,"0")}\u00B0</b> (spread \u00B1${f.sp.toFixed(0)}\u00B0 \u2192 \u00B1${l.sp.toFixed(0)}\u00B0): the gun forecast is settling.`;
+      else txt=`<b>Holding around ~${String(tgt).padStart(3,"0")}\u00B0</b> (spread \u00B1${l.sp.toFixed(0)}\u00B0), neither converging nor drifting yet.`;
+      vl.innerHTML=`At the gun: ${txt}`;
+    } else vl.textContent="";
+  }
+}
 // ---------- Refresh button feedback (v493) ----------
 // A pressed Refresh says nothing about whether it worked. The helper fires the fetches, then
 // polls for their success markers: every marker fresh within 12 s flashes the button green,
@@ -3453,12 +3796,14 @@ function fcAt(ms){                                     // forecast wind interpol
 // Either way: ellipsis while working, colour flash, base colour back after 5 s.
 function refreshFlash(btn,fire,markers){
   if(!btn){ try{fire();}catch(e){} return; }
-  const t0=Date.now(), prevTxt=btn.textContent;
-  btn.disabled=true; btn.textContent="\u2026";
+  const isInput=(btn.tagName==="INPUT"||btn.tagName==="TEXTAREA");
+  const t0=Date.now(), prevTxt=isInput?null:btn.textContent;
+  if(!isInput){ btn.disabled=true; btn.textContent="\u2026"; }
   let settled=false;
   const settle=ok=>{
     if(settled)return; settled=true;
-    btn.disabled=false; btn.textContent=prevTxt;
+    if(!isInput){ btn.disabled=false; btn.textContent=prevTxt; }
+    if(btn.id==="goBtn"){ setTimeout(()=>{ try{goBtnPaint();}catch(e){} },5050); }
     btn.style.background=ok?"#2E7D4F":"#B3403A";
     btn.style.borderColor=ok?"#2E7D4F":"#B3403A";
     btn.style.color="#fff";
@@ -3496,6 +3841,13 @@ function mdlIngest(j){
   if(!H||!H.time)throw new Error("no hourly data");
   MDL.data=H; MDL.stamp=Date.now();
   window.mdlOkAt=Date.now();
+  try{ const gun=trendWindow()[0], C=mdlCols(), part={};
+       if(C){ let bi=-1,bd=1e18;
+         for(let i=0;i<C.ts.length;i++){ const dd=Math.abs(C.ts[i]-gun); if(dd<bd){bd=dd;bi=i;} }
+         if(bi>=0&&bd<=2700000){
+           MDL_LIST.forEach(m=>{ const v=C.H["wind_direction_10m_"+m[0]];
+             if(v&&v[bi]!=null)part[{EC:"ec",GFS:"gfs",ICON:"icon",UKMO:"ukmo",KNMI:"knmi"}[m[1]]]=Math.round(+v[bi]); });
+           if(Object.keys(part).length)fcConvSnap(part); } } }catch(e){}
   try{fcPageRender();}catch(e){}
   try{ localStorage.setItem("cc_mdl",JSON.stringify({data:H,stamp:MDL.stamp})); }catch(e){}
   mdlRender();
@@ -3787,6 +4139,7 @@ function fcPageRender(){
     n++;
   }
   host.innerHTML=n?rows:`<div style="font-size:12px;color:#3A7D5E;padding:6px 0">The cached forecast does not cover the race window. Tap Refresh.</div>`;
+  try{ fcConvRender(); }catch(e){}
   const mv=$("fcMdlVerdict"), md=$("fcMdlDetail");
   if(mv){
     const vt=mdlVerdictText(t0,t1);
@@ -4398,7 +4751,17 @@ function trackRedraw(){
   // deleted in v365, so guarding with an early return here meant the Download button was never
   // greyed. Test each one on its own instead.
   const tk=$("posTrack");
-  if(tk)tk.setAttribute("points", TRACK.map(pt=>{const q=ll2pos(pt.lat,pt.lon); return q[0].toFixed(1)+","+q[1].toFixed(1);}).join(" "));
+  if(tk){
+    // drawn as faded bands now, so the single polyline is left empty and a sibling group carries them
+    tk.setAttribute("points","");
+    const host=tk.parentNode;
+    let g=host&&host.querySelector("#posTrackFade");
+    if(host&&!g){ g=document.createElementNS("http://www.w3.org/2000/svg","g"); g.setAttribute("id","posTrackFade"); host.insertBefore(g,tk); }
+    if(g){ g.innerHTML=trackFadeBands().map(b=>{
+      const pts=b.pts.map(pt=>{const q=ll2pos(pt.lat,pt.lon); return q[0].toFixed(1)+","+q[1].toFixed(1);}).join(" ");
+      return `<polyline points="${pts}" fill="none" stroke="#FF6A13" stroke-width="${(3*b.w).toFixed(1)}" stroke-linejoin="round" stroke-linecap="round" opacity="${b.op.toFixed(2)}"/>`;
+    }).join(""); }
+  }
   // Download lives on the GPS tab as #gps2Dl now. #trackDlBtn is kept as a fallback in case the
   // old markup ever returns.
   const dl=$("gps2Dl")||$("trackDlBtn");
@@ -4417,7 +4780,68 @@ function trackRedraw(){
   const smg=net.dist/(mins/60);
   st.innerHTML=`${head}<br>CMG ${String(Math.round(net.brg)).padStart(3,"0")}\u00B0 \u00B7 SMG ${smg.toFixed(1)} kt (net line, start to now)`;
 }
-function trackClear(){ TRACK=[]; trackRedraw(); }
+// A whole race of track at full strength is unreadable: yesterday's became a solid orange mat.
+// Fade it by AGE instead, in bands, so the last few minutes read strongly and the earlier part
+// stays visible but quiet. It never disappears: the oldest band keeps a floor opacity.
+const TRACK_BANDS=6, TRACK_OP_NEW=0.95, TRACK_OP_OLD=0.16;
+const ROUND={at:0, leg:0};                       // when the last mark was rounded
+// Every manoeuvre the app has identified, kept with its position so the track can show it.
+// Nothing needs a legend: a dot on your own track where you tacked explains itself.
+const TACKPTS=[];
+function tackMark(kind,confirmed){
+  try{
+    const p=TRACK&&TRACK.length?TRACK[TRACK.length-1]:null;
+    if(!p)return;
+    TACKPTS.push({lat:p.lat,lon:p.lon,t:Date.now(),kind,confirmed:!!confirmed});
+    if(TACKPTS.length>200)TACKPTS.splice(0,50);
+  }catch(e){}
+}
+// After a tack or a rounding the boat is not up to speed and is not sailing its polar, so any
+// board data from that period would poison the wind and tide solves. MANOEUVRE_SETTLE_MIN is
+// how long to wait before believing a board again.
+var MANOEUVRE_SETTLE_MIN=2;                      // minutes, editable in Settings
+function lastManoeuvreAt(){
+  const t1=(TACKPTS.length?TACKPTS[TACKPTS.length-1].t:0);
+  return Math.max(t1, ROUND.at||0);
+}
+function boatSettled(){
+  const t=lastManoeuvreAt();
+  return !t || (Date.now()-t)>=MANOEUVRE_SETTLE_MIN*60000;
+}
+function trackFadeBands(pts){
+  const P=pts||TRACK;
+  if(!P||P.length<2)return [];
+  const tN=P[P.length-1].t, t0=P[0].t, span=Math.max(1,tN-t0);
+  const bandOf=p=>{
+    const f=(tN-p.t)/span;                       // 0 newest, 1 oldest
+    return Math.min(TRACK_BANDS-1,Math.floor(f*TRACK_BANDS));
+  };
+  const opOf=b=>TRACK_OP_NEW-(TRACK_OP_NEW-TRACK_OP_OLD)*(b/(TRACK_BANDS-1));
+  const out=[]; let cur=null;
+  for(let i=1;i<P.length;i++){
+    const b=bandOf(P[i]);
+    // Legs already sailed are dimmed harder: half the colour and a thinner line, so the current
+    // leg stands out as the one being sailed.
+    const done=(ROUND.at>0&&P[i].t<ROUND.at);
+    if(!cur||cur.b!==b||cur.done!==done){
+      cur={b,done,op:opOf(b)*(done?0.5:1),w:(done?0.55:1),pts:[P[i-1],P[i]]}; out.push(cur);
+    } else cur.pts.push(P[i]);
+  }
+  return out;
+}
+// Dots for the manoeuvres the app has identified, drawn on top of the track.
+function tackDotsSVG(px,inFrame){
+  let out="";
+  for(const m of TACKPTS){
+    const q=px([m.lat,m.lon]);
+    if(inFrame&&!inFrame(q))continue;
+    const done=(ROUND.at>0&&m.t<ROUND.at);
+    const op=done?0.45:0.95, r=done?2.6:3.6;
+    out+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${r}" fill="#fff" stroke="#FF6A13" stroke-width="${done?1.4:2}" opacity="${op}"/>`;
+  }
+  return out;
+}
+function trackClear(){ TRACK=[]; TACKPTS.length=0; trackRedraw(); }
 function trackDownloadCSV(){
   if(!TRACK.length)return;
   const p2=n=>n==null?"":n.toFixed(1);
@@ -4728,9 +5152,16 @@ function gps2Render(){
     // Track first, boat over it. Both get a white casing so they stay legible over land, water
     // or the seamarks, and both are drawn large enough to find at a glance on a wet deck.
     if(typeof TRACK!=="undefined"&&TRACK.length>1){
-      const pl=TRACK.map(t=>[t.lat,t.lon]);
-      L.polyline(pl,{color:"#fff",weight:8,opacity:.75,pane:"coursePane"}).addTo(MAP2LAYERS);
-      L.polyline(pl,{color:"#FF6A13",weight:4.5,opacity:1,pane:"coursePane"}).addTo(MAP2LAYERS);
+      trackFadeBands().forEach(b=>{
+        const pl=b.pts.map(t=>[t.lat,t.lon]);
+        L.polyline(pl,{color:"#fff",weight:8*b.w,opacity:b.op*0.75,pane:"coursePane"}).addTo(MAP2LAYERS);
+        L.polyline(pl,{color:"#FF6A13",weight:4.5*b.w,opacity:b.op,pane:"coursePane"}).addTo(MAP2LAYERS);
+      });
+      TACKPTS.forEach(m=>{
+        const done=(ROUND.at>0&&m.t<ROUND.at);
+        L.circleMarker([m.lat,m.lon],{radius:done?3:4.5,color:"#FF6A13",weight:done?1.4:2,
+          fillColor:"#fff",fillOpacity:done?0.45:0.95,opacity:done?0.45:0.95,pane:"coursePane"}).addTo(MAP2LAYERS);
+      });
     }
     L.circleMarker(me,{radius:12,color:"#fff",weight:4,fill:false,opacity:.9}).addTo(MAP2LAYERS);
     L.circleMarker(me,{radius:9,color:"#12283A",weight:2,fillColor:"#0E7C94",fillOpacity:1}).addTo(MAP2LAYERS);
@@ -5852,14 +6283,18 @@ function goBtnInit(){
     const turningOn=GPS.watch==null;
     gpsToggle();
     if(turningOn){
-      try{
-        // Forecast still gets fetched (it feeds the persistent-trend model and is the fallback
-        // if the buoy is unreachable), but the buoy fetch is chained to run after it settles,
-        // so the buoy reliably ends up as the active wind source rather than racing it.
-        if(WIND.forecast!==null&&(WIND.observed!==null||WIND.manual!==null)){ fcResume(); dbbFetchAll(); }
-        else trendFetch().then(dbbFetchAll).catch(dbbFetchAll);
-      }catch(e){}
       try{ compassStart(); }catch(e){}   // must be called synchronously within this click for iOS's permission prompt
+      // GO is the one button pressed at the start of every session, so it pulls EVERYTHING:
+      // forecast, models, buoy and airport. There must never be a session with no wind.
+      refreshFlash(b,()=>{
+        try{
+          if(WIND.forecast!==null&&(WIND.observed!==null||WIND.manual!==null)){ fcResume(); dbbFetchAll(); }
+          else trendFetch().then(dbbFetchAll).catch(dbbFetchAll);
+        }catch(e){}
+        try{ mdlFetch(); }catch(e){}
+        try{ aptFetch(); }catch(e){}
+      },["fcOkAt","dbbOkAt","dbbTrendOkAt","mdlOkAt","aptOkAt"]);
+      return;                            // refreshFlash repaints the button itself
     }
     goBtnPaint();
   };
@@ -5994,6 +6429,23 @@ function rtTick0(){
   else lbl="RACING \u00B7 elapsed "+rtFmt(tRem);
   if(lab)lab.textContent=lbl;
   rtFlagsPaint();
+  // The gun: the timer reaching zero IS the start, exactly, because the timer is synced to the
+  // sequence. It is the only moment the app knows to the second, so it is written to the record
+  // as a first-class event and everything downstream anchors to it.
+  if(tRem<=0 && !RT.gunFired){
+    RT.gunFired=true;
+    RT.gunAt=tgt;
+    try{ raceRecEvent("gun","start",{at:tgt,src:RT.src,letter:(state&&state.letter)||null,num:(state&&state.num)||null}); }catch(e){}
+    // Milling about before the gun is not part of the race and only clutters the chart, so the
+    // track starts clean at the start. The race record keeps the pre-start samples regardless.
+    try{ if(typeof TRACK!=="undefined"&&TRACK.length){
+      const kept=TRACK.filter(p=>p.t>=tgt-1000);
+      if(kept.length!==TRACK.length){ TRACK=kept; trackRedraw(); } } }catch(e){}
+    try{ ROUND.at=0; ROUND.leg=0; TACKPTS.length=0; }catch(e){}   // a fresh race: nothing sailed yet
+    try{ window.roGunAt=tgt; }catch(e){}
+  }
+  if(tRem>1)RT.gunFired=false;                    // a re-armed or nudged sequence can fire again
+  try{ roArmFromTimer(); }catch(e){}
   const w=Math.ceil(tRem);
   if(RT.lastWhole===null)RT.lastWhole=w+1;
   if(w<RT.lastWhole){
@@ -6104,10 +6556,16 @@ function rtInfo(){
 function rtApUp(){
   const tgt=rtTarget();
   RT.apFrozen = tgt!=null ? (tgt-Date.now())/1000 : null;
-  RT.ap=true; rtStop(); rtTick(); rtBtns(); rtInfo();
+  RT.ap=true; RT.apUpAt=Date.now(); rtStop(); rtTick(); rtBtns(); rtInfo();
+  // The RO postponing is a statement that conditions are not fit to start: the loudest
+  // instability signal available, and until now it left no trace in the record.
+  try{ raceRecEvent("ap","up",{frozenAt:RT.apFrozen,letter:(state&&state.letter)||null}); }catch(e){}
+  try{ roApSet(true); }catch(e){}
 }
 function rtApDown(){
-  RT.ap=false; RT.apFrozen=null; RT.lastWhole=null;
+  try{ raceRecEvent("ap","down",{heldMin:RT.apUpAt?Math.round((Date.now()-RT.apUpAt)/60000):null}); }catch(e){}
+  try{ roApSet(false); }catch(e){}
+  RT.ap=false; RT.apFrozen=null; RT.lastWhole=null; RT.gunFired=false;
   const resume=Date.now()+60000+300000;            // 1 min, then a fresh 5:00 sequence
   if(RT.src==="auto"){ try{ RT.offset=resume-rtSeq().gun; }catch(e){ RT.offset=0; } }
   else { RT.src="manual"; RT.myStart=resume; }
@@ -6228,6 +6686,7 @@ function buildPickers(){
    const nu=$("nmeaUrl"); if(nu)nu.addEventListener("input",windAvail);
    window.addEventListener("online",windAvail); window.addEventListener("offline",windAvail);
    fcCacheLoad(); if(FC.data)trendFromForecast(true);   // offline: reuse the forecast fetched ashore
+   try{ fcApplyCached(); }catch(e){}                    // and make it the working wind at once
    // keep the band tracking the wind you are actually seeing, instruments or typed
    setInterval(()=>{ if(window.wsBandDirty||window.holdBand)return;
                      if(obsStats())bandFromObserved(true); },60000);
@@ -6275,12 +6734,32 @@ function buildPickers(){
   $("letters").onclick=e=>{if(e.target.dataset.l){
     state.letter=e.target.dataset.l;                    // the course to sail, changed only here
     state.num=Math.min(state.num,(CARDS[state.card].courses[state.letter]||[]).length||8);buildNums();
+    const wPrev=windDir();                              // the wind BEFORE this letter touches it
     const wl=WINDLTR.find(([l])=>l===state.letter);
     if(wl){ WIND.expected=wl[1]; WIND.chosen=true;       // a course has now been chosen
             if(WIND.forecast===null&&WIND.observed===null&&WIND.manual===null) setUsed(wl[1],"expected"); }
-    render();}};
+    // The announced letter is a wind OBSERVATION by a professional on station: the RO chose it
+    // by looking at the water. Recorded as such, and it outranks the forecast while fresh.
+    if(wl && RO.letterArmed){
+      RO.letter=state.letter;
+      // A letter is a coarse statement (+-14 deg). If the working wind already lies inside the
+      // announced sector the RO agrees with us, so keep the finer number and just record the
+      // agreement. Only a wind OUTSIDE the sector means the RO is telling us something new,
+      // and that is the 5 September case.
+      // Compare against the wind as it stood BEFORE the letter, and only when there was a real
+      // wind to compare with: with nothing set, the RO's letter is the best we have.
+      const hadWind=(WIND.forecast!==null||WIND.observed!==null||WIND.manual!==null||WIND.dbb!=null);
+      const w=wPrev, inside=hadWind&&angdiff(w,wl[1])<=RO_LETTER_SD;
+      if(inside){ RO.dir=norm(w); RO.sd=RO_LETTER_SD; RO.t=Date.now(); RO.from="letter";
+                  try{ raceRecEvent("ro","letter agrees",{letter:state.letter,wind:Math.round(w)}); }catch(e){}
+                  try{ roRender(); }catch(e){} }
+      else { roObserve(wl[1],RO_LETTER_SD,"letter"); LEG1.asked=false; LEG1.confirmed=null; }
+    }
+    render(); try{leg1Render();}catch(e){}}};
   $("nums").onclick=e=>{if(e.target.dataset.n){ if(!WIND.chosen)return;   // pick a letter first
-    state.num=+e.target.dataset.n;WIND.numChosen=true;render();}};
+    state.num=+e.target.dataset.n;WIND.numChosen=true;
+    LEG1.asked=false; LEG1.confirmed=null;
+    render(); try{leg1Render();}catch(e){}}};
 }
 function chipHTML(code){
   const cols=CHIP[code]||["#8aa"];
@@ -6317,15 +6796,11 @@ function render(){
   //   expected via a course letter      : white on black
   //   forecast or slider                : white on orange
   //   manual entry                      : dark ink on orange
-  if(wd){
-    const s=WIND.src;
-    let bg="#FBFDFE", fg="var(--ink)";
-    if(s==="manual"){ bg="var(--start)"; fg="#12283A"; }
-    else if(s==="forecast"||s==="observed"){ bg="var(--start)"; fg="#fff"; }
-    else if(WIND.chosen){ bg="var(--ink)"; fg="#fff"; }   // expected, chosen by a course letter
-    wd.style.background=bg; wd.style.color=fg;
-    wd.style.borderColor=(bg==="#FBFDFE")?"var(--rule)":bg;
-  }
+  // The wind boxes are painted by ONE function now, windTintPaint, which colours them by the
+  // source actually driving the wind (card, forecast, buoy, race officer, instruments, typed).
+  // The old language here keyed off WIND.src and fought with it, which left the box showing
+  // the wrong story after an RO reading.
+  try{ windTintPaint(); }catch(e){}
   // Race date and Start time follow the same colour language as the wind boxes:
   //   white  the programme picked it, nothing overriding
   //   orange the race timer is counting to it
@@ -6649,11 +7124,14 @@ function boatOverlaySVG(px,W,H,opts){
   const inFrame=q=>q[0]>=2&&q[0]<=W-2&&q[1]>=2&&q[1]<=H-2;
   let s="";
   if(o.track!==false&&typeof TRACK!=="undefined"&&TRACK.length>1){
-    let seg=[];
-    const flush=()=>{ if(seg.length>1)s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="#FF6A13" stroke-width="${o.tw||2.5}" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>`; seg=[]; };
-    for(const t of TRACK){ const q=px([t.lat,t.lon]);
-      if(inFrame(q))seg.push(q[0].toFixed(1)+","+q[1].toFixed(1)); else flush(); }
-    flush();
+    trackFadeBands().forEach(b=>{
+      let seg=[];
+      const flush=()=>{ if(seg.length>1)s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="#FF6A13" stroke-width="${((o.tw||2.5)*b.w).toFixed(1)}" stroke-linejoin="round" stroke-linecap="round" opacity="${b.op.toFixed(2)}"/>`; seg=[]; };
+      for(const t of b.pts){ const q=px([t.lat,t.lon]);
+        if(inFrame(q))seg.push(q[0].toFixed(1)+","+q[1].toFixed(1)); else flush(); }
+      flush();
+    });
+    try{ s+=tackDotsSVG(px,inFrame); }catch(e){}
   }
   const q=px(me);
   if(!inFrame(q))return s;
@@ -6704,10 +7182,14 @@ function drawMap(r,wdir){
   // actually happened. Drawn over the course lines but under the mark badges.
   try{
     if(typeof TRACK!=="undefined"&&TRACK.length>1){
+      trackFadeBands().forEach(b=>{
+        const qb=b.pts.map(t=>px([t.lat,t.lon]));
+        const db=qb.map((c,i)=>(i?"L":"M")+c[0].toFixed(1)+","+c[1].toFixed(1)).join(" ");
+        s+=`<path d="${db}" fill="none" stroke="#fff" stroke-width="${(5*b.w).toFixed(1)}" stroke-linejoin="round" stroke-linecap="round" opacity="${(b.op*0.7).toFixed(2)}"/>`;
+        s+=`<path d="${db}" fill="none" stroke="#FF6A13" stroke-width="${(2.4*b.w).toFixed(1)}" stroke-linejoin="round" stroke-linecap="round" opacity="${b.op.toFixed(2)}"/>`;
+      });
+      try{ s+=tackDotsSVG(px,null); }catch(e){}
       const q=TRACK.map(t=>px([t.lat,t.lon]));
-      const d=q.map((c,i)=>(i?"L":"M")+c[0].toFixed(1)+","+c[1].toFixed(1)).join(" ");
-      s+=`<path d="${d}" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" opacity=".7"/>`;
-      s+=`<path d="${d}" fill="none" stroke="#FF6A13" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" opacity=".95"/>`;
       const last=q[q.length-1];
       s+=`<circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="5" fill="#FF6A13" stroke="#fff" stroke-width="2"/>`;
     }
@@ -7144,6 +7626,24 @@ function tackWatch(){
       // from the mark, where extra tacks are not normal, and only in light air, where an
       // undetected shift is the real risk.
       TACK.suspectShift=(!confirmed && !nearMark() && tws<=LIGHT_AIR_KT);
+      // SHIFT RESET. Signed miss: which side of the expected board the boat actually settled.
+      // Three in a row, same sign, all big, means the wind moved, so snap to it rather than
+      // rejecting a fourth honest tack. Only inside the window or after the gun, same as the
+      // bisector rule, and never on a reach where boards mean nothing.
+      if(beat&&!confirmed&&sailWindowOpen()){
+        const signed=((r.hdg-expected+540)%360)-180;
+        const mv=shiftNote(signed);
+        if(mv!=null){
+          const nw=norm(w+mv/2);                   // the boards straddle the NEW wind
+          windSet("dir",nw,"solved");
+          try{ windSeriesAdd(nw,Math.round(Math.abs(mv)),TACK.board); }catch(e){}
+          try{ raceRecEvent("shift","reset",{from:Math.round(w),to:Math.round(nw),
+               move:Math.round(mv)}); }catch(e){}
+          noticeSet("shift","Wind has shifted about "+Math.abs(Math.round(mv/2))+
+            "\u00B0 "+(mv>0?"right":"left")+": wind now "+d3(nw)+"\u00B0",null);
+        }
+      }
+      if(confirmed)SHIFT.misses=[];                // a good tack clears the suspicion
       // Refresh the wind from the PAIR. The bisector cancels a helm sailing consistently low,
       // which one board alone cannot do. Only when the tack confirmed: an unconfirmed one means
       // the wind is the thing that moved, so re-deriving from it would bake the error in.
@@ -7160,6 +7660,7 @@ function tackWatch(){
       }
       try{raceRecEvent("tack",kind,{from:TACK.last.from,to:TACK.last.to,
           confirmed,miss:TACK.last.miss,suspectShift:TACK.suspectShift});}catch(e){}
+      try{ tackMark(kind,confirmed); }catch(e){}
       // the same courtesy as a leg change: say so, since the boards and the advice both flip
       noticeSet(kind, kind.charAt(0).toUpperCase()+kind.slice(1)+" onto "+
         (TACK.board==="stbd"?"starboard":"port")+", "+d3(r.hdg)+"\u00B0"+
@@ -7186,7 +7687,7 @@ function tackWatch(){
     // already on the new board while this branch still thinks it is settled, and the long window
     // is quietly being poisoned. That put the stored starboard vector 13 degrees and 0.5 kt out,
     // which was enough to make the tide solve refuse the answer entirely.
-    if(turn<TACK_STABLE){
+    if(turn<TACK_STABLE&&boatSettled()){        // not while the boat is still rebuilding speed
       const v=recentVector(TACK_SETTLE_MS,4);
       if(v)TACK.boards[TACK.board]={cog:v.cog,sog:v.sog,vx:v.vx,vy:v.vy,t:now};
     }
@@ -8058,11 +8559,13 @@ function drawStart(r,wdir,wspd){
       // Track sailed, so the approach can be seen. Same rule as elsewhere: points outside the
       // frame are dropped, never clamped.
       if(typeof TRACK!=="undefined"&&TRACK.length>1){
-        let seg=[];
-        const flush=()=>{ if(seg.length>1)s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="${ORANGE}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity=".8"/>`; seg=[]; };
-        for(const t of TRACK){ const p2=F([t.lat,t.lon]);
-          if(p2[0]>=4&&p2[0]<=W-4&&p2[1]>=4&&p2[1]<=H-4)seg.push(p2[0].toFixed(1)+","+p2[1].toFixed(1)); else flush(); }
-        flush();
+        trackFadeBands().forEach(b=>{
+          let seg=[];
+          const flush=()=>{ if(seg.length>1)s+=`<polyline points="${seg.join(" ")}" fill="none" stroke="${ORANGE}" stroke-width="${(2*b.w).toFixed(1)}" stroke-linejoin="round" stroke-linecap="round" opacity="${(b.op*0.85).toFixed(2)}"/>`; seg=[]; };
+          for(const t of b.pts){ const p2=F([t.lat,t.lon]);
+            if(p2[0]>=4&&p2[0]<=W-4&&p2[1]>=4&&p2[1]<=H-4)seg.push(p2[0].toFixed(1)+","+p2[1].toFixed(1)); else flush(); }
+          flush();
+        });
       }
       const tgtPos=tgt==="cv"?L.cv:L.pin;
       const off=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off:null;
@@ -8557,6 +9060,7 @@ function tuneActHTML(){
     `<div style="font-size:11px;line-height:1.4;color:#C6E4D3;margin-top:6px">Running on <b>${live?"measured":"forecast"}</b> wind and tide.</div>`;
 }
 function tuningCtl(){
+  try{ setTimeout(beatLiveBind,0); }catch(e){}
   { const el=$("instSrc"); if(el)el.innerHTML=instSrcHTML(); }
   const cap=$("tuneCap"); if(cap)cap.innerHTML=tuneCapHTML();
   const cmp=$("tuneCmp"); if(cmp)cmp.innerHTML=tuneCmpHTML();
@@ -8565,12 +9069,34 @@ function tuningCtl(){
 function tuningClick(ev){
   const b=ev.target.closest?ev.target.closest("[data-t]"):null; if(!b)return;
   const k=b.dataset.t;
-  if(k==="sailwin"){ SAIL.window?sailWindowStop():sailWindowStart(); return; }
+  if(k==="sailwin"){
+    // The flash treatment, promise mode: starting clears the tack series and opens the window,
+    // stopping closes it. Green confirms the state actually changed, so a press that did not
+    // register is visible rather than silent.
+    const btn=b;   // the handler already resolved the button
+    const wasOpen=!!SAIL.window;
+    refreshFlash(btn,()=>{ wasOpen?sailWindowStop():sailWindowStart(); return !!SAIL.window!==wasOpen; });
+    return;
+  }
   if(k==="wport"||k==="wstbd"){ beatPress(k==="wstbd"?"stbd":"port"); return; }
   if(k==="gochart"){ fitGoToChart(); return; }
   if(k==="wclear"){ beatReset(); WINDSERIES.length=0; FIT.stbd=null; FIT.port=null; FIT.err={stbd:0,port:0}; FIT.accepted=false; try{fitFootPaint();}catch(e){} }
-  else if(k==="wuse"){ beatApply(); try{raceRecEvent("tuning","use measured",{wind:START.obsWind,tide:START.obsTide});}catch(e){} }
-  else if(k==="wrevert"){ beatUnapply(); try{raceRecEvent("tuning","back to forecast",null);}catch(e){} }
+  else if(k==="wuse"){
+    // Flash treatment, promise mode: green only if the measured wind actually became the wind
+    // in use, so a press that could not be applied says so instead of looking successful.
+    refreshFlash(b,()=>{ beatApply();
+      try{raceRecEvent("tuning","use measured",{wind:START.obsWind,tide:START.obsTide});}catch(e){}
+      render();
+      return (WINDDMC.dir&&(WINDDMC.dir.src==="solved"||WINDDMC.dir.src==="typed")); });
+    return;
+  }
+  else if(k==="wrevert"){
+    refreshFlash(b,()=>{ beatUnapply();
+      try{raceRecEvent("tuning","back to forecast",null);}catch(e){}
+      render();
+      return (WINDDMC.dir&&WINDDMC.dir.src!=="solved"); });
+    return;
+  }
   render();
 }
 function startClick(ev){
@@ -9898,6 +10424,8 @@ const SETTINGS=[
    why:"Short window that sees the turn. Must stay below the settle time."},
   {k:"TACK_STABLE",    label:"Board: counts as settled",  unit:"\u00B0",   def:12,   min:4,  max:30,
    why:"Beyond this the board is not clean enough to record for the tide solve."},
+  {k:"MANOEUVRE_SETTLE_MIN", label:"Settling after a manoeuvre", unit:"min", def:2, min:0, max:6, step:0.5,
+   why:"After a tack or rounding the boat is not on its polar, so boards are ignored this long."},
   {k:"MARK_NEAR_M",    label:"Near the mark",             unit:"m", def:100,  min:30, max:400,
    why:"Inside this, extra tacks are normal and shifts are not assumed."},
   {k:"LIGHT_AIR_KT",   label:"Light air below",           unit:"kt",def:7,    min:3,  max:14,
@@ -10021,14 +10549,19 @@ function legAdvanceWatch(){
     const onNext=!!(nx&&v&&Math.abs(((v.cog-nx.co+540)%360)-180)<45);
     if((opening?1:0)+(swung?1:0)+(onNext?1:0)<2)return;
     const from=state.leg;
+    const roundPrev=ROUND.at;
     state.leg=Math.min(r.legs.length-1,state.leg+1);
+    // The moment of rounding: everything before it is a leg already sailed, so the chart dims it.
+    // It also tells you at a glance that the app knows where you are in the race.
+    ROUND.at=now; ROUND.leg=state.leg;
+    try{ raceRecEvent("round","mark",{leg:state.leg,at:now}); }catch(e){}
     ADV.last=now; ADV.armed=false; ADV.minDist=Infinity; ADV.brgAtMin=null;
     TACK.hdg=null; TACK.turning=null; TACK.boards={stbd:null,port:null};
     const L=r.legs[state.leg];
     noticeSet("leg","Now leg "+(state.leg+1)+" of "+r.legs.length+", "+
       ((r.pts[state.leg]&&(r.pts[state.leg].name||r.pts[state.leg].lbl))||"")+" to "+
       ((r.pts[state.leg+1]&&(r.pts[state.leg+1].name||r.pts[state.leg+1].lbl))||"")+
-      (L?", "+L.pos.toLowerCase():""), ()=>{ state.leg=from; ADV.last=Date.now(); });
+      (L?", "+L.pos.toLowerCase():""), ()=>{ state.leg=from; ROUND.at=roundPrev; ADV.last=Date.now(); });
   }catch(e){}
 }
 function legStep(dir){                             // dir: -1 previous leg, +1 next leg (Course Analysis)
