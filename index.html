@@ -686,6 +686,24 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <div id="startCtl" style="display:none;margin-top:8px"></div>
   </div>
   </div>
+
+  <!-- Pre-start tuning: the sailing window and the boat's own instruments, on the tab you are
+       already looking at before the gun. The same two values can be typed on GPS Display during
+       the race; each pair is live only in its own phase, so they cannot drift apart. -->
+  <div class="ppage" id="ppage3">
+    <div class="bpage-head" style="color:#C9DFEC">PRE-START TUNING</div>
+    <div id="preSailWinWrap" style="margin-top:4px">
+      <button class="rtbtn" id="preSailWin" style="width:100%;min-height:56px;font-size:15px">Start recording<br><span style="font-size:10px;font-weight:600">tack repeatedly, the app takes the rest</span></button>
+    </div>
+    <div id="preBeatIn" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18)">
+      <div id="preBeatHead" style="font-size:10px;letter-spacing:.06em;color:#C6E4D3;font-weight:800">READ OFF THE BOAT, BEFORE YOU TAP TO STOP</div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <div style="flex:1"><label style="color:#C6E4D3">Log kt</label><input id="preLog" type="number" inputmode="decimal" step="0.1" placeholder="Speed from Log" style="width:100%;box-sizing:border-box"></div>
+        <div style="flex:1"><label style="color:#C6E4D3">Compass &deg;</label><input id="preHdg" type="number" inputmode="numeric" placeholder="Course from Compass" style="width:100%;box-sizing:border-box"></div>
+      </div>
+      <div id="preBeatMsg" style="font-size:11px;color:#C6E4D3;margin-top:6px;line-height:1.4"></div>
+    </div>
+  </div>
   </div>
 </details>
 
@@ -3062,6 +3080,63 @@ function beatLiveApply(){
   try{ tuningCtl(); }catch(e){}          // the instruments panel above shows the new tide at once
   return true;
 }
+// The two pairs of instrument boxes are mirrors of ONE value, and each pair is live only in its
+// own phase: Race timer before the gun, GPS Display after it. The pair that is not in its phase
+// dims and refuses input, which is what stops the two drifting apart.
+function tunePairsSync(){
+  try{
+    const racing=beatLiveMode();
+    const pairs=[["beatLog","preLog"],["beatHdg","preHdg"]];
+    pairs.forEach(([a,b])=>{
+      const A=$(a), B=$(b); if(!A||!B)return;
+      if(!A.dataset.mirrorBound){
+        A.dataset.mirrorBound="1";
+        A.addEventListener("input",()=>{ if($(b))$(b).value=A.value; });
+      }
+      if(!B.dataset.mirrorBound){
+        B.dataset.mirrorBound="1";
+        B.addEventListener("input",()=>{ if($(a))$(a).value=B.value; });
+        const go=()=>{
+          if(beatLiveMode())return;                 // after the gun this pair is not the live one
+          const lv=$("preLog")&&$("preLog").value!==""?+$("preLog").value:null;
+          const hv=$("preHdg")&&$("preHdg").value!==""?+$("preHdg").value:null;
+          refreshFlash(B,()=>{
+            const ok=(lv!=null&&isFinite(lv)&&lv>0.2)||(hv!=null&&isFinite(hv));
+            const m=$("preBeatMsg");
+            if(m)m.innerHTML=ok
+              ? `Held for the beat: `+(lv!=null?`log <b>${(+lv).toFixed(1)} kt</b>`:"no log")+
+                (hv!=null?` \u00B7 compass <b>${d3(norm(hv))}\u00B0</b>`:"")+`. Tap Stop recording to use it.`
+              : `Nothing entered yet.`;
+            return ok;
+          });
+        };
+        B.addEventListener("change",go);
+        B.addEventListener("keydown",e=>{ if(e.key==="Enter"){ go(); B.blur(); } });
+      }
+    });
+    // dim whichever pair is out of phase
+    const setLive=(el,live)=>{ if(!el)return; el.disabled=!live; el.style.opacity=live?1:0.4; };
+    setLive($("beatLog"),racing); setLive($("beatHdg"),racing);
+    setLive($("preLog"),!racing); setLive($("preHdg"),!racing);
+    const ph=$("preBeatHead");
+    if(ph)ph.textContent=racing?"RACING \u00B7 USE THE GPS DISPLAY BOXES":"READ OFF THE BOAT, BEFORE YOU TAP TO STOP";
+    // the recording button belongs to the pre-start only
+    const pw=$("preSailWinWrap");
+    if(pw)pw.style.display=racing?"none":"";
+    const pb=$("preSailWin");
+    if(pb&&!pb.dataset.bound){
+      pb.dataset.bound="1";
+      pb.onclick=()=>{ const was=!!SAIL.window;
+        refreshFlash(pb,()=>{ was?sailWindowStop():sailWindowStart(); return !!SAIL.window!==was; }); };
+    }
+    if(pb){ const open=!!SAIL.window;
+      pb.innerHTML=open
+        ? "Stop recording<br><span style='font-size:10px;font-weight:600'>"+WINDSERIES.length+" tack"+(WINDSERIES.length===1?"":"s")+" recorded</span>"
+        : "Start recording<br><span style='font-size:10px;font-weight:600'>tack repeatedly, the app takes the rest</span>";
+      pb.style.background=open?"#E08A2B":""; pb.style.borderColor=open?"#F0A950":"";
+    }
+  }catch(e){}
+}
 function beatLiveBind(){
   ["beatLog","beatHdg"].forEach(id=>{
     const el=$(id); if(!el||el.dataset.liveBound)return;
@@ -3070,6 +3145,7 @@ function beatLiveBind(){
     el.addEventListener("change",go);
     el.addEventListener("keydown",e=>{ if(e.key==="Enter"){ go(); el.blur(); } });
   });
+  try{ tunePairsSync(); }catch(e){}
   const h=$("beatInHead");
   if(h)h.textContent=beatLiveMode()
     ? "READ OFF THE BOAT \u00B7 APPLIES AT ONCE"
@@ -6446,6 +6522,7 @@ function rtTick0(){
   }
   if(tRem>1)RT.gunFired=false;                    // a re-armed or nudged sequence can fire again
   try{ roArmFromTimer(); }catch(e){}
+  try{ if(!RT._syncN||(RT._syncN=(RT._syncN+1)%10)===0)beatLiveBind(); }catch(e){}
   const w=Math.ceil(tRem);
   if(RT.lastWhole===null)RT.lastWhole=w+1;
   if(w<RT.lastWhole){
@@ -7315,6 +7392,7 @@ const DEFLINE=250;                              // metres, the assumed line's le
 // bisector becomes the new wind, which is legitimate because a helm sailing consistently low
 // cancels between the two boards.
 const TACK={
+  pending:null,        // a confirmed tack whose wind waits for the boat to settle
   board:null,          // "stbd" | "port"
   since:0,             // when this board started
   hdg:null,            // settled mean heading on this board
@@ -7617,6 +7695,7 @@ function tackWatch(){
       const miss=Math.abs(((r.hdg-expected+540)%360)-180);
       const confirmed=miss<=TACK_CONFIRM;
       const kind=(L&&L.pos==="Run")?"gybe":"tack";
+      TACK.pending=null;                          // a fresh manoeuvre voids any deferred solve
       TACK.prev={board:TACK.board,hdg:from};
       TACK.board=tackSide(r.hdg,w); TACK.hdg=r.hdg; TACK.since=now; TACK.n++;
       { const v=recentVector(TACK_SETTLE_MS,4);
@@ -7650,13 +7729,34 @@ function tackWatch(){
       // v449: only inside a declared sailing window, or after the gun. Outside it the boards may
       // be a reach-to-reach turn and the bisector would be meaningless.
       if(beat&&confirmed&&sailWindowOpen()){
-        const a=rad(from), b=rad(r.hdg);
-        const bis=norm(Math.atan2(Math.sin(a)+Math.sin(b),Math.cos(a)+Math.cos(b))*180/Math.PI);
-        const nw=(L.pos==="Run")?norm(bis+180):bis;
-        if(Math.abs(((nw-w+540)%360)-180)<=35){
-          windSet("dir",nw,"solved");
-          windSeriesAdd(nw,TACK.last.miss,TACK.board);   // 8b: keep the series, not just the value
-        }
+        // The wind from a tack is DEFERRED until the boat is back up to speed. At the 25-second
+        // settle the tack is recognised, but the heading then is a boat still accelerating and
+        // sailing wide of its polar, so the bisector taken there is biased. Re-read the new
+        // board after the settling window and derive the wind from THAT heading against the
+        // pre-tack one. If the boat tacks again before the window is up, the pending derivation
+        // is dropped: the pair is no longer clean.
+        const pend={from, board:TACK.board, run:(L.pos==="Run"), miss:TACK.last.miss,
+                    at:now, seq:(TACK.n||0)};
+        TACK.pending=pend;
+        setTimeout(()=>{
+          try{
+            if(!TACK.pending||TACK.pending!==pend)return;      // another manoeuvre intervened
+            if((TACK.n||0)!==pend.seq)return;
+            if(!sailWindowOpen())return;
+            const rr=recentHeading(TACK_SETTLE_MS); if(!rr)return;
+            const a2=rad(pend.from), b2=rad(rr.hdg);
+            const bis2=norm(Math.atan2(Math.sin(a2)+Math.sin(b2),Math.cos(a2)+Math.cos(b2))*180/Math.PI);
+            const nw2=pend.run?norm(bis2+180):bis2;
+            const wNow=windDir();
+            if(Math.abs(((nw2-wNow+540)%360)-180)<=35){
+              windSet("dir",nw2,"solved");
+              windSeriesAdd(nw2,pend.miss,pend.board);
+              try{ raceRecEvent("wind","from tack",{dir:Math.round(nw2),
+                   waitedMin:MANOEUVRE_SETTLE_MIN}); }catch(e){}
+            }
+            TACK.pending=null;
+          }catch(e){}
+        }, Math.max(0,MANOEUVRE_SETTLE_MIN*60000));
       }
       try{raceRecEvent("tack",kind,{from:TACK.last.from,to:TACK.last.to,
           confirmed,miss:TACK.last.miss,suspectShift:TACK.suspectShift});}catch(e){}
@@ -8962,11 +9062,9 @@ function tuneCapHTML(){
     ? `<div style="flex:1;min-height:52px;display:flex;align-items:center;justify-content:center;
          border-radius:12px;background:rgba(255,255,255,.10);border:1.5px solid #BFE8D4;color:#BFE8D4;
          font-weight:800;font-size:13px">Racing \u00b7 every tack counts</div>`
-    : `<button class="rtbtn" data-t="sailwin" style="flex:1;min-height:52px;font-size:14px;${
-        open?"background:#E08A2B;border-color:#F0A950":""}">${
-        open?"Stop recording<br><span style='font-size:10px;font-weight:600'>"+mins+" min \u00b7 "+
-             WINDSERIES.length+" tack"+(WINDSERIES.length===1?"":"s")+"</span>"
-           :"Start recording<br><span style='font-size:10px;font-weight:600'>tack repeatedly, the app takes the rest</span>"}</button>`;
+    : (open?`<div style="flex:1;min-height:52px;display:flex;align-items:center;justify-content:center;
+         border-radius:12px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.20);
+         color:#C9DFEC;font-size:12px;font-weight:700">Recording \u00b7 ${mins} min \u00b7 ${WINDSERIES.length} tack${WINDSERIES.length===1?"":"s"}</div>`:``);
   const series=st.n?`<div style="margin-top:7px;padding:7px 9px;border-radius:10px;
       background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.20);font-size:12px;line-height:1.45">
       <div style="font-size:10px;letter-spacing:.06em;font-weight:800;color:#C6E4D3">WIND FROM YOUR TACKS</div>`+
