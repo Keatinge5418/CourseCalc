@@ -126,6 +126,7 @@ header{padding:26px 96px 24px 14px;background:#FFF6D0;border-radius:12px;margin:
    .legpanel sits after the family block */
 details.legpanel.fam-race{background:var(--race-mid)}
 details.legpanel.fam-util{background:var(--util-mid)}
+input[type=text],input[type=number],input[type=date],input[type=time],input[type=search],textarea{font-size:16px}
 input[type=range]{-webkit-appearance:none;appearance:none;height:34px;background:transparent}
 input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:#C9D6DF}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;border-radius:50%;background:#12283A;margin-top:-11px;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}
@@ -195,6 +196,11 @@ input[type=number]:focus,input[type=date]:focus,input[type=time]:focus{outline:n
 button.pick{min-height:var(--btn-h);border:1.5px solid var(--rule);background:var(--card);
   border-radius:var(--r-ctl);font-size:var(--fs-value);font-weight:700;color:var(--ink);padding:0}
 button.pick.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+/* One grammar on the Setup page: white is the app's default, an orange RING is what the app is
+   tracking or assuming, a black fill is your explicit choice, and the boat turns blue once you
+   have chosen it. Source tints stay on the wind boxes alone, where sources actually compete. */
+button.pick.appdefault{background:#FBFDFE;color:var(--ink);border:2.5px solid var(--start)}
+button.pick.boaton{background:#2C5F8A;color:#fff;border-color:#2C5F8A}
 button.pick.sug{border-color:var(--start);box-shadow:inset 0 0 0 2px var(--start)}
 /* black course button can also carry the orange "used wind" ring: outline sits outside */
 button.pick.on.sug{box-shadow:0 0 0 2px var(--start)}
@@ -461,6 +467,18 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   <div style="margin-bottom:12px"><label>Course card</label>
     <div class="cardbtns" id="cardbtns"></div>
+    <div class="cardbtns" id="modebtns" style="margin-top:8px"></div>
+  <div id="coastalWrap" style="display:none;margin-top:10px;background:#FBEEB0;border:1px solid #E0C86A;border-radius:12px;padding:10px 11px">
+    <div style="font-size:12px;font-weight:800;color:#3A2A00;margin-bottom:6px">Build a coastal course</div>
+    <input id="coastalFind" type="text" placeholder="Find a mark: Muglins, Boyd, Kish" autocapitalize="off" autocorrect="off" style="width:100%;box-sizing:border-box;font-size:16px">
+    <div id="coastalHits" style="max-height:150px;overflow-y:auto;margin-top:6px"></div>
+    <div id="coastalSeq" style="margin-top:8px"></div>
+    <div class="inrow" style="margin-top:8px">
+      <div style="flex:1"><button class="pick" id="coastalUse" style="width:100%">Use this course</button></div>
+      <div style="flex:0 0 84px"><button class="pick" id="coastalClear" style="width:100%">Clear</button></div>
+    </div>
+  </div>
+
   </div>
   <div class="inrow" style="margin-bottom:12px">
     <div style="flex:1.15"><label>Race date</label><input id="rdate" type="date"></div>
@@ -468,9 +486,11 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <div style="flex:0 0 58px"><label>&nbsp;</label><button id="rdtNowBtn" class="pick" style="width:100%;padding:0;font-weight:800;font-size:13px" title="Set race date and time to now">NOW</button></div>
   </div>
   <div class="inrow">
-    <div><label>Wind &deg;T <span id="windSrcLbl" style="font-weight:700;letter-spacing:0"></span></label><input id="wdir" type="number" inputmode="numeric" value="0" min="0" max="359" title="the wind the app is using; type to override"></div>
+    <div><label>Wind &deg;T</label><input id="wdir" type="number" inputmode="numeric" value="0" min="0" max="359" title="the wind the app is using; type to override"></div>
     <div><label>Wind kt</label><input id="wspd" type="number" inputmode="numeric" value="10" min="0" max="40"></div>
     <div><label>Gusts kt</label><input id="wgst" type="number" inputmode="numeric" value="15" min="0" max="50"></div>
+  </div>
+    <div id="windSrcLbl" style="font-size:11px;font-weight:700;letter-spacing:.03em;margin:2px 0 0"></div>
   </div>
   <div style="margin-top:12px"><label>Course letter <span id="sugTxt" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
     <div class="letters" id="letters"></div>
@@ -487,7 +507,6 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 
 
 
-  </div>
   </div>
   <div class="bpage">
     <div class="bpage-head">SAIL WARDROBE</div>
@@ -520,6 +539,8 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div id="fcPress" style="background:#fff;border-radius:10px;padding:6px 4px;margin-top:8px"></div>
   <div id="fcTrendLine" style="font-size:12px;color:#12283A;margin-top:8px"></div>
   <div id="fcCalLine" style="font-size:12px;color:#3A7D5E;margin-top:4px"></div>
+  <div id="fcSkillLine" class="wxnote" style="display:none;margin-top:6px"></div>
+  <div class="wxcap" style="font-size:10px;margin-top:8px;opacity:.85">Data from Dublin Bay Buoy (dublinbaybuoy.com), sourced from Irish Lights MetOcean and Open-Meteo.</div>
   </div>
 
   <div class="bpage">
@@ -715,6 +736,15 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div id="gpsScroll">
 
   <!-- PAGE 1: the numbers. -->
+  <div class="gpage" id="gpage3">
+    <div class="bpage-head" style="color:var(--muted-dark)">COURSE CHART</div>
+  <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
+  <!-- v418: the wind slider and its restore button are gone from this page. Page 2 already has
+       one, it drives the same global wind, and this page is now a plan view rather than a place
+       you adjust things. The leg plan for the chosen leg sits under the chart instead. -->
+  <div id="mapPlan" style="margin-top:8px"></div>
+  </div>
+
   <div class="gpage" id="gpage1">
     <div class="bpage-head" style="color:var(--muted-dark)">NUMBERS</div>
   <!-- v409: four tiles removed to give the compass rose room, which was down to 104px.
@@ -776,15 +806,6 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        copied. Its controls (Tide/Wind/Both, orientation, the wind slider and the restore R)
        drive global state, so they act on the entire app from wherever they live. The two mini
        charts are gone: this chart is the same picture, larger. -->
-  <div class="gpage" id="gpage3">
-    <div class="bpage-head" style="color:var(--muted-dark)">COURSE CHART</div>
-  <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
-  <!-- v418: the wind slider and its restore button are gone from this page. Page 2 already has
-       one, it drives the same global wind, and this page is now a plan view rather than a place
-       you adjust things. The leg plan for the chosen leg sits under the chart instead. -->
-  <div id="mapPlan" style="margin-top:8px"></div>
-  </div>
-
   <div class="gpage" id="gpage2">
     <div class="bpage-head" style="color:var(--muted-dark)">LEG CHART</div>
   <!-- Light ink: this row was #12283A, right on the light Course Analysis tab but near-black on
@@ -1904,7 +1925,11 @@ N:["As Jp Lp Ns Xp","As Jp Lp Ks Xp","As Jp Lp Xp","As Bs Ns Xp","As Bs Hs Xp"],
 P:["As Jp Cp Ks Ap Xp","As Jp Cp Ks Xp","As Jp Cp Bs Xp","As Ks Vs Xp","As Vs Xp"],
 Q:["Ls Np Ds Js Cp Xp","Ls Np Cp Ap Xp","Ls Ks Vs Bp Xp","Ls Ks Vs Xp","Ls Vs Xp"],
 R:["Ls Ks Vs Dp Xp","Ls Ks Vs Cp Xp","Ls Ks Vs Bp Xp","Ls Ks Vs Hp Xp","Ls Vs Xp"]};
+// The coastal card holds ONE course at a time, the one you build by hand. It is deliberately
+// absent from the card button row: you reach it through the Coastal button instead.
+const COASTAL={A:["Ep As"]};
 const CARDS={
+ coastal:{btn:"Coastal",title:"Coastal \u00B7 custom course",vhf:"74",start:"cv",courses:COASTAL,hidden:true},
  satcv:{btn:"Sat CV",title:"Saturday \u00B7 Committee Vessel",vhf:"74",start:"cv",courses:COURSES},
  sathut:{btn:"Sat Hut",title:"Saturday \u00B7 West Pier Hut",vhf:"68",start:"hut",courses:C2},
  thublue:{btn:"Thu Blue",title:"Thursday \u00B7 Blue Fleet",vhf:"74",start:"cv",courses:C3},
@@ -2781,6 +2806,7 @@ function arrivalInfo(r,idx,wdir,wspd){
 // ---------- UI ----------
 const $=id=>document.getElementById(id);
 let state={card:"thublue",letter:"A",num:1,leg:0,northUp:true,boat:"etap28i",viewMode:"both"};
+let BOATCHOSEN=false;                            // the ETAP is the app's assumption until you press one
 // Four winds. "used" is what the whole app calculates from; it always equals one of the
 // other three, whichever was set last under these rules:
 //   expected  - a course letter button. Claims "used" ONLY until the first Forecast press.
@@ -3151,6 +3177,94 @@ function beatLiveBind(){
     ? "READ OFF THE BOAT \u00B7 APPLIES AT ONCE"
     : "READ OFF THE BOAT, BEFORE YOU TAP TO STOP";
 }
+// ---------- Coastal: a course built by hand from any mark (v525) ----------
+// Card courses are fixed sequences of bay marks. A coastal race uses whatever the sailing
+// instructions name, so this builds a course string over an extended mark table: pick marks in
+// order, say which side each is left, and everything downstream (legs, laylines, sail calls,
+// tactics, charts) works exactly as it does for a card course.
+const COASTAL_SEQ=[];
+function coastalSave(){ try{ localStorage.setItem("cc_coastal",JSON.stringify(COASTAL_SEQ)); }catch(e){} }
+function coastalLoad(){
+  try{ const r=localStorage.getItem("cc_coastal"); if(!r)return;
+    const a=JSON.parse(r); if(Array.isArray(a)){ COASTAL_SEQ.length=0; a.forEach(m=>COASTAL_SEQ.push(m)); }
+  }catch(e){}
+}
+function coastalFind(q){
+  const s=(q||"").trim().toLowerCase();
+  if(s.length<2)return [];
+  const out=[];
+  for(const k in MARKS){ const m=MARKS[k];
+    if((m[0]||"").toLowerCase().includes(s))out.push({key:k,name:m[0],lat:m[1],lon:m[2],dbsc:true}); }
+  try{
+    for(const sm of SEAMARKS){
+      if(!sm.n)continue;
+      if(sm.n.toLowerCase().includes(s))out.push({key:null,name:sm.n,lat:sm.p[0],lon:sm.p[1],dbsc:false});
+      if(out.length>60)break;
+    }
+  }catch(e){}
+  return out.slice(0,40);
+}
+function coastalAdd(hit){
+  COASTAL_SEQ.push({key:hit.key,name:hit.name,lat:hit.lat,lon:hit.lon,side:"P"});
+  coastalSave(); coastalRender();
+}
+function coastalRender(){
+  const hits=$("coastalHits"), seq=$("coastalSeq"), find=$("coastalFind");
+  if(!hits||!seq)return;
+  const list=coastalFind(find?find.value:"");
+  hits.innerHTML=list.length
+    ? list.map((h,i)=>`<div class="coastalHit" data-i="${i}" style="padding:5px 6px;border-top:1px solid #E0C86A;font-size:13px;color:#12283A;cursor:pointer">`+
+        `${h.name}${h.dbsc?' <span style="color:#6B5A20;font-size:11px">bay mark</span>':''}</div>`).join("")
+    : ((find&&find.value.trim().length>=2)?`<div style="font-size:12px;color:#6B5A20;padding:4px 2px">No mark of that name.</div>`:``);
+  hits.querySelectorAll(".coastalHit").forEach(el=>el.onclick=()=>{ coastalAdd(list[+el.dataset.i]); if(find){find.value="";} });
+  seq.innerHTML=COASTAL_SEQ.length
+    ? COASTAL_SEQ.map((m,i)=>`<div style="display:flex;gap:6px;align-items:center;padding:3px 0;font-size:13px;color:#12283A">`+
+        `<div style="flex:0 0 18px;color:#6B5A20">${i+1}</div>`+
+        `<div style="flex:1">${m.name}</div>`+
+        `<button class="pick coastalSide" data-i="${i}" style="flex:0 0 96px;padding:3px 0;font-size:12px;font-weight:800;`+
+        `background:${m.side==="P"?"var(--port)":"var(--stbd)"};border-color:${m.side==="P"?"var(--port)":"var(--stbd)"};color:#fff">`+
+        `${m.side==="P"?"leave to port":"leave to stbd"}</button>`+
+        `<button class="pick coastalDel" data-i="${i}" style="flex:0 0 30px;padding:3px 0;font-size:12px">\u00d7</button></div>`).join("")
+    : `<div style="font-size:12px;color:#6B5A20">Add each mark in order. The last one is the finish. Tap the side button to change which side you leave a mark.</div>`;
+  seq.querySelectorAll(".coastalSide").forEach(b=>b.onclick=()=>{ const i=+b.dataset.i;
+    COASTAL_SEQ[i].side=(COASTAL_SEQ[i].side==="P")?"S":"P"; coastalSave(); coastalRender(); });
+  seq.querySelectorAll(".coastalDel").forEach(b=>b.onclick=()=>{ COASTAL_SEQ.splice(+b.dataset.i,1); coastalSave(); coastalRender(); });
+}
+function coastalApply(){
+  if(COASTAL_SEQ.length<2)return false;
+  // Marks that are not bay marks join MARKS under their own keys, so every chart and every
+  // calculation treats them as first-class marks for this race.
+  const toks=COASTAL_SEQ.map((m,i)=>{
+    let k=m.key;
+    if(!k){ k="X"+(i+1); MARKS[k]=[m.name,m.lat,m.lon,"O"]; }
+    return k+(m.side==="S"?"s":"p");
+  });
+  COASTAL.A[0]=toks.join(" ");
+  state.card="coastal"; state.letter="A"; state.num=1; state.leg=0;
+  WIND.chosen=true; WIND.numChosen=true;
+  try{ buildNums(); }catch(e){}
+  try{ raceRecEvent("course","coastal",{seq:COASTAL.A[0]}); }catch(e){}
+  render();
+  return true;
+}
+function modeBtnsInit(){
+  const host=$("modebtns"); if(!host||host.dataset.built)return;
+  host.dataset.built="1";
+  host.innerHTML=`<button class="pick" id="coastalBtn">Coastal</button>`+
+    [1,2,3].map(()=>`<button class="pick" disabled style="opacity:.35">&nbsp;</button>`).join("");
+  const b=$("coastalBtn");
+  if(b)b.onclick=()=>{
+    const w=$("coastalWrap"); if(!w)return;
+    const open=w.style.display!=="none";
+    w.style.display=open?"none":"";
+    if(!open){ coastalLoad(); coastalRender(); }
+  };
+  const f=$("coastalFind"); if(f)f.addEventListener("input",coastalRender);
+  const u=$("coastalUse");
+  if(u)u.onclick=()=>refreshFlash(u,()=>coastalApply());
+  const c=$("coastalClear");
+  if(c)c.onclick=()=>{ COASTAL_SEQ.length=0; coastalSave(); coastalRender(); };
+}
 function roRender(){
   const el=$("roLine"); if(!el)return;
   const bits=[];
@@ -3474,7 +3588,7 @@ function windTintPaint(){
     });
     const lb=$("windSrcLbl");
     if(lb){ const corr=(src==="forecast"&&FCCAL.ok&&FCCAL.bias!=null);
-      lb.textContent=t.label+(corr?" (corrected)":"");
+      lb.textContent="wind from "+t.label+(corr?", corrected":"");
       lb.style.color=t.bd; }
   }catch(e){}
 }
@@ -3784,6 +3898,53 @@ function fcAt(ms){                                     // forecast wind interpol
   // value, which can be a day off and wildly different in direction.
   return {dir:norm(D[D.length-1]), spd:S.length?+S[S.length-1]:null, gst:G.length?+G[G.length-1]:null,
           clamped:true, lastTime:T[T.length-1]};
+}
+// ---------- Forecast skill from the buoy archive (v523) ----------
+// How wrong the direction forecast has actually been at YOUR lead time, measured over 30 days of
+// forecast-versus-buoy pairs the site already keeps. It answers "what is today's forecast worth"
+// before sailing, and can later give 4a a measured spread instead of a fixed guess.
+const DBB_KEY="sb_publishable_R5KkIpbiwNajUyx3I4aewQ_S4NI8hl3";
+const FCSKILL={rows:null, at:0};
+function fcSkillFetch(){
+  return fetch("https://api.dublinbaybuoy.com/rest/v1/rpc/rpc_forecast_skill",{
+      method:"POST",
+      headers:{apikey:DBB_KEY,"Content-Type":"application/json"},
+      body:JSON.stringify({variable_name:"wind_direction_10m",model_name:"ecmwf_ifs025",
+                           window_days:30,lead_bucket_hours:6})})
+    .then(r=>{ if(!r.ok)throw new Error("HTTP "+r.status); return r.json(); })
+    .then(rows=>{
+      if(!Array.isArray(rows)||!rows.length)throw new Error("no rows");
+      FCSKILL.rows=rows; FCSKILL.at=Date.now();
+      try{ localStorage.setItem("cc_fcskill",JSON.stringify(FCSKILL)); }catch(e){}
+      window.fcSkillOkAt=Date.now();
+      try{ fcSkillRender(); }catch(e){}
+      return true;
+    }).catch(()=>{ try{ fcSkillRender(); }catch(e){} return false; });
+}
+function fcSkillLoad(){ try{ const r=localStorage.getItem("cc_fcskill");
+  if(r){ const o=JSON.parse(r); FCSKILL.rows=o.rows; FCSKILL.at=o.at||0; } }catch(e){} }
+function fcSkillAtLead(hours){
+  if(!FCSKILL.rows)return null;
+  let best=null,bd=1e9;
+  for(const r of FCSKILL.rows){
+    const lb=+r.lead_bucket; if(!isFinite(lb))continue;
+    const d=Math.abs(lb-hours);
+    if(d<bd){ bd=d; best=r; }
+  }
+  return best;
+}
+function fcSkillRender(){
+  const el=$("fcSkillLine"); if(!el)return;
+  if(!FCSKILL.rows){ el.style.display="none"; return; }
+  let leadH=3;
+  try{ leadH=Math.max(0,(trendWindow()[0]-(FC.stamp||Date.now()))/3600000); }catch(e){}
+  const r=fcSkillAtLead(leadH);
+  if(!r||r.mae==null){ el.style.display="none"; return; }
+  el.style.display="";
+  const ageD=Math.round((Date.now()-FCSKILL.at)/86400000);
+  el.innerHTML=`Forecast skill: at about <b>${Math.round(leadH)} h</b> lead, ECMWF direction for this bay `+
+    `is typically within <b>${Math.round(+r.mae)}\u00B0</b> of the buoy `+
+    `(${r.n} pairs, last 30 days${ageD>1?`, checked ${ageD} d ago`:""}).`;
 }
 // ---------- Convergence at the gun (v508) ----------
 // Lagged-ensemble check: every successful fetch snapshots what each source predicts for the
@@ -4216,6 +4377,7 @@ function fcPageRender(){
   }
   host.innerHTML=n?rows:`<div style="font-size:12px;color:#3A7D5E;padding:6px 0">The cached forecast does not cover the race window. Tap Refresh.</div>`;
   try{ fcConvRender(); }catch(e){}
+  try{ fcSkillRender(); }catch(e){}
   const mv=$("fcMdlVerdict"), md=$("fcMdlDetail");
   if(mv){
     const vt=mdlVerdictText(t0,t1);
@@ -6018,7 +6180,17 @@ function garminLabelsSync(){
     if(tgt&&tgt.m&&typeof MARKS!=="undefined"&&MARKS[tgt.m]){
       try{ chip=chipHTML(MARKS[tgt.m][3]); }catch(e){ chip=""; }
     }
-    dest.innerHTML=chip?`<span style="display:inline-flex;align-items:center;gap:5px">${word}${chip}</span>`:word;
+    // Bay marks are short words; coastal marks are not ("North Burford", "Dublin Bay Buoy"),
+    // and at 20px they wrapped into the chip. Scale the name to its length and keep the chip on
+    // its own flex line so the two can never collide.
+    const n=word.length;
+    dest.style.fontSize=(n<=9?20:n<=14?17:n<=20?15:13)+"px";
+    dest.style.lineHeight="1.15";
+    dest.innerHTML=chip
+      ? `<span style="display:inline-flex;align-items:center;gap:5px;min-width:0;justify-content:center">`+
+        `<span style="min-width:0;overflow-wrap:anywhere">${word}</span>`+
+        `<span style="flex:0 0 auto">${chip}</span></span>`
+      : word;
   }
   // Tack/Gybe distance and time now come from gybeCallInfo, written in garminRender alongside
   // the To Mark tile, so the two tiles are driven by one model and cannot disagree.
@@ -6369,6 +6541,7 @@ function goBtnInit(){
         }catch(e){}
         try{ mdlFetch(); }catch(e){}
         try{ aptFetch(); }catch(e){}
+        try{ fcSkillFetch(); }catch(e){}
       },["fcOkAt","dbbOkAt","dbbTrendOkAt","mdlOkAt","aptOkAt"]);
       return;                            // refreshFlash repaints the button itself
     }
@@ -6715,14 +6888,15 @@ function rtInit(){
   rtStop(); rtBtns(); rtInfo(); rtTick();
 }
 function buildPickers(){
+  try{ setTimeout(modeBtnsInit,0); }catch(e){}
   $("boatbtns").innerHTML=Object.keys(BOATS).map(k=>`<button class="pick" data-b="${k}">${BOATS[k].label}</button>`).join("");
-  $("boatbtns").onclick=e=>{if(e.target.dataset.b){setBoat(e.target.dataset.b);
+  $("boatbtns").onclick=e=>{if(e.target.dataset.b){BOATCHOSEN=true;setBoat(e.target.dataset.b);
     if(TIME.cardChosen){                         // a card is already locked in: its start time
       const g=nextCardGun(state.card,Date.now()); // depends on the boat's class, so refresh it too
       if(g!=null){TIME.user=g; TIME.src="user";}
     }
     render();RT.lastWhole=null;rtInfo();}};
-  $("cardbtns").innerHTML=Object.keys(CARDS).map(k=>`<button class="pick" data-c="${k}">${CARDS[k].btn}</button>`).join("");
+  $("cardbtns").innerHTML=Object.keys(CARDS).filter(k=>!CARDS[k].hidden).map(k=>`<button class="pick" data-c="${k}">${CARDS[k].btn}</button>`).join("");
   $("cardbtns").onclick=e=>{if(e.target.dataset.c){state.card=e.target.dataset.c;state.num=Math.min(state.num,(CARDS[state.card].courses[state.letter]||[]).length||8);buildNums();
     TIME.cardChosen=true;                        // you picked the card, so the programme stops moving it
     {const g=nextCardGun(state.card,Date.now());
@@ -6751,8 +6925,10 @@ function buildPickers(){
    {
      try{ aptLoad(); aptRender(); }catch(e){}
      try{ mdlLoad(); mdlRender(); }catch(e){}
+     try{ fcSkillLoad(); fcSkillRender(); }catch(e){}
      const fb=$("fcPageRefresh"); if(fb)fb.onclick=()=>refreshFlash(fb,
-       ()=>{ try{trendFetch();}catch(e){} try{dbbFetchAll();}catch(e){} try{mdlFetch();}catch(e){} try{aptFetch();}catch(e){} },
+       ()=>{ try{trendFetch();}catch(e){} try{dbbFetchAll();}catch(e){} try{mdlFetch();}catch(e){}
+             try{aptFetch();}catch(e){} try{fcSkillFetch();}catch(e){} },
        ["fcOkAt","dbbOkAt","dbbTrendOkAt","mdlOkAt","aptOkAt"]);
      const ct=$("condtab"); if(ct)ct.addEventListener("toggle",()=>{ if(ct.open){ try{fcPageRender();}catch(e){} try{aptRender();}catch(e){} setTimeout(()=>{try{drawTideCurve();}catch(e){}},60); } }); }
    const bdr=$("bdRefresh"); if(bdr)bdr.onclick=dbbFetchAll;
@@ -6883,7 +7059,9 @@ function render(){
   //   orange the race timer is counting to it
   //   ink on orange  you typed it
   {const g=usedGun(), src=timeSrc();
-   if(src==="default"&&!TIME.cardChosen){        // let the programme choose the card too
+   // A coastal course is an explicit choice, so the programme must not pull the card back to
+   // the next scheduled race on the following render.
+   if(src==="default"&&!TIME.cardChosen&&state.card!=="coastal"){   // let the programme choose the card too
      const n=defaultRace();
      if(n&&n.card&&n.card!==state.card){
        state.card=n.card;
@@ -6897,24 +7075,22 @@ function render(){
    const ts=p2(d.getHours())+":"+p2(d.getMinutes());
    const paintT=(el,val)=>{ if(!el)return;
      if(document.activeElement!==el)el.value=val;
-     let bg="#FBFDFE", fg="var(--ink)";
-     if(src==="user"){ bg="var(--start)"; fg="#12283A"; }
-     else if(src==="timer"){ bg="var(--start)"; fg="#fff"; }
-     el.style.background=bg; el.style.color=fg;
-     el.style.borderColor=(bg==="#FBFDFE")?"var(--rule)":bg;
+     // your choice fills black; the timer counting to it is a ring, not a fill
+     if(src==="user"){ el.style.background="var(--ink)"; el.style.color="#fff";
+                       el.style.border="1.5px solid var(--ink)"; }
+     else if(src==="timer"){ el.style.background="#FBFDFE"; el.style.color="var(--ink)";
+                       el.style.border="2.5px solid var(--start)"; }
+     else { el.style.background="#FBFDFE"; el.style.color="var(--ink)";
+            el.style.border="1.5px solid var(--rule)"; }
    };
    paintT(rd,ds); paintT(rt,ts);
   }
-  // Wind kt and Gusts kt use the same code: white while nothing has set them, orange
-  // once the forecast or instruments do, dark ink on orange when you typed the figure.
+  // Wind kt and Gusts kt carry the same source colours as Wind deg: windTintPaint owns the
+  // three boxes, so all that is needed here is the value. Painting them orange from the old
+  // language left the three boxes telling different stories, which is what the screenshots showed.
   {const paint=(el,src,val)=>{
      if(!el)return;
      if(document.activeElement!==el)el.value=String(val);
-     let bg="#FBFDFE", fg="var(--ink)";
-     if(src==="manual"){ bg="var(--start)"; fg="#12283A"; }
-     else if(src==="forecast"){ bg="var(--start)"; fg="#fff"; }
-     el.style.background=bg; el.style.color=fg;
-     el.style.borderColor=(bg==="#FBFDFE")?"var(--rule)":bg;
    };
    paint($("wspd"),WSPD.src,Math.round(usedSpd()*10)/10);
    paint($("wgst"),WGST.src,Math.round(usedGst()));
@@ -6934,7 +7110,12 @@ function render(){
     b.style.cursor=WIND.chosen?"":"default";
   });
   document.querySelectorAll("#cardbtns .pick").forEach(b=>b.classList.toggle("on",b.dataset.c===state.card));
-  document.querySelectorAll("#boatbtns .pick").forEach(b=>b.classList.toggle("on",b.dataset.b===state.boat));
+  document.querySelectorAll("#boatbtns .pick").forEach(b=>{
+    const sel=(b.dataset.b===state.boat);
+    b.classList.toggle("boaton",sel&&!!BOATCHOSEN);
+    b.classList.toggle("appdefault",sel&&!BOATCHOSEN);
+    b.classList.remove("on");
+  });
   $("eyebrow").textContent=`Dublin Bay SC \u00B7 ${CARDS[state.card].title} \u00B7 VHF ${CARDS[state.card].vhf}`;
   const haveCourse=WIND.chosen&&WIND.numChosen;
   const r=haveCourse?compute(state.card,wdir,wspd,wgst,state.letter,state.num):null;
