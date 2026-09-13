@@ -65,6 +65,8 @@
   --fs-label:10px; --fs-body:12px; --fs-value:15px; --fs-head:19px;
   /* controls: two heights, neither below the 44px that a wet thumb needs */
   --ctlh:52px; --btn-h:46px; --btn-sm:34px;
+  /* the fill that means "you chose this", on every pick button. It began as the boat blue. */
+  --chosen:#2C5F8A;
   --r-panel:12px; --r-ctl:8px;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
@@ -208,14 +210,17 @@ input[type=number]:focus,input[type=date]:focus,input[type=time]:focus{outline:n
    layered on top of them. */
 button.pick{min-height:var(--btn-h);border:1.5px solid var(--rule);background:var(--card);
   border-radius:var(--r-ctl);font-size:var(--fs-value);font-weight:700;color:var(--ink);padding:0}
-button.pick.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+button.pick.on{background:var(--chosen);color:#fff;border-color:var(--chosen)}
 /* One grammar on the Setup page: white is the app's default, an orange RING is what the app is
-   tracking or assuming, a black fill is your explicit choice, and the boat turns blue once you
-   have chosen it. Source tints stay on the wind boxes alone, where sources actually compete. */
+   tracking or assuming, and a BLUE fill is your explicit choice. The blue started as the boat
+   button alone and black did the same job everywhere else, which made one meaning wear two
+   colours. Now the boat is simply the first thing you choose, not a special case. Green is
+   reserved for a live state you can act on (a coastal course in use, NOW). Source tints stay on
+   the wind boxes alone, where sources actually compete. */
 button.pick.appdefault{background:#FBFDFE;color:var(--ink);border:2.5px solid var(--start)}
-button.pick.boaton{background:#2C5F8A;color:#fff;border-color:#2C5F8A}
+button.pick.boaton{background:var(--chosen);color:#fff;border-color:var(--chosen)}
 button.pick.sug{border-color:var(--start);box-shadow:inset 0 0 0 2px var(--start)}
-/* black course button can also carry the orange "used wind" ring: outline sits outside */
+/* a chosen button can also carry the orange "scheduled/assumed" ring: outline sits outside */
 button.pick.on.sug{box-shadow:0 0 0 2px var(--start)}
 /* The six live readouts: same family as the tiles above, but denser, since they sit under the
    mini chart and are read at a glance rather than studied. */
@@ -339,7 +344,16 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 /* Coastal entry lines use the app's standard control height, the same --ctlh the race date,
    start time and wind boxes use. The lat/lon pair sit in an .inrow and got it for free; Name
    and Find did not, and looked thin beside them. One rule rather than four inline styles. */
+/* Both Coastal pages are flex columns sized to the page, never taller. A bpage that overflows
+   scrolls inside itself, and that internal scroll is what was stealing the swipe from the
+   bundle's snap. The lists take the slack and scroll within their own cards instead. */
+#coastalPage,#marksPage{display:flex;flex-direction:column;overflow:hidden}
+.coastCard{background:#FBEEB0;border:1px solid #E0C86A;border-radius:12px;padding:10px 11px;
+  box-sizing:border-box}
+.coastCardHead{font-size:12px;font-weight:800;color:#3A2A00;margin-bottom:6px;flex:0 0 auto}
 #coastalPage input[type=text]{height:var(--ctlh);box-sizing:border-box;font-size:16px;
+  padding:0 10px;border:1.5px solid var(--rule);border-radius:var(--r-ctl,10px);width:100%}
+#marksPage input[type=text]{height:var(--ctlh);box-sizing:border-box;font-size:16px;
   padding:0 10px;border:1.5px solid var(--rule);border-radius:var(--r-ctl,10px);width:100%}
 /* A position row: label, degrees, minutes, hemisphere. Degrees and minutes are separate boxes
    so the numeric keypad is enough to type a position (there is no space key on it, which is
@@ -347,8 +361,8 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 .ddmrow{display:flex;align-items:center;gap:5px}
 .ddmlab{flex:0 0 30px;font-size:12px;font-weight:800;color:#3A2A00}
 .ddmsym{flex:0 0 9px;font-size:15px;font-weight:700;color:#6B5A20;text-align:center}
-#coastalPage input.ddmnum{flex:1 1 0;min-width:0;text-align:center;font-weight:700;padding:0 4px}
-#coastalPage button.ddmhemi{flex:0 0 52px;min-height:var(--ctlh);font-size:16px;font-weight:800;padding:0}
+#marksPage input.ddmnum{flex:1 1 0;min-width:0;text-align:center;font-weight:700;padding:0 4px}
+#marksPage button.ddmhemi{flex:0 0 52px;min-height:var(--ctlh);font-size:16px;font-weight:800;padding:0}
 #preScroll{height:calc(100dvh - var(--preoff, 96px));overflow-y:auto;overflow-x:hidden;
   scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #preScroll .ppage{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
@@ -528,15 +542,30 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 
   <div id="wardrobeBody" style="margin-top:6px"></div>
   </div>
+  <!-- Coastal is split across two pages so each one fits its own page height. A bpage that
+       overflows scrolls INSIDE itself, and on iOS that internal scroll swallows the drag, so
+       the bundle's snap never fires. Keeping each page within its height is what makes the
+       swipe between pages work. -->
   <div class="bpage" id="coastalPage">
     <div class="bpage-head">COASTAL</div>
-  <div style="margin-top:2px;background:#FBEEB0;border:1px solid #E0C86A;border-radius:12px;padding:10px 11px">
-    <div style="font-size:12px;font-weight:800;color:#3A2A00;margin-bottom:6px">Find a mark</div>
-    <input id="coastalFind" type="text" placeholder="Find a mark: Muglins, Boyd, Kish" autocapitalize="off" autocorrect="off">
-    <div id="coastalHits" style="max-height:150px;overflow-y:auto;margin-top:6px"></div>
+  <div class="coastCard" style="margin-top:2px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column">
+    <div class="coastCardHead">Find a mark</div>
+    <input id="coastalFind" type="text" placeholder="Find a mark: Muglins, Boyd, Kish" autocapitalize="off" autocorrect="off" style="flex:0 0 auto">
+    <div id="coastalHits" style="flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:6px"></div>
   </div>
-  <div style="margin-top:10px;background:#FBEEB0;border:1px solid #E0C86A;border-radius:12px;padding:10px 11px">
-    <div style="font-size:12px;font-weight:800;color:#3A2A00;margin-bottom:6px">Or enter a position</div>
+  <div class="coastCard" style="margin-top:10px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column">
+    <div class="coastCardHead">Course</div>
+    <div id="coastalSeq" style="flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:2px"></div>
+    <div class="inrow" style="margin-top:8px;flex:0 0 auto">
+      <div style="flex:1"><button class="pick" id="coastalUse" style="width:100%">Use this course</button></div>
+      <div style="flex:0 0 84px"><button class="pick" id="coastalClear" style="width:100%">Clear</button></div>
+    </div>
+  </div>
+  </div>
+  <div class="bpage" id="marksPage">
+    <div class="bpage-head">MARKS</div>
+  <div class="coastCard" style="margin-top:2px;flex:0 0 auto">
+    <div class="coastCardHead">Enter a position</div>
     <input id="coastalMName" type="text" placeholder="Name this mark" autocapitalize="words" style="margin-bottom:8px">
     <!-- Degrees and minutes are separate boxes, the way a navigator writes a position, so the
          number pad is all that is ever needed: no space key, nothing to parse out of one string.
@@ -563,17 +592,9 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     </div>
     <div id="coastalMErr" style="font-size:12px;color:#8A2A00;margin-top:5px"></div>
   </div>
-  <div style="margin-top:10px;background:#FBEEB0;border:1px solid #E0C86A;border-radius:12px;padding:10px 11px">
-    <div style="font-size:12px;font-weight:800;color:#3A2A00;margin-bottom:6px">My marks</div>
-    <div id="coastalMine" style="max-height:190px;overflow-y:auto"></div>
-  </div>
-  <div style="margin-top:10px;background:#FBEEB0;border:1px solid #E0C86A;border-radius:12px;padding:10px 11px">
-    <div style="font-size:12px;font-weight:800;color:#3A2A00;margin-bottom:6px">Course</div>
-    <div id="coastalSeq" style="margin-top:2px"></div>
-    <div class="inrow" style="margin-top:8px">
-      <div style="flex:1"><button class="pick" id="coastalUse" style="width:100%">Use this course</button></div>
-      <div style="flex:0 0 84px"><button class="pick" id="coastalClear" style="width:100%">Clear</button></div>
-    </div>
+  <div class="coastCard" style="margin-top:10px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column">
+    <div class="coastCardHead">My marks</div>
+    <div id="coastalMine" style="flex:1 1 auto;min-height:0;overflow-y:auto"></div>
   </div>
   </div>
   </div>
@@ -3471,8 +3492,22 @@ function coastalApply(){
   WIND.chosen=true; WIND.numChosen=true;
   try{ buildNums(); }catch(e){}
   try{ raceRecEvent("course","coastal",{seq:COASTAL.A[0]}); }catch(e){}
+  coastalInUsePaint();
   render();
   return true;
+}
+// A coastal course in use is a STATE, not a moment, so it is shown as one: Use this course and
+// the Coastal card button both go green and stay green. A flash said "pressed", which is not
+// the question you ask on the water. The truth is state.card, so a card button pressed
+// elsewhere takes the green away by itself.
+function coastalInUse(){ return state.card==="coastal"&&COASTAL_SEQ.length>=2; }
+function coastalInUsePaint(){
+  const on=coastalInUse();
+  [$("coastalUse"),$("coastalBtn")].forEach(b=>{
+    if(!b)return;
+    if(on){ b.style.background="var(--stbd)"; b.style.borderColor="var(--stbd)"; b.style.color="#fff"; }
+    else  { b.style.background=""; b.style.borderColor=""; b.style.color=""; }
+  });
 }
 function modeBtnsInit(){
   const host=$("modebtns"); if(!host||host.dataset.built)return;
@@ -3483,39 +3518,55 @@ function modeBtnsInit(){
   if(b)b.onclick=()=>{
     const p=$("coastalPage"); if(!p)return;
     myMarksLoad(); myMarksRender(); coastalLoad(); coastalRender();
-    // The page scrolls inside itself, so bring BOTH scrolls home: the bundle to this page, and
-    // the page to its own top. Without the second, you land wherever you last left it, which is
-    // how the Find box ended up off the top of the screen.
-    p.scrollTop=0;
-    p.scrollIntoView({block:"start",behavior:"smooth"});
-    setTimeout(()=>{ p.scrollTop=0; },350);
+    // The page fits its own height now, so bringing the bundle to it is all that is needed.
+    if(p.scrollIntoView)p.scrollIntoView({block:"start",behavior:"smooth"});
   };
   const f=$("coastalFind"); if(f)f.addEventListener("input",coastalRender);
   const u=$("coastalUse");
-  if(u)u.onclick=()=>refreshFlash(u,()=>coastalApply());
+  if(u)u.onclick=()=>{ coastalApply(); };
   const c=$("coastalClear");
-  if(c)c.onclick=()=>{ COASTAL_SEQ.length=0; coastalSave(); coastalRender(); };
+  if(c)c.onclick=()=>{
+    COASTAL_SEQ.length=0; coastalSave(); coastalRender();
+    // Clear is what takes the green away: an emptied course is no longer the one being sailed.
+    COASTAL.A[0]="Ep As";
+    if(state.card==="coastal"){
+      // Hand the card back to the programme. It only auto-picks when the card is not coastal
+      // and not user-chosen, so step off coastal first and let defaultRace() have it.
+      TIME.cardChosen=false;
+      const n=(typeof defaultRace==="function")?defaultRace():null;
+      state.card=(n&&n.card)?n.card:"thublue";
+      state.letter="A"; state.num=1; state.leg=0;
+      try{buildNums();}catch(e){}
+    }
+    coastalInUsePaint();
+    try{render();}catch(e){}
+  };
   coastalManualInit();
   try{ myMarksLoad(); myMarksRender(); }catch(e){}
   coastalTopWatch();
+  coastalInUsePaint();   // a session restored onto a coastal course opens already green
 }
-// The page scrolls inside itself, so arriving at it is not enough: its own scrollTop has to go
-// home too, or you land wherever you last left it and the Find box sits off the top. Watching
-// the page enter the viewport covers a swipe as well as the Coastal button. It only fires on
-// the transition into view, so scrolling within the page while you are on it is left alone.
+// Each page now fits its own height, so there is no internal scroll left to reset. The watcher
+// earns its place differently: it repaints a page as it comes into view, so the lists are
+// current whether you arrived by swiping or by the Coastal button. It fires only on the
+// transition into view, never while you are already on the page.
 function coastalTopWatch(){
-  const p=$("coastalPage"); if(!p||p.dataset.topWatch)return;
-  p.dataset.topWatch="1";
-  if(!("IntersectionObserver" in window))return;
-  let wasIn=false;
-  const io=new IntersectionObserver(es=>{
-    es.forEach(e=>{
-      const isIn=e.isIntersecting&&e.intersectionRatio>0.55;
-      if(isIn&&!wasIn){ p.scrollTop=0; try{coastalRender(); myMarksRender();}catch(err){} }
-      wasIn=isIn;
-    });
-  },{root:$("boatScroll"),threshold:[0,0.55,1]});
-  io.observe(p);
+  const hasIO=("IntersectionObserver" in window);
+  [["coastalPage",()=>{ try{coastalRender();}catch(e){} }],
+   ["marksPage",  ()=>{ try{myMarksRender();}catch(e){} }]].forEach(a=>{
+    const p=$(a[0]); if(!p||p.dataset.topWatch)return;
+    p.dataset.topWatch="1";      // marked either way, so init does not keep retrying
+    if(!hasIO)return;            // old engine: the page still works, it just is not repainted on entry
+    let wasIn=false;
+    const io=new IntersectionObserver(es=>{
+      es.forEach(e=>{
+        const isIn=e.isIntersecting&&e.intersectionRatio>0.55;
+        if(isIn&&!wasIn){ p.scrollTop=0; a[1](); }
+        wasIn=isIn;
+      });
+    },{root:$("boatScroll"),threshold:[0,0.55,1]});
+    io.observe(p);
+  });
 }
 // Degrees and minutes arrive as separate typed boxes plus a hemisphere button, so there is
 // nothing to parse out of a sentence: validate each part and combine.
@@ -5014,7 +5065,7 @@ function icsFlag(code,h){
 //   default - the programme: your next race, its card, and your class's gun
 //   user    - you typed a date or a time
 //   timer   - the gun the race timer is actually counting to, which wins while it runs
-const TIME={user:null, src:"default"};
+const TIME={user:null, src:"default", viaNow:false};
 function defaultRace(){ return nextRace(Date.now()); }
 function raceDayMs(){                                  // the DAY the timer should anchor to
   if(TIME.src==="user"&&TIME.user!=null)return TIME.user;
@@ -7240,14 +7291,14 @@ function buildPickers(){
   $("boatbtns").onclick=e=>{if(e.target.dataset.b){BOATCHOSEN=true;setBoat(e.target.dataset.b);
     if(TIME.cardChosen){                         // a card is already locked in: its start time
       const g=nextCardGun(state.card,Date.now()); // depends on the boat's class, so refresh it too
-      if(g!=null){TIME.user=g; TIME.src="user";}
+      if(g!=null){TIME.user=g; TIME.src="user"; TIME.viaNow=false;}
     }
     render();RT.lastWhole=null;rtInfo();}};
   $("cardbtns").innerHTML=Object.keys(CARDS).filter(k=>!CARDS[k].hidden).map(k=>`<button class="pick" data-c="${k}">${CARDS[k].btn}</button>`).join("");
   $("cardbtns").onclick=e=>{if(e.target.dataset.c){state.card=e.target.dataset.c;state.num=Math.min(state.num,(CARDS[state.card].courses[state.letter]||[]).length||8);buildNums();
     TIME.cardChosen=true;                        // you picked the card, so the programme stops moving it
     {const g=nextCardGun(state.card,Date.now());
-     if(g!=null){TIME.user=g; TIME.src="user";}}  // date and time follow that card's own day and sequence
+     if(g!=null){TIME.user=g; TIME.src="user"; TIME.viaNow=false;}}  // date and time follow that card's own day and sequence
     render();RT.lastWhole=null;rtInfo();}};
   $("letters").innerHTML=WINDLTR.map(([l])=>`<button class="pick" data-l="${l}">${l}</button>`).join("");
   function buildNums(){
@@ -7426,15 +7477,25 @@ function render(){
    const ts=p2(d.getHours())+":"+p2(d.getMinutes());
    const paintT=(el,val)=>{ if(!el)return;
      if(document.activeElement!==el)el.value=val;
-     // your choice fills black; the timer counting to it is a ring, not a fill
-     if(src==="user"){ el.style.background="var(--ink)"; el.style.color="#fff";
+     // NOW fills green and stays green: "these are the time and date right now", a state you
+     // can read at a glance rather than a flash you had to be watching for.
+     if(src==="user"&&TIME.viaNow){ el.style.background="var(--stbd)"; el.style.color="#fff";
+                       el.style.border="1.5px solid var(--stbd)"; }
+     else if(src==="user"){ el.style.background="var(--ink)"; el.style.color="#fff";
                        el.style.border="1.5px solid var(--ink)"; }
      else if(src==="timer"){ el.style.background="#FBFDFE"; el.style.color="var(--ink)";
                        el.style.border="2.5px solid var(--start)"; }
+     // Nothing overriding means the programme's schedule is what you are looking at, which is
+     // the app assuming rather than you choosing: an orange ring, like the scheduled card.
      else { el.style.background="#FBFDFE"; el.style.color="var(--ink)";
-            el.style.border="1.5px solid var(--rule)"; }
+            el.style.border="2.5px solid var(--start)"; }
    };
    paintT(rd,ds); paintT(rt,ts);
+   {const nb=$("rdtNowBtn");
+    if(nb){ const on=(src==="user"&&TIME.viaNow);
+      if(on){ nb.style.background="var(--stbd)"; nb.style.borderColor="var(--stbd)"; nb.style.color="#fff"; }
+      else  { nb.style.background=""; nb.style.borderColor=""; nb.style.color=""; }
+    }}
   }
   // Wind kt and Gusts kt carry the same source colours as Wind deg: windTintPaint owns the
   // three boxes, so all that is needed here is the value. Painting them orange from the old
@@ -7452,7 +7513,7 @@ function render(){
     ? `(wind ${Math.round(wdir)}\u00B0 \u2192 ${atWind})`
     : `(course set to expected wind)`;
   document.querySelectorAll("#letters .pick").forEach(b=>{
-    b.classList.toggle("on",WIND.chosen&&b.dataset.l===state.letter);   // black: the course you sail, once chosen
+    b.classList.toggle("on",WIND.chosen&&b.dataset.l===state.letter);   // blue: the course you sail, once chosen
     b.classList.toggle("sug",showOrange&&b.dataset.l===atWind);  // orange: where the used wind is
   });
   document.querySelectorAll("#nums .pick").forEach(b=>{
@@ -7460,7 +7521,15 @@ function render(){
     b.style.opacity=WIND.chosen?"":"0.4";                 // dimmed until a course letter is chosen
     b.style.cursor=WIND.chosen?"":"default";
   });
-  document.querySelectorAll("#cardbtns .pick").forEach(b=>b.classList.toggle("on",b.dataset.c===state.card));
+  // The card the programme schedules for today carries an orange RING, and keeps it whatever is
+  // actually selected: the ring says "scheduled", the fill says "chosen", and they are allowed
+  // to disagree. Same grammar as the letter nearest the used wind, which stays ringed while a
+  // different letter is filled black.
+  {const sched=(()=>{ try{ const n=defaultRace(); return (n&&n.card)?n.card:null; }catch(e){ return null; } })();
+   document.querySelectorAll("#cardbtns .pick").forEach(b=>{
+     b.classList.toggle("on",b.dataset.c===state.card);
+     b.classList.toggle("sug",sched!=null&&b.dataset.c===sched);
+   });}
   document.querySelectorAll("#boatbtns .pick").forEach(b=>{
     const sel=(b.dataset.b===state.boat);
     b.classList.toggle("boaton",sel&&!!BOATCHOSEN);
@@ -7567,6 +7636,7 @@ function render(){
   try{fitWatchLeg();}catch(e){}
   try{noticePaint();}catch(e){}
   try{tdcPaint();}catch(e){}
+  try{coastalInUsePaint();}catch(e){}   // green follows state.card, whatever changed it
 }
 let CURROUTE=null;
 const TIDECOL="#123C69";     // dark navy: the tidal stream, on every view that draws it
@@ -11251,26 +11321,25 @@ function legSwipeInit(){
 // so listen for "change" as well. render() is idempotent, so a double call is free.
 { // Race date and Start time: typing either one is a manual override of the programme.
   const rd=$("rdate"), rt=$("rtime");
-  const apply=()=>{
+  const apply=(viaNow)=>{
     const ds=(rd&&rd.value)||"", ts=(rt&&rt.value)||"";
     if(!ds||!ts)return;
     const p=ds.split("-").map(Number), q=ts.split(":").map(Number);
     const d=new Date(p[0],p[1]-1,p[2],q[0]||0,q[1]||0,0,0);
-    if(isFinite(d.getTime())){ TIME.user=d.getTime(); TIME.src="user"; }
+    if(isFinite(d.getTime())){ TIME.user=d.getTime(); TIME.src="user"; TIME.viaNow=!!viaNow; }
     render();
   };
   [rd,rt].forEach(el=>{ if(!el)return;
-    el.addEventListener("change",apply);
-    el.addEventListener("keydown",e=>{ if(e.key==="Enter"){apply();el.blur();} });
+    el.addEventListener("change",()=>apply(false));   // typing is your own choice, not NOW
+    el.addEventListener("keydown",e=>{ if(e.key==="Enter"){apply(false);el.blur();} });
   });
   const nb=$("rdtNowBtn");
-  if(nb)nb.onclick=()=>refreshFlash(nb,()=>{
+  if(nb)nb.onclick=()=>{
     const now=new Date(), p2=n=>String(n).padStart(2,"0");
     if(rd)rd.value=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}`;
     if(rt)rt.value=`${p2(now.getHours())}:${p2(now.getMinutes())}`;
-    apply();                                    // same user-override path as typing: TIME.src="user"
-    return true;                                // promise mode: instant green
-  });
+    apply(true);       // same user-override path as typing, but flagged as NOW so it stays green
+  };
 }
 { // Wind kt and Gusts kt: typing is a manual override, and it survives a re-render.
   const sp=$("wspd"), gs=$("wgst");
