@@ -343,8 +343,13 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 .tabBtns{display:flex;gap:6px;margin:2px 0 10px;flex-wrap:wrap}
 .tabBtns button.pick{flex:1 1 0;min-width:0;min-height:var(--btn-sm);font-size:var(--fs-body);
   padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tabScroll{overflow-x:hidden}
+/* A tab still fills the screen: the page height was never the problem, the vertical SNAP was.
+   min-height rather than height, so a page taller than the screen (Setup, Marks) scrolls on
+   past instead of being clipped to one screen. */
+.tabScroll{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;height:calc(100dvh - var(--taboff,96px))}
 .tabScroll > .tpage{display:none}
+.tabScroll > .tpage.shown{min-height:100%}
 /* A flex column, as the snap page was, so the existing chart rules inside these pages (which
    size themselves as flex children) keep behaving. The difference is the height: natural,
    set by the content, rather than measured against the viewport. */
@@ -369,7 +374,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 /* On a measured snap page this svg stretched to fill whatever height was left. The page now
    sizes to its content, so there is no leftover height to fill: give the chart a height of
    its own instead of letting flex collapse it to nothing. */
-#condtab .tpage > svg{flex:0 0 auto;width:100%;height:auto;min-height:200px}
+#condtab .tpage > svg{flex:1 1 auto;min-height:0;height:auto}
 .bpage-head{font-size:var(--fs-label);letter-spacing:.06em;font-weight:800;opacity:.75;
   padding:2px 2px 6px;flex:0 0 auto}
 /* Coastal entry lines use the app's standard control height, the same --ctlh the race date,
@@ -404,8 +409,15 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
    worse, not better. */
 #ppage2 #startWrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 #ppage2 #startView{flex:1 1 auto;min-height:0;height:auto;width:100%}
-#gpsScroll .gpage{display:none;box-sizing:border-box;padding-bottom:12px}
-#gpsScroll .gpage.shown{display:flex;flex-direction:column;justify-content:flex-start}
+#gpsScroll .gpage.tpage{display:none;box-sizing:border-box;padding-bottom:12px}
+#gpsScroll .gpage.tpage.shown{display:flex;flex-direction:column;justify-content:flex-start;min-height:100%}
+/* The three views of a leg, stacked inside their one page. Each is exactly a screen and snaps
+   to the top as you scroll down through them. Only the first has the leg swipe, so a
+   horizontal drag and this vertical scroll never fight. */
+#gpsScroll .legGroup.shown{display:block;height:100%;overflow-y:auto;overflow-x:hidden;
+  scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#gpsScroll .legGroup > .gsub{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
+  display:flex;flex-direction:column;justify-content:flex-start;box-sizing:border-box;padding-bottom:12px}
 /* The charts take whatever is left after the fixed-height blocks, so a page is always exactly
    full and never overflows, on any device, without a pixel guess. */
 #gpsScroll .garmin-compass-wrap{display:flex;flex-direction:column;min-height:0}
@@ -413,9 +425,9 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 /* One elastic element per page, so a page is exactly one screen on any device without a pixel
    guess. Page 1: the compass arc. Page 2: the leg chart. Everything else keeps its natural
    height. min-height:0 is required or a flex child refuses to shrink below its content. */
-/* On a measured full-screen page this took whatever height was left. The page sizes to its
-   content now, so there is no leftover to take: give the arc a height of its own. */
-#gpsScroll #garminCompass{flex:0 0 auto;width:100%;height:auto;min-height:240px}
+/* A page is a full screen again, so the arc goes back to taking whatever height is left after
+   the fixed blocks: exactly one screen on any device, without a pixel guess. */
+#gpsScroll #garminCompass{flex:1 1 auto;min-height:90px}
 #gpage3 #mapWrap{flex:0 0 auto}
 /* On a very short screen the fixed blocks alone exceed the page, so the arc collapses to nothing
    and the page still overflows. Give the arc no floor there and let the six readouts tighten:
@@ -856,7 +868,11 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div class="tabScroll" id="gpsScroll">
 
   <!-- PAGE 1: the numbers. -->
-  <div class="gpage tpage" id="gpage3" data-t="COURSE CHART">
+  <!-- One page, three views of the same leg, scrolled through vertically and each snapping to
+       the top. Only the FIRST of them carries the left/right leg swipe, so a horizontal drag
+       never competes with the vertical scroll on the other two. -->
+  <div class="tpage legGroup" id="gpage_leg" data-t="COURSE CHART">
+  <div class="gpage gsub" id="gpage3">
     <div class="bpage-head" style="color:var(--muted-dark)">COURSE CHART</div>
   <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
   <!-- v418: the wind slider and its restore button are gone from this page. Page 2 already has
@@ -865,7 +881,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div id="mapPlan" style="margin-top:8px"></div>
   </div>
 
-  <div class="gpage tpage" id="gpage1" data-t="NUMBERS">
+  <div class="gpage gsub" id="gpage1">
     <div class="bpage-head" style="color:var(--muted-dark)">NUMBERS</div>
   <!-- v409: four tiles removed to give the compass rose room, which was down to 104px.
        Dropped: Bearing to Mark (now drawn on the rose itself), VMC, ETA at Mark (Time to Mark
@@ -926,7 +942,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        copied. Its controls (Tide/Wind/Both, orientation, the wind slider and the restore R)
        drive global state, so they act on the entire app from wherever they live. The two mini
        charts are gone: this chart is the same picture, larger. -->
-  <div class="gpage tpage" id="gpage2" data-t="LEG CHART">
+  <div class="gpage gsub" id="gpage2">
     <div class="bpage-head" style="color:var(--muted-dark)">LEG CHART</div>
   <!-- Light ink: this row was #12283A, right on the light Course Analysis tab but near-black on
        near-black once the chart moved onto the dark GPS Display in v403. Measured contrast was
@@ -967,6 +983,8 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <div class="tot leginfo" id="legRow1" style="margin-top:7px"></div>
   </div>
   </div>
+
+  </div><!-- /legGroup -->
 
   <div class="gpage tpage" id="gpage_tac" data-t="TACTICS">
     <div class="bpage-head" style="color:var(--muted-dark)">TACTICS</div>
@@ -6284,7 +6302,9 @@ function tabPagesShow(tabId,label){
   if(!shown&&pages.length){ pages[0].classList.add("shown"); shown=pages[0]; }
   t.current=shown?shown.dataset.t:null;
   document.querySelectorAll("#"+t.host+" .pick").forEach(b=>b.classList.toggle("on",b.dataset.t===t.current));
-  const sc=$(t.scroll); if(sc)sc.scrollTop=0;   // a new page starts at its own top
+  const sc=$(t.scroll);
+  if(sc){ sc.scrollTop=0; try{tabFitAll();}catch(e){} }   // a new page starts at its own top
+  if(shown&&shown.classList.contains("legGroup"))shown.scrollTop=0;
   if(t.onShow){ try{ t.onShow(t.current); }catch(e){} }
 }
 function tabPages(tabId,scrollId,hostId,onShow){
@@ -6298,7 +6318,38 @@ function tabPages(tabId,scrollId,hostId,onShow){
   host.onclick=e=>{ const b=e.target.closest(".pick"); if(b&&b.dataset.t)tabPagesShow(tabId,b.dataset.t); };
   tabPagesShow(tabId,pages[0].dataset.t);
 }
+// A tab scroller fills the screen below whatever sits above it (the status scrim and the tab
+// summary), so that offset has to be measured. This is the ONLY measurement left: there is no
+// snap position to land wrong any more, so a stale value costs a little height, not a broken page.
+function tabFitAll(){
+  document.querySelectorAll(".tabScroll").forEach(sc=>{
+    const det=sc.closest("details");
+    if(det&&!det.open)return;
+    const top=Math.max(0,Math.round(sc.getBoundingClientRect().top));
+    sc.style.setProperty("--taboff",(top+10)+"px");
+  });
+}
 function bundlesInit(){
+  window.addEventListener("resize",()=>{ tabFitAll(); setTimeout(tabFitAll,350); });
+  document.addEventListener("focusout",e=>{
+    const t=e.target;
+    if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"))setTimeout(tabFitAll,350);
+  },true);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize",()=>{ tabFitAll(); setTimeout(tabFitAll,350); });
+  }
+  // Opening a tab brings it to the TOP of the screen before anything is measured. bundle() did
+  // this and the measurement depended on it: without it the scroller starts wherever the tab
+  // happened to sit down the page, is then sized a full screen from there, and most of it ends
+  // up below the fold. Two deferred re-measures because the smooth scroll is still moving when
+  // the first one runs.
+  document.querySelectorAll("details.bundle").forEach(det=>{
+    det.addEventListener("toggle",()=>{
+      if(!det.open)return;
+      if(det.scrollIntoView)det.scrollIntoView({block:"start"});
+      tabFitAll(); setTimeout(tabFitAll,60); setTimeout(tabFitAll,320);
+    });
+  });
   window.addEventListener("resize",bundleFitSettled);
   window.addEventListener("orientationchange",()=>setTimeout(bundleFitAll,250));
   if(window.visualViewport){
@@ -11386,13 +11437,11 @@ function legSwipeOn(id,guard){
 function legSwipeInit(){
   legSwipeOn("legview");                                        // Course Analysis
   legSwipeOn("miniLegSvg");     // hidden page, but wired so unhiding it just works
-  // Page 1 of the GPS Display: swiping the numbers changes leg exactly as swiping the chart on
-  // page 2 does. The whole page is the target, since there is no single big element to grab, and
-  // the handler already ignores anything that is not a firm horizontal drag, so the vertical
-  // page snap is untouched.
-  legSwipeOn("gpage1");
-  // Page 3, the bay chart. Ignored while the chart is zoomed in, because a horizontal drag is
-  // then a pan and must not also change leg.
+  // v551: the leg swipe lives on the COURSE CHART ONLY. Numbers and the Leg Chart sit below it
+  // in one vertically-snapped group, and a horizontal drag on those would compete with that
+  // scroll. One page owns the gesture, so the two directions never fight.
+  // Ignored while the chart is zoomed in, because a horizontal drag is then a pan and must not
+  // also change leg.
   legSwipeOn("gpage3",()=>{ try{ return typeof MAPZ!=="undefined"&&MAPZ&&MAPZ.V.z>1; }catch(e){ return false; } });
   document.addEventListener("keydown",e=>{
     if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;
