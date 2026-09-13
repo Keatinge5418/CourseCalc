@@ -200,6 +200,16 @@ input.autoval{background:#E4F2F6;border-color:#9CCFDA}
 input.autoval::placeholder{color:#0E7C94;opacity:1;font-weight:700}
 input.autoval::-webkit-input-placeholder{color:#0E7C94;opacity:1;font-weight:700}
 input[type=number]:focus,input[type=date]:focus,input[type=time]:focus{outline:none;border-color:var(--ink)}
+/* THE FONT AND SIZE RULE (setup pages only).
+   On the Boat tab every VALUE is one size and one face, whether it sits in a button or an input,
+   so the page reads as one thing rather than two. Labels above them stay at --fs-label.
+   It is deliberately scoped to this tab and NOT global: Setup is done ashore before the start,
+   with glasses on, so small type is fine here. The racing pages are read wet, moving and at
+   arm's length, and keep their own larger type. Tabular figures are retained so a changing
+   number does not jitter. Must sit AFTER the input rules above, or it loses to them. */
+#boattab input[type=number],#boattab input[type=date],#boattab input[type=time]{
+  font-size:var(--fs-value);font-weight:700;
+  font-family:inherit;font-variant-numeric:tabular-nums;padding:10px 8px}
 .letters{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:4px}
 .numbtns{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:4px}
 .cardbtns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
@@ -321,6 +331,22 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 /* ---------- bundles (v455) ----------
    A bundle is a tab of full-screen snap pages. One shared class rather than a copy per bundle.
    The bar is 50px: tall enough to hit and to see at the top of a page you have swiped into. */
+/* ---------- button-selected pages (v548) ----------
+   Replaces the snap-paged bundle. A tab is now an ordinary scrolling panel with a row of
+   buttons that choose which page is shown; the others are simply not in the layout. Nothing
+   measures the viewport, so nothing can be measured wrong: the keyboard offset, the
+   scroll-out drift and the fit-on-open timing all stop existing rather than being patched.
+   The buttons use the page's own colour grammar, so the chosen page fills blue like any
+   other explicit choice. */
+.tabBtns{display:flex;gap:6px;margin:2px 0 10px;flex-wrap:wrap}
+.tabBtns button.pick{flex:1 1 0;min-width:0;min-height:var(--btn-sm);font-size:var(--fs-body);
+  padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabScroll{overflow-x:hidden}
+.tabScroll > .tpage{display:none}
+/* A flex column, as the snap page was, so the existing chart rules inside these pages (which
+   size themselves as flex children) keep behaving. The difference is the height: natural,
+   set by the content, rather than measured against the viewport. */
+.tabScroll > .tpage.shown{display:flex;flex-direction:column}
 .bundleScroll{overflow-y:auto;overflow-x:hidden;scroll-snap-type:y mandatory;
   -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .bundleScroll > .bpage{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
@@ -338,7 +364,10 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 .wxr{display:flex;gap:8px;font-size:13px;color:#12283A;padding:3px 0;border-top:1px solid #E2EAF0}
 .wxcap{font-size:12px;color:#3A7D5E}
 .wxnote{font-size:12px;color:#12283A}
-#condtab .bpage > svg{flex:1 1 auto;min-height:0;height:auto}
+/* On a measured snap page this svg stretched to fill whatever height was left. The page now
+   sizes to its content, so there is no leftover height to fill: give the chart a height of
+   its own instead of letting flex collapse it to nothing. */
+#condtab .tpage > svg{flex:0 0 auto;width:100%;height:auto;min-height:200px}
 .bpage-head{font-size:var(--fs-label);letter-spacing:.06em;font-weight:800;opacity:.75;
   padding:2px 2px 6px;flex:0 0 auto}
 /* Coastal entry lines use the app's standard control height, the same --ctlh the race date,
@@ -608,8 +637,9 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
      through. Wind buoy and Tides each split in two, because each was two ideas in one
      tab: what it is now, and how it is trending. -->
 <details class="notes bundle fam-wind" id="condtab"><summary>Conditions</summary>
-  <div class="bundleScroll" id="condScroll" style="height:calc(100dvh - var(--condoff,96px))">
-  <div class="bpage">
+  <div class="tabBtns" id="condBtns"></div>
+  <div class="tabScroll" id="condScroll">
+  <div class="bpage tpage" id="cond_forecast" data-t="FORECAST">
     <div class="bpage-head">FORECAST</div>
   <div class="inrow" style="margin-bottom:8px;align-items:flex-end">
     <div style="flex:1"><button class="pick" id="fcPageRefresh" style="width:100%">Refresh</button></div>
@@ -627,7 +657,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div class="wxcap" style="font-size:10px;margin-top:8px;opacity:.85">Data from Dublin Bay Buoy (dublinbaybuoy.com), sourced from Irish Lights MetOcean and Open-Meteo.</div>
   </div>
 
-  <div class="bpage">
+  <div class="bpage tpage" id="cond_now" data-t="NOW">
     <div class="bpage-head">NOW</div>
 
   <div style="font-weight:700;color:#0B5138;font-size:12px;margin:8px 0 2px">Dublin Bay buoy</div>
@@ -650,7 +680,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div id="aptMetar" style="background:#fff;border-radius:10px;padding:6px 10px"></div>
   <div class="wxcap" style="font-size:11px;margin-top:4px">Land station 10 km from the bay; indicative, not the racecourse wind.</div>
   </div>
-  <div class="bpage">
+  <div class="bpage tpage" id="cond_tides" data-t="TIDES">
     <div class="bpage-head">TIDES</div>
   <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin:2px 0 4px">
     <div id="tideSubtitle" style="font-size:12px;color:#3A7D5E">Dun Laoghaire (Dublin North Wall)</div>
@@ -664,7 +694,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   <div id="tideCurve" style="background:#fff;border-radius:10px;padding:6px 4px;margin-top:6px"></div>
   </div>
-  <div class="bpage">
+  <div class="bpage tpage" id="cond_windmodel" data-t="WIND MODEL">
     <div class="bpage-head">WIND MODEL</div>
 
 
@@ -3463,7 +3493,14 @@ function coastalRender(){
         (h.mine?`<button class="pick myMarkDel" data-m="${h.myIdx}" title="Forget this saved mark" style="flex:0 0 30px;min-height:0;padding:3px 0;font-size:12px">\u00d7</button>`:``)+
         `</div>`).join("")
     : ((find&&find.value.trim().length>=2)?`<div style="font-size:12px;color:#6B5A20;padding:4px 2px">No mark of that name.</div>`:``);
-  hits.querySelectorAll(".coastalHit").forEach(el=>el.onclick=()=>{ coastalAdd(list[+el.dataset.i]); if(find){find.value="";} });
+  // Clear the search box BEFORE adding. coastalAdd re-renders, and a render that still sees
+  // your typed text rebuilds the same hits, which is why the list used to need a second tap
+  // to close: the first tap rendered with the text still in the box.
+  hits.querySelectorAll(".coastalHit").forEach(el=>el.onclick=()=>{
+    const hit=list[+el.dataset.i];
+    if(find)find.value="";
+    coastalAdd(hit);
+  });
   hits.querySelectorAll(".myMarkDel").forEach(el=>el.onclick=()=>{ myMarksDel(+el.dataset.m); coastalRender(); myMarksRender(); });
   seq.innerHTML=COASTAL_SEQ.length
     ? COASTAL_SEQ.map((m,i)=>`<div style="display:flex;gap:6px;align-items:center;padding:3px 0;font-size:13px;color:#12283A">`+
@@ -6229,13 +6266,58 @@ function bundle(tabId,scrollId,varName){
     setTimeout(()=>bundleFit(b),60); setTimeout(()=>bundleFit(b),320);
   });
 }
+// visualViewport resize fires repeatedly WHILE the keyboard slides, so measuring on it alone
+// leaves the last reading taken mid-animation: the keyboard finishes closing, nothing fires
+// again, and the pages keep the shrunken height. That is the low, offset page you see after
+// typing. So every resize also schedules a settled re-measure, and a blur (the moment the
+// keyboard actually goes) asks for one too.
+let _bundleSettle=null;
+function bundleFitSettled(){
+  bundleFitAll();
+  if(_bundleSettle)clearTimeout(_bundleSettle);
+  _bundleSettle=setTimeout(()=>{ _bundleSettle=null; bundleFitAll(); },350);
+}
+// ---------- button-selected tab pages (v548) ----------
+// A tab holds several .tpage panels; a row of buttons chooses which one is shown. This
+// replaces the vertical snap paging, whose every fault came from measuring the viewport:
+// with pages simply shown or hidden there is nothing to measure and nothing to drift.
+// NOTE: this is VERTICAL paging only. The left/right leg swipe on the GPS Display pages is a
+// separate mechanism and is untouched by this.
+const TABPAGES={};
+function tabPagesShow(tabId,label){
+  const t=TABPAGES[tabId]; if(!t)return;
+  const pages=document.querySelectorAll("#"+t.scroll+" > .tpage");
+  let shown=null;
+  pages.forEach(p=>{ const on=(p.dataset.t===label); p.classList.toggle("shown",on); if(on)shown=p; });
+  if(!shown&&pages.length){ pages[0].classList.add("shown"); shown=pages[0]; }
+  t.current=shown?shown.dataset.t:null;
+  document.querySelectorAll("#"+t.host+" .pick").forEach(b=>b.classList.toggle("on",b.dataset.t===t.current));
+  const sc=$(t.scroll); if(sc)sc.scrollTop=0;   // a new page starts at its own top
+  if(t.onShow){ try{ t.onShow(t.current); }catch(e){} }
+}
+function tabPages(tabId,scrollId,hostId,onShow){
+  const host=$(hostId), sc=$(scrollId);
+  if(!host||!sc||host.dataset.built)return;
+  host.dataset.built="1";
+  const pages=[...sc.querySelectorAll(":scope > .tpage")];
+  if(!pages.length)return;
+  TABPAGES[tabId]={scroll:scrollId,host:hostId,current:null,onShow:onShow||null};
+  host.innerHTML=pages.map(p=>`<button class="pick" data-t="${p.dataset.t}">${p.dataset.t}</button>`).join("");
+  host.onclick=e=>{ const b=e.target.closest(".pick"); if(b&&b.dataset.t)tabPagesShow(tabId,b.dataset.t); };
+  tabPagesShow(tabId,pages[0].dataset.t);
+}
 function bundlesInit(){
-  window.addEventListener("resize",bundleFitAll);
+  window.addEventListener("resize",bundleFitSettled);
   window.addEventListener("orientationchange",()=>setTimeout(bundleFitAll,250));
   if(window.visualViewport){
-    window.visualViewport.addEventListener("resize",bundleFitAll);
+    window.visualViewport.addEventListener("resize",bundleFitSettled);
     window.visualViewport.addEventListener("scroll",bundleFitAll);
   }
+  // A field losing focus is the keyboard leaving. Capture, because blur does not bubble.
+  document.addEventListener("focusout",e=>{
+    const t=e.target;
+    if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"))bundleFitSettled();
+  },true);
 }
 function preFitPages(){
   const tab=$("pretab"), sc=$("preScroll");
@@ -6282,7 +6364,10 @@ function gps2Init(){
   const dl=$("gps2Dl");   if(dl)dl.onclick=()=>{ try{trackDownloadCSV();}catch(e){} };
   try{gpsPagesInit();}catch(e){}
   try{prePagesInit();}catch(e){}
-  try{ bundlesInit(); bundle("condtab","condScroll","--condoff");
+  try{ bundlesInit();
+       // Conditions is the first tab converted to button-selected pages (v548): it is no
+       // longer a measured snap bundle, so it is deliberately NOT registered with bundle().
+       tabPages("condtab","condScroll","condBtns");
        bundle("offshoretab","offScroll","--offoff");
        bundle("coursetab","courseScroll","--courseoff");
        bundle("boattab","boatScroll","--boatoff");
@@ -7387,6 +7472,7 @@ function buildPickers(){
   document.querySelectorAll(".wslideR").forEach(rb=>{ rb.onclick=fcResume; });
   syncWindTab();
   $("letters").onclick=e=>{if(e.target.dataset.l){
+    try{ if(coastalInUse())return; }catch(err){}   // dimmed on a coastal course: no letter to pick
     state.letter=e.target.dataset.l;                    // the course to sail, changed only here
     state.num=Math.min(state.num,(CARDS[state.card].courses[state.letter]||[]).length||8);buildNums();
     const wPrev=windDir();                              // the wind BEFORE this letter touches it
@@ -7412,6 +7498,7 @@ function buildPickers(){
     }
     render(); try{leg1Render();}catch(e){}}};
   $("nums").onclick=e=>{if(e.target.dataset.n){ if(!WIND.chosen)return;   // pick a letter first
+    try{ if(coastalInUse())return; }catch(err){}   // dimmed on a coastal course: no number to pick
     state.num=+e.target.dataset.n;WIND.numChosen=true;
     LEG1.asked=false; LEG1.confirmed=null;
     render(); try{leg1Render();}catch(e){}}};
@@ -7509,17 +7596,25 @@ function render(){
   }
   const atWind=suggestLetter(wdir);            // the letter nearest the USED wind
   const showOrange=(WIND.src!=="expected");    // orange only once forecast/observed drives used
-  $("sugTxt").textContent = showOrange
-    ? `(wind ${Math.round(wdir)}\u00B0 \u2192 ${atWind})`
-    : `(course set to expected wind)`;
+  // A coastal course is a sequence of marks you built by hand, not a letter and number off a
+  // card, so both grids have nothing to say: dim them, stop them responding, and drop the
+  // suggested-letter ring with them. Leaving them live invited a tap that would silently
+  // replace the coastal course.
+  const coastal=(()=>{ try{ return coastalInUse(); }catch(e){ return false; } })();
+  $("sugTxt").textContent = coastal
+    ? `(not used on a coastal course)`
+    : (showOrange ? `(wind ${Math.round(wdir)}\u00B0 \u2192 ${atWind})`
+                  : `(course set to expected wind)`);
   document.querySelectorAll("#letters .pick").forEach(b=>{
-    b.classList.toggle("on",WIND.chosen&&b.dataset.l===state.letter);   // blue: the course you sail, once chosen
-    b.classList.toggle("sug",showOrange&&b.dataset.l===atWind);  // orange: where the used wind is
+    b.classList.toggle("on",!coastal&&WIND.chosen&&b.dataset.l===state.letter);   // blue: the course you sail, once chosen
+    b.classList.toggle("sug",!coastal&&showOrange&&b.dataset.l===atWind);  // orange: where the used wind is
+    b.style.opacity=coastal?"0.4":"";
+    b.style.cursor=coastal?"default":"";
   });
   document.querySelectorAll("#nums .pick").forEach(b=>{
-    b.classList.toggle("on",WIND.numChosen&&+b.dataset.n===state.num);
-    b.style.opacity=WIND.chosen?"":"0.4";                 // dimmed until a course letter is chosen
-    b.style.cursor=WIND.chosen?"":"default";
+    b.classList.toggle("on",!coastal&&WIND.numChosen&&+b.dataset.n===state.num);
+    b.style.opacity=(coastal||!WIND.chosen)?"0.4":"";      // dimmed until a course letter is chosen
+    b.style.cursor=(coastal||!WIND.chosen)?"default":"";
   });
   // The card the programme schedules for today carries an orange RING, and keeps it whatever is
   // actually selected: the ring says "scheduled", the fill says "chosen", and they are allowed
