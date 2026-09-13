@@ -324,8 +324,10 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
    `mandatory` not `proximity`: proximity was the right call while a page could be taller than
    the screen. Now each page IS exactly one screen, so mandatory is correct and is what makes it
    land page by page instead of resting anywhere. */
-#gpsScroll{height:calc(100dvh - var(--gpsoff, 96px));overflow-y:auto;overflow-x:hidden;
-  scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+/* v550: the GPS Display pages are chosen by a button row, so the scroller is ordinary. The
+   height is no longer measured against the viewport and the pages no longer snap vertically.
+   The LEG SWIPE is a separate, horizontal mechanism on gpage1 and gpage3 and is untouched. */
+#gpsScroll{overflow-x:hidden}
 /* Race timer and Start, two pages, same mechanism as the GPS Display: a contained scroller
    measured from visualViewport, so iOS's URL bar cannot make the pages the wrong height. */
 /* ---------- bundles (v455) ----------
@@ -376,7 +378,8 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 /* Both Coastal pages are flex columns sized to the page, never taller. A bpage that overflows
    scrolls inside itself, and that internal scroll is what was stealing the swipe from the
    bundle's snap. The lists take the slack and scroll within their own cards instead. */
-#coastalPage,#marksPage{display:flex;flex-direction:column;overflow:hidden}
+/* These pages size to their content now, chosen by a button rather than measured against the
+   viewport, so there is nothing to clip and nothing to stretch. */
 .coastCard{background:#FBEEB0;border:1px solid #E0C86A;border-radius:12px;padding:10px 11px;
   box-sizing:border-box}
 .coastCardHead{font-size:12px;font-weight:800;color:#3A2A00;margin-bottom:6px;flex:0 0 auto}
@@ -401,8 +404,8 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
    worse, not better. */
 #ppage2 #startWrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 #ppage2 #startView{flex:1 1 auto;min-height:0;height:auto;width:100%}
-#gpsScroll .gpage{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
-  display:flex;flex-direction:column;justify-content:flex-start;box-sizing:border-box;padding-bottom:12px}
+#gpsScroll .gpage{display:none;box-sizing:border-box;padding-bottom:12px}
+#gpsScroll .gpage.shown{display:flex;flex-direction:column;justify-content:flex-start}
 /* The charts take whatever is left after the fixed-height blocks, so a page is always exactly
    full and never overflows, on any device, without a pixel guess. */
 #gpsScroll .garmin-compass-wrap{display:flex;flex-direction:column;min-height:0}
@@ -410,7 +413,9 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 /* One elastic element per page, so a page is exactly one screen on any device without a pixel
    guess. Page 1: the compass arc. Page 2: the leg chart. Everything else keeps its natural
    height. min-height:0 is required or a flex child refuses to shrink below its content. */
-#gpsScroll #garminCompass{flex:1 1 auto;min-height:90px}
+/* On a measured full-screen page this took whatever height was left. The page sizes to its
+   content now, so there is no leftover to take: give the arc a height of its own. */
+#gpsScroll #garminCompass{flex:0 0 auto;width:100%;height:auto;min-height:240px}
 #gpage3 #mapWrap{flex:0 0 auto}
 /* On a very short screen the fixed blocks alone exceed the page, so the arc collapses to nothing
    and the page still overflows. Give the arc no floor there and let the six readouts tighten:
@@ -525,8 +530,9 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 <!-- Boat bundle (v457). Setup and the wardrobe are both "what am I sailing today", so
      they are two pages rather than two tabs. -->
 <details class="notes bundle fam-boat" id="boattab"><summary>Boat</summary>
-  <div class="bundleScroll" id="boatScroll" style="height:calc(100dvh - var(--boatoff,96px))">
-  <div class="bpage">
+  <div class="tabBtns" id="boatBtns"></div>
+  <div class="tabScroll" id="boatScroll">
+  <div class="bpage tpage" id="boat_setup" data-t="SETUP">
     <div class="bpage-head">SETUP</div>
 
   <div style="padding:2px 0 0">
@@ -566,34 +572,33 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 
 
   </div>
-  <div class="bpage">
+  <div class="bpage tpage" id="boat_wardrobe" data-t="SAIL WARDROBE">
     <div class="bpage-head">SAIL WARDROBE</div>
 
   <div id="wardrobeBody" style="margin-top:6px"></div>
   </div>
-  <!-- Coastal is split across two pages so each one fits its own page height. A bpage that
-       overflows scrolls INSIDE itself, and on iOS that internal scroll swallows the drag, so
-       the bundle's snap never fires. Keeping each page within its height is what makes the
-       swipe between pages work. -->
-  <div class="bpage" id="coastalPage">
+  <!-- Coastal is split across two pages because they are two jobs: build the course, and keep
+       the marks. Each is chosen by its own button now, so neither is measured against the
+       viewport and neither can stretch to a height that is not there. -->
+  <div class="bpage tpage" id="coastalPage" data-t="COASTAL">
     <div class="bpage-head">COASTAL</div>
-  <div class="coastCard" style="margin-top:2px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column">
+  <div class="coastCard" style="margin-top:2px">
     <div class="coastCardHead">Find a mark</div>
-    <input id="coastalFind" type="text" placeholder="Find a mark: Muglins, Boyd, Kish" autocapitalize="off" autocorrect="off" style="flex:0 0 auto">
-    <div id="coastalHits" style="flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:6px"></div>
+    <input id="coastalFind" type="text" placeholder="Find a mark: Muglins, Boyd, Kish" autocapitalize="off" autocorrect="off">
+    <div id="coastalHits" style="margin-top:6px"></div>
   </div>
-  <div class="coastCard" style="margin-top:10px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column">
+  <div class="coastCard" style="margin-top:10px">
     <div class="coastCardHead">Course</div>
-    <div id="coastalSeq" style="flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:2px"></div>
-    <div class="inrow" style="margin-top:8px;flex:0 0 auto">
+    <div id="coastalSeq" style="margin-top:2px"></div>
+    <div class="inrow" style="margin-top:8px">
       <div style="flex:1"><button class="pick" id="coastalUse" style="width:100%">Use this course</button></div>
       <div style="flex:0 0 84px"><button class="pick" id="coastalClear" style="width:100%">Clear</button></div>
     </div>
   </div>
   </div>
-  <div class="bpage" id="marksPage">
+  <div class="bpage tpage" id="marksPage" data-t="MARKS">
     <div class="bpage-head">MARKS</div>
-  <div class="coastCard" style="margin-top:2px;flex:0 0 auto">
+  <div class="coastCard" style="margin-top:2px">
     <div class="coastCardHead">Enter a position</div>
     <input id="coastalMName" type="text" placeholder="Name this mark" autocapitalize="words" style="margin-bottom:8px">
     <!-- Degrees and minutes are separate boxes, the way a navigator writes a position, so the
@@ -621,9 +626,9 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     </div>
     <div id="coastalMErr" style="font-size:12px;color:#8A2A00;margin-top:5px"></div>
   </div>
-  <div class="coastCard" style="margin-top:10px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column">
+  <div class="coastCard" style="margin-top:10px">
     <div class="coastCardHead">My marks</div>
-    <div id="coastalMine" style="flex:1 1 auto;min-height:0;overflow-y:auto"></div>
+    <div id="coastalMine"></div>
   </div>
   </div>
   </div>
@@ -847,10 +852,11 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        page you are looking at. Tappable to undo, because an advance at a luff near the mark must
        be reversible without hunting for a control. -->
   <div id="noticeBar" style="display:none"></div>
-  <div id="gpsScroll">
+  <div class="tabBtns" id="gpsBtns"></div>
+  <div class="tabScroll" id="gpsScroll">
 
   <!-- PAGE 1: the numbers. -->
-  <div class="gpage" id="gpage3">
+  <div class="gpage tpage" id="gpage3" data-t="COURSE CHART">
     <div class="bpage-head" style="color:var(--muted-dark)">COURSE CHART</div>
   <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
   <!-- v418: the wind slider and its restore button are gone from this page. Page 2 already has
@@ -859,7 +865,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div id="mapPlan" style="margin-top:8px"></div>
   </div>
 
-  <div class="gpage" id="gpage1">
+  <div class="gpage tpage" id="gpage1" data-t="NUMBERS">
     <div class="bpage-head" style="color:var(--muted-dark)">NUMBERS</div>
   <!-- v409: four tiles removed to give the compass rose room, which was down to 104px.
        Dropped: Bearing to Mark (now drawn on the rose itself), VMC, ETA at Mark (Time to Mark
@@ -920,7 +926,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        copied. Its controls (Tide/Wind/Both, orientation, the wind slider and the restore R)
        drive global state, so they act on the entire app from wherever they live. The two mini
        charts are gone: this chart is the same picture, larger. -->
-  <div class="gpage" id="gpage2">
+  <div class="gpage tpage" id="gpage2" data-t="LEG CHART">
     <div class="bpage-head" style="color:var(--muted-dark)">LEG CHART</div>
   <!-- Light ink: this row was #12283A, right on the light Course Analysis tab but near-black on
        near-black once the chart moved onto the dark GPS Display in v403. Measured contrast was
@@ -962,7 +968,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   </div>
 
-  <div class="gpage" id="gpage_tac">
+  <div class="gpage tpage" id="gpage_tac" data-t="TACTICS">
     <div class="bpage-head" style="color:var(--muted-dark)">TACTICS</div>
     <div id="tdcCard" style="margin:0 0 6px"></div>
     <div id="tacWrap" class="legpanel" style="margin:0;flex:1 1 auto;min-height:0;overflow-y:auto">
@@ -983,7 +989,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        apparent wind angle, apparent wind speed, heading and boat speed. On Aurelia with NMEA
        most of those arrive electrically; on Red Tape they are typed, derived or assumed. The
        maths downstream never changes, only the provenance and the confidence. -->
-  <div class="gpage" id="gpage_inst">
+  <div class="gpage tpage" id="gpage_inst" data-t="INSTRUMENTS">
     <div id="instHead" class="bpage-head" style="color:var(--muted-dark)">INSTRUMENTS</div>
     <div id="instWrap" style="background:#1C3D61;border:1px solid #2E5680;border-radius:12px;padding:7px 9px;color:#fff;flex:1 1 auto;min-height:0;overflow-y:auto;font-size:13px;line-height:1.35">
       <div id="instSrc" style="margin-bottom:8px"></div>
@@ -3553,10 +3559,12 @@ function modeBtnsInit(){
     [1,2,3].map(()=>`<button class="pick" disabled style="opacity:.35">&nbsp;</button>`).join("");
   const b=$("coastalBtn");
   if(b)b.onclick=()=>{
-    const p=$("coastalPage"); if(!p)return;
     myMarksLoad(); myMarksRender(); coastalLoad(); coastalRender();
-    // The page fits its own height now, so bringing the bundle to it is all that is needed.
-    if(p.scrollIntoView)p.scrollIntoView({block:"start",behavior:"smooth"});
+    // Coastal is a page of the Boat tab, so selecting it is all this does.
+    try{ tabPagesShow("boattab","COASTAL"); }catch(e){}
+    const t=$("boattab");
+    if(t&&!t.open){ t.open=true; try{t.dispatchEvent(new Event("toggle"));}catch(e){} }
+    if(t&&t.scrollIntoView)t.scrollIntoView({block:"start",behavior:"smooth"});
   };
   const f=$("coastalFind"); if(f)f.addEventListener("input",coastalRender);
   const u=$("coastalUse");
@@ -3580,30 +3588,14 @@ function modeBtnsInit(){
   };
   coastalManualInit();
   try{ myMarksLoad(); myMarksRender(); }catch(e){}
-  coastalTopWatch();
   coastalInUsePaint();   // a session restored onto a coastal course opens already green
 }
-// Each page now fits its own height, so there is no internal scroll left to reset. The watcher
-// earns its place differently: it repaints a page as it comes into view, so the lists are
-// current whether you arrived by swiping or by the Coastal button. It fires only on the
-// transition into view, never while you are already on the page.
-function coastalTopWatch(){
-  const hasIO=("IntersectionObserver" in window);
-  [["coastalPage",()=>{ try{coastalRender();}catch(e){} }],
-   ["marksPage",  ()=>{ try{myMarksRender();}catch(e){} }]].forEach(a=>{
-    const p=$(a[0]); if(!p||p.dataset.topWatch)return;
-    p.dataset.topWatch="1";      // marked either way, so init does not keep retrying
-    if(!hasIO)return;            // old engine: the page still works, it just is not repainted on entry
-    let wasIn=false;
-    const io=new IntersectionObserver(es=>{
-      es.forEach(e=>{
-        const isIn=e.isIntersecting&&e.intersectionRatio>0.55;
-        if(isIn&&!wasIn){ p.scrollTop=0; a[1](); }
-        wasIn=isIn;
-      });
-    },{root:$("boatScroll"),threshold:[0,0.55,1]});
-    io.observe(p);
-  });
+// A page is repainted as it is SELECTED. The old version watched for the page scrolling into
+// view, which a snap bundle needed; with button-selected pages a hidden page never intersects
+// anything, so the controller says when instead. Passed to tabPages as its onShow.
+function boatPageShown(label){
+  if(label==="COASTAL"){ try{coastalRender();}catch(e){} }
+  else if(label==="MARKS"){ try{myMarksRender();}catch(e){} }
 }
 // Degrees and minutes arrive as separate typed boxes plus a hemisphere button, so there is
 // nothing to parse out of a sentence: validate each part and combine.
@@ -6362,7 +6354,7 @@ function gps2Init(){
   const b=$("gps2Fit"); if(b)b.onclick=gps2Fit;
   const c=$("gps2Clear"); if(c)c.onclick=()=>{ try{trackClear();}catch(e){} gps2Render(); };
   const dl=$("gps2Dl");   if(dl)dl.onclick=()=>{ try{trackDownloadCSV();}catch(e){} };
-  try{gpsPagesInit();}catch(e){}
+  try{ tabPages("garmintab","gpsScroll","gpsBtns"); }catch(e){}
   try{prePagesInit();}catch(e){}
   try{ bundlesInit();
        // Conditions is the first tab converted to button-selected pages (v548): it is no
@@ -6370,7 +6362,7 @@ function gps2Init(){
        tabPages("condtab","condScroll","condBtns");
        bundle("offshoretab","offScroll","--offoff");
        bundle("coursetab","courseScroll","--courseoff");
-       bundle("boattab","boatScroll","--boatoff");
+       tabPages("boattab","boatScroll","boatBtns",boatPageShown);
        bundle("sdtab","sdScroll","--sdoff"); }catch(e){}
   // Wardrobe: load before the first render so the very first sail call already respects it.
   try{
@@ -9654,7 +9646,8 @@ function fitClick(ev){
 function fitGoToChart(){
   try{
     const tab=$("garmintab"); if(tab&&!tab.open){ tab.open=true; tab.dispatchEvent(new Event("toggle")); }
-    setTimeout(()=>{ const sc=$("gpsScroll"); if(sc)sc.scrollTo({top:sc.clientHeight,behavior:"smooth"}); fitFootPaint(); },250);
+    // The chart is a PAGE now, not a scroll position, so select it by name.
+    setTimeout(()=>{ try{ tabPagesShow("garmintab","LEG CHART"); }catch(e){} fitFootPaint(); },250);
   }catch(e){}
 }
 // The timer already knows which situation we are in, so the tab never asks.
