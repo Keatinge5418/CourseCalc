@@ -142,6 +142,19 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
   background:rgba(0,0,0,.06);border-radius:12px 12px 0 0}
 .notes:not([open]) summary{margin:-10px -14px;border-radius:12px;min-height:72px;font-size:17px}
 .fam-race-dark summary, .fam-tide-dark summary, .fam-boat-dark summary{background:rgba(255,255,255,.12)}
+/* The close bar sticks below the status-bar scrim, so it is still there after you scroll down a
+   long page (the Coastal builder made this obvious). It needs an OPAQUE background or the page
+   shows through it, hence a solid colour per family rather than the translucent overlay above. */
+.notes[open] > summary{position:sticky; top:54px; z-index:900}
+.fam-wind[open] > summary{background:#C9DCEA}
+.fam-tide[open] > summary{background:#CFE4DE}
+.fam-boat[open] > summary{background:#CFE0D6}
+.fam-race[open] > summary{background:#D7DEE4}
+.fam-util[open] > summary{background:#DCDFE2}
+.fam-offshore[open] > summary{background:#CFE1F1}
+.fam-race-dark[open] > summary{background:#2A4763}
+.fam-tide-dark[open] > summary{background:#2F6E62}
+.fam-boat-dark[open] > summary{background:#2E5E45}
 
 /* AFTER .notes summary, which is later in the file and was overriding the family colours back to
    near-black. Third time this has bitten in this session: equal specificity means source order
@@ -323,6 +336,19 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 #condtab .bpage > svg{flex:1 1 auto;min-height:0;height:auto}
 .bpage-head{font-size:var(--fs-label);letter-spacing:.06em;font-weight:800;opacity:.75;
   padding:2px 2px 6px;flex:0 0 auto}
+/* Coastal entry lines use the app's standard control height, the same --ctlh the race date,
+   start time and wind boxes use. The lat/lon pair sit in an .inrow and got it for free; Name
+   and Find did not, and looked thin beside them. One rule rather than four inline styles. */
+#coastalPage input[type=text]{height:var(--ctlh);box-sizing:border-box;font-size:16px;
+  padding:0 10px;border:1.5px solid var(--rule);border-radius:var(--r-ctl,10px);width:100%}
+/* A position row: label, degrees, minutes, hemisphere. Degrees and minutes are separate boxes
+   so the numeric keypad is enough to type a position (there is no space key on it, which is
+   what made the single combined box impossible to fill on the phone). */
+.ddmrow{display:flex;align-items:center;gap:5px}
+.ddmlab{flex:0 0 30px;font-size:12px;font-weight:800;color:#3A2A00}
+.ddmsym{flex:0 0 9px;font-size:15px;font-weight:700;color:#6B5A20;text-align:center}
+#coastalPage input.ddmnum{flex:1 1 0;min-width:0;text-align:center;font-weight:700;padding:0 4px}
+#coastalPage button.ddmhemi{flex:0 0 52px;min-height:var(--ctlh);font-size:16px;font-weight:800;padding:0}
 #preScroll{height:calc(100dvh - var(--preoff, 96px));overflow-y:auto;overflow-x:hidden;
   scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #preScroll .ppage{height:100%;scroll-snap-align:start;scroll-snap-stop:always;
@@ -468,17 +494,6 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div style="margin-bottom:12px"><label>Course card</label>
     <div class="cardbtns" id="cardbtns"></div>
     <div class="cardbtns" id="modebtns" style="margin-top:8px"></div>
-  <div id="coastalWrap" style="display:none;margin-top:10px;background:#FBEEB0;border:1px solid #E0C86A;border-radius:12px;padding:10px 11px">
-    <div style="font-size:12px;font-weight:800;color:#3A2A00;margin-bottom:6px">Build a coastal course</div>
-    <input id="coastalFind" type="text" placeholder="Find a mark: Muglins, Boyd, Kish" autocapitalize="off" autocorrect="off" style="width:100%;box-sizing:border-box;font-size:16px">
-    <div id="coastalHits" style="max-height:150px;overflow-y:auto;margin-top:6px"></div>
-    <div id="coastalSeq" style="margin-top:8px"></div>
-    <div class="inrow" style="margin-top:8px">
-      <div style="flex:1"><button class="pick" id="coastalUse" style="width:100%">Use this course</button></div>
-      <div style="flex:0 0 84px"><button class="pick" id="coastalClear" style="width:100%">Clear</button></div>
-    </div>
-  </div>
-
   </div>
   <div class="inrow" style="margin-bottom:12px">
     <div style="flex:1.15"><label>Race date</label><input id="rdate" type="date"></div>
@@ -512,6 +527,54 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <div class="bpage-head">SAIL WARDROBE</div>
 
   <div id="wardrobeBody" style="margin-top:6px"></div>
+  </div>
+  <div class="bpage" id="coastalPage">
+    <div class="bpage-head">COASTAL</div>
+  <div style="margin-top:2px;background:#FBEEB0;border:1px solid #E0C86A;border-radius:12px;padding:10px 11px">
+    <div style="font-size:12px;font-weight:800;color:#3A2A00;margin-bottom:6px">Find a mark</div>
+    <input id="coastalFind" type="text" placeholder="Find a mark: Muglins, Boyd, Kish" autocapitalize="off" autocorrect="off">
+    <div id="coastalHits" style="max-height:150px;overflow-y:auto;margin-top:6px"></div>
+  </div>
+  <div style="margin-top:10px;background:#FBEEB0;border:1px solid #E0C86A;border-radius:12px;padding:10px 11px">
+    <div style="font-size:12px;font-weight:800;color:#3A2A00;margin-bottom:6px">Or enter a position</div>
+    <input id="coastalMName" type="text" placeholder="Name this mark" autocapitalize="words" style="margin-bottom:8px">
+    <!-- Degrees and minutes are separate boxes, the way a navigator writes a position, so the
+         number pad is all that is ever needed: no space key, nothing to parse out of one string.
+         The hemisphere is a tap, defaulted to the Irish Sea (N and W). -->
+    <div class="ddmrow">
+      <div class="ddmlab">Lat</div>
+      <input id="coastalMLatD" type="text" inputmode="numeric" placeholder="53" maxlength="3" class="ddmnum">
+      <div class="ddmsym">&deg;</div>
+      <input id="coastalMLatM" type="text" inputmode="decimal" placeholder="13.20" maxlength="6" class="ddmnum">
+      <div class="ddmsym">&prime;</div>
+      <button type="button" class="pick ddmhemi" id="coastalMLatH" data-h="N">N</button>
+    </div>
+    <div class="ddmrow" style="margin-top:6px">
+      <div class="ddmlab">Lon</div>
+      <input id="coastalMLonD" type="text" inputmode="numeric" placeholder="6" maxlength="3" class="ddmnum">
+      <div class="ddmsym">&deg;</div>
+      <input id="coastalMLonM" type="text" inputmode="decimal" placeholder="04.50" maxlength="6" class="ddmnum">
+      <div class="ddmsym">&prime;</div>
+      <button type="button" class="pick ddmhemi" id="coastalMLonH" data-h="W">W</button>
+    </div>
+    <div class="inrow" style="margin-top:8px">
+      <div style="flex:1"><button class="pick" id="coastalMAdd" style="width:100%">Add position</button></div>
+      <div style="flex:0 0 92px;display:none" id="coastalMCancelWrap"><button class="pick" id="coastalMCancel" style="width:100%">Cancel</button></div>
+    </div>
+    <div id="coastalMErr" style="font-size:12px;color:#8A2A00;margin-top:5px"></div>
+  </div>
+  <div style="margin-top:10px;background:#FBEEB0;border:1px solid #E0C86A;border-radius:12px;padding:10px 11px">
+    <div style="font-size:12px;font-weight:800;color:#3A2A00;margin-bottom:6px">My marks</div>
+    <div id="coastalMine" style="max-height:190px;overflow-y:auto"></div>
+  </div>
+  <div style="margin-top:10px;background:#FBEEB0;border:1px solid #E0C86A;border-radius:12px;padding:10px 11px">
+    <div style="font-size:12px;font-weight:800;color:#3A2A00;margin-bottom:6px">Course</div>
+    <div id="coastalSeq" style="margin-top:2px"></div>
+    <div class="inrow" style="margin-top:8px">
+      <div style="flex:1"><button class="pick" id="coastalUse" style="width:100%">Use this course</button></div>
+      <div style="flex:0 0 84px"><button class="pick" id="coastalClear" style="width:100%">Clear</button></div>
+    </div>
+  </div>
   </div>
   </div>
 </details>
@@ -3257,10 +3320,99 @@ function coastalLoad(){
     const a=JSON.parse(r); if(Array.isArray(a)){ COASTAL_SEQ.length=0; a.forEach(m=>COASTAL_SEQ.push(m)); }
   }catch(e){}
 }
+// Marks you enter by hand are worth keeping: the same headland or outfall comes round again
+// next season. MYMARKS is your own permanent list, saved beside the coastal course, and it is
+// searched alongside the DBSC marks and the seamark database.
+const MYMARKS=[];
+function myMarksSave(){ try{ localStorage.setItem("cc_mymarks",JSON.stringify(MYMARKS)); }catch(e){} }
+function myMarksLoad(){
+  try{ const r=localStorage.getItem("cc_mymarks"); if(!r)return;
+    const a=JSON.parse(r); if(Array.isArray(a)){ MYMARKS.length=0; a.forEach(m=>MYMARKS.push(m)); }
+  }catch(e){}
+}
+function myMarksAdd(name,lat,lon){
+  const nm=(name||"").trim();
+  if(!nm)return false;
+  const i=MYMARKS.findIndex(m=>(m.name||"").toLowerCase()===nm.toLowerCase());
+  if(i>=0)MYMARKS[i]={name:nm,lat:lat,lon:lon};   // same name typed again replaces the old fix
+  else MYMARKS.push({name:nm,lat:lat,lon:lon});
+  myMarksSave();
+  return true;
+}
+function myMarksDel(i){ if(i>=0&&i<MYMARKS.length){ MYMARKS.splice(i,1); myMarksSave(); } }
+// Show a stored decimal degree back the way it was typed: degrees, minutes to two decimals,
+// hemisphere. Minutes that round up to 60.00 carry into the degrees rather than printing 60.
+function fmtDDM(val,kind){
+  if(val==null||!isFinite(val))return "";
+  const hemi=(kind==="lat")?(val<0?"S":"N"):(val<0?"W":"E");
+  const a=Math.abs(val);
+  let deg=Math.floor(a), min=(a-deg)*60;
+  if(min>=59.995){ min=0; deg+=1; }
+  return deg+"\u00b0 "+min.toFixed(2)+"\u2032 "+hemi;
+}
+// Which saved mark, if any, is being edited. null means Add is adding a new one.
+let MYEDIT=null;
+function myMarksRender(){
+  const host=$("coastalMine"); if(!host)return;
+  host.innerHTML=MYMARKS.length
+    ? MYMARKS.map((m,i)=>`<div style="display:flex;gap:6px;align-items:center;padding:6px 0;border-top:1px solid #E0C86A">`+
+        `<div style="flex:1;min-width:0">`+
+          `<div style="font-size:13px;font-weight:700;color:#12283A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name}</div>`+
+          `<div style="font-size:11px;color:#6B5A20">${fmtDDM(m.lat,"lat")} &nbsp; ${fmtDDM(m.lon,"lon")}</div>`+
+        `</div>`+
+        `<button class="pick myMarkEdit" data-i="${i}" style="flex:0 0 58px;min-height:var(--btn-sm);padding:0;font-size:12px">Edit</button>`+
+        `<button class="pick myMarkDrop" data-i="${i}" style="flex:0 0 34px;min-height:var(--btn-sm);padding:0;font-size:13px">\u00d7</button>`+
+      `</div>`).join("")
+    : `<div style="font-size:12px;color:#6B5A20">Marks you enter by hand are saved here, and turn up in Find.</div>`;
+  host.querySelectorAll(".myMarkEdit").forEach(b=>b.onclick=()=>myMarksEditStart(+b.dataset.i));
+  host.querySelectorAll(".myMarkDrop").forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.i;
+    if(MYEDIT===i)myMarksEditCancel();             // the row being edited is going away
+    else if(MYEDIT!=null&&MYEDIT>i)MYEDIT--;       // indices above it shift down
+    myMarksDel(i); myMarksRender(); coastalRender();
+  });
+}
+// Load a saved mark back into the entry boxes. Add becomes Save, and a Cancel appears, so it is
+// clear you are changing an existing mark rather than creating a second one.
+function myMarksEditStart(i){
+  const m=MYMARKS[i]; if(!m)return;
+  MYEDIT=i;
+  const set=(id,v)=>{ const el=$(id); if(el)el.value=v; };
+  set("coastalMName",m.name);
+  const put=(dId,mId,hId,val,kind)=>{
+    const hemi=(kind==="lat")?(val<0?"S":"N"):(val<0?"W":"E");
+    const a=Math.abs(val);
+    let deg=Math.floor(a), min=(a-deg)*60;
+    if(min>=59.995){ min=0; deg+=1; }
+    set(dId,String(deg)); set(mId,min.toFixed(2));
+    const h=$(hId); if(h){ h.dataset.h=hemi; h.textContent=hemi; }
+  };
+  put("coastalMLatD","coastalMLatM","coastalMLatH",m.lat,"lat");
+  put("coastalMLonD","coastalMLonM","coastalMLonH",m.lon,"lon");
+  myMarksEditPaint();
+  const err=$("coastalMErr"); if(err)err.textContent="Editing "+m.name+".";
+  const card=$("coastalMName");
+  if(card&&card.scrollIntoView)card.scrollIntoView({block:"nearest"});
+}
+function myMarksEditCancel(){
+  MYEDIT=null;
+  ["coastalMName","coastalMLatD","coastalMLatM","coastalMLonD","coastalMLonM"].forEach(id=>{ const el=$(id); if(el)el.value=""; });
+  myMarksEditPaint();
+  const err=$("coastalMErr"); if(err)err.textContent="";
+}
+function myMarksEditPaint(){
+  const add=$("coastalMAdd"), cw=$("coastalMCancelWrap");
+  if(add)add.textContent=(MYEDIT==null)?"Add position":"Save changes";
+  if(cw)cw.style.display=(MYEDIT==null)?"none":"";
+}
 function coastalFind(q){
   const s=(q||"").trim().toLowerCase();
   if(s.length<2)return [];
   const out=[];
+  // Your own marks come first: you named them, so they are the ones you meant.
+  MYMARKS.forEach((m,i)=>{
+    if((m.name||"").toLowerCase().includes(s))out.push({key:null,name:m.name,lat:m.lat,lon:m.lon,dbsc:false,mine:true,myIdx:i});
+  });
   for(const k in MARKS){ const m=MARKS[k];
     if((m[0]||"").toLowerCase().includes(s))out.push({key:k,name:m[0],lat:m[1],lon:m[2],dbsc:true}); }
   try{
@@ -3280,11 +3432,18 @@ function coastalRender(){
   const hits=$("coastalHits"), seq=$("coastalSeq"), find=$("coastalFind");
   if(!hits||!seq)return;
   const list=coastalFind(find?find.value:"");
+  // A hit is a row you tap to add. One of your own marks also carries a delete control, so the
+  // saved list can be pruned of typos without leaving the page.
   hits.innerHTML=list.length
-    ? list.map((h,i)=>`<div class="coastalHit" data-i="${i}" style="padding:5px 6px;border-top:1px solid #E0C86A;font-size:13px;color:#12283A;cursor:pointer">`+
-        `${h.name}${h.dbsc?' <span style="color:#6B5A20;font-size:11px">bay mark</span>':''}</div>`).join("")
+    ? list.map((h,i)=>`<div style="display:flex;gap:6px;align-items:center;border-top:1px solid #E0C86A">`+
+        `<div class="coastalHit" data-i="${i}" style="flex:1;padding:8px 6px;font-size:13px;color:#12283A;cursor:pointer">`+
+        `${h.name}${h.dbsc?' <span style="color:#6B5A20;font-size:11px">bay mark</span>':''}`+
+        `${h.mine?' <span style="color:#6B5A20;font-size:11px">my mark</span>':''}</div>`+
+        (h.mine?`<button class="pick myMarkDel" data-m="${h.myIdx}" title="Forget this saved mark" style="flex:0 0 30px;min-height:0;padding:3px 0;font-size:12px">\u00d7</button>`:``)+
+        `</div>`).join("")
     : ((find&&find.value.trim().length>=2)?`<div style="font-size:12px;color:#6B5A20;padding:4px 2px">No mark of that name.</div>`:``);
   hits.querySelectorAll(".coastalHit").forEach(el=>el.onclick=()=>{ coastalAdd(list[+el.dataset.i]); if(find){find.value="";} });
+  hits.querySelectorAll(".myMarkDel").forEach(el=>el.onclick=()=>{ myMarksDel(+el.dataset.m); coastalRender(); myMarksRender(); });
   seq.innerHTML=COASTAL_SEQ.length
     ? COASTAL_SEQ.map((m,i)=>`<div style="display:flex;gap:6px;align-items:center;padding:3px 0;font-size:13px;color:#12283A">`+
         `<div style="flex:0 0 18px;color:#6B5A20">${i+1}</div>`+
@@ -3322,16 +3481,109 @@ function modeBtnsInit(){
     [1,2,3].map(()=>`<button class="pick" disabled style="opacity:.35">&nbsp;</button>`).join("");
   const b=$("coastalBtn");
   if(b)b.onclick=()=>{
-    const w=$("coastalWrap"); if(!w)return;
-    const open=w.style.display!=="none";
-    w.style.display=open?"none":"";
-    if(!open){ coastalLoad(); coastalRender(); }
+    const p=$("coastalPage"); if(!p)return;
+    myMarksLoad(); myMarksRender(); coastalLoad(); coastalRender();
+    // The page scrolls inside itself, so bring BOTH scrolls home: the bundle to this page, and
+    // the page to its own top. Without the second, you land wherever you last left it, which is
+    // how the Find box ended up off the top of the screen.
+    p.scrollTop=0;
+    p.scrollIntoView({block:"start",behavior:"smooth"});
+    setTimeout(()=>{ p.scrollTop=0; },350);
   };
   const f=$("coastalFind"); if(f)f.addEventListener("input",coastalRender);
   const u=$("coastalUse");
   if(u)u.onclick=()=>refreshFlash(u,()=>coastalApply());
   const c=$("coastalClear");
   if(c)c.onclick=()=>{ COASTAL_SEQ.length=0; coastalSave(); coastalRender(); };
+  coastalManualInit();
+  try{ myMarksLoad(); myMarksRender(); }catch(e){}
+  coastalTopWatch();
+}
+// The page scrolls inside itself, so arriving at it is not enough: its own scrollTop has to go
+// home too, or you land wherever you last left it and the Find box sits off the top. Watching
+// the page enter the viewport covers a swipe as well as the Coastal button. It only fires on
+// the transition into view, so scrolling within the page while you are on it is left alone.
+function coastalTopWatch(){
+  const p=$("coastalPage"); if(!p||p.dataset.topWatch)return;
+  p.dataset.topWatch="1";
+  if(!("IntersectionObserver" in window))return;
+  let wasIn=false;
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      const isIn=e.isIntersecting&&e.intersectionRatio>0.55;
+      if(isIn&&!wasIn){ p.scrollTop=0; try{coastalRender(); myMarksRender();}catch(err){} }
+      wasIn=isIn;
+    });
+  },{root:$("boatScroll"),threshold:[0,0.55,1]});
+  io.observe(p);
+}
+// Degrees and minutes arrive as separate typed boxes plus a hemisphere button, so there is
+// nothing to parse out of a sentence: validate each part and combine.
+function ddmParts(degStr,minStr,hemi,kind){
+  const dRaw=(degStr||"").trim(), mRaw=(minStr||"").trim();
+  if(!dRaw&&!mRaw)return null;
+  const deg=dRaw===""?0:Number(dRaw), min=mRaw===""?0:Number(mRaw);
+  if(!isFinite(deg)||!isFinite(min))return null;
+  if(deg<0||min<0||min>=60)return null;
+  let val=deg+min/60;
+  if(kind==="lat"&&val>90)return null;
+  if(kind==="lon"&&val>180)return null;
+  if(hemi==="S"||hemi==="W")val=-val;
+  return val;
+}
+function coastalManualAdd(){
+  const nameEl=$("coastalMName"), errEl=$("coastalMErr");
+  const latD=$("coastalMLatD"), latM=$("coastalMLatM"), latH=$("coastalMLatH");
+  const lonD=$("coastalMLonD"), lonM=$("coastalMLonM"), lonH=$("coastalMLonH");
+  if(!nameEl||!latD||!latM||!lonD||!lonM)return;
+  const nm=(nameEl.value||"").trim();
+  const lat=ddmParts(latD.value,latM.value,latH?latH.dataset.h:"N","lat");
+  const lon=ddmParts(lonD.value,lonM.value,lonH?lonH.dataset.h:"W","lon");
+  if(!nm){ if(errEl)errEl.textContent="Name the mark first."; return; }
+  if(lat==null){ if(errEl)errEl.textContent="Check the latitude: degrees 0 to 90, minutes under 60."; return; }
+  if(lon==null){ if(errEl)errEl.textContent="Check the longitude: degrees 0 to 180, minutes under 60."; return; }
+  if(MYEDIT!=null){
+    // Saving an edit, not adding a second mark. A correction should follow through to the
+    // course you are building, since fixing a bad fix mid-build is why you are here.
+    const old=MYMARKS[MYEDIT];
+    const oldName=old?old.name:null;
+    MYMARKS[MYEDIT]={name:nm,lat:lat,lon:lon};
+    myMarksSave();
+    if(oldName!=null){
+      COASTAL_SEQ.forEach(m=>{
+        if(!m.key&&(m.name||"").toLowerCase()===oldName.toLowerCase()){ m.name=nm; m.lat=lat; m.lon=lon; }
+      });
+      coastalSave();
+    }
+    MYEDIT=null;
+    myMarksEditCancel();
+    myMarksRender(); coastalRender();
+    if(errEl)errEl.textContent="Saved.";
+    return;
+  }
+  myMarksAdd(nm,lat,lon);            // keep it: the same mark comes round again next season
+  coastalAdd({key:null,name:nm,lat:lat,lon:lon,dbsc:false,mine:true});
+  nameEl.value=""; latD.value=""; latM.value=""; lonD.value=""; lonM.value="";
+  myMarksRender();
+  if(errEl)errEl.textContent="Saved to your marks, and added to the course.";
+}
+function coastalManualInit(){
+  const btn=$("coastalMAdd"); if(!btn||btn.dataset.built)return;
+  btn.dataset.built="1";
+  btn.onclick=()=>refreshFlash(btn,coastalManualAdd);
+  const cx=$("coastalMCancel"); if(cx)cx.onclick=()=>myMarksEditCancel();
+  myMarksEditPaint();
+  // Hemisphere: a tap, not a typed letter. Defaults suit the Irish Sea, N and W.
+  [["coastalMLatH","N","S"],["coastalMLonH","W","E"]].forEach(a=>{
+    const h=$(a[0]); if(!h)return;
+    h.onclick=()=>{ h.dataset.h=(h.dataset.h===a[1])?a[2]:a[1]; h.textContent=h.dataset.h; };
+  });
+  // Degrees is a short box: two digits for a latitude, three for a longitude, and then the
+  // caret should already be in minutes rather than waiting for a tap.
+  [["coastalMLatD","coastalMLatM",2],["coastalMLonD","coastalMLonM",3]].forEach(a=>{
+    const f=$(a[0]), t=$(a[1]); if(!f||!t)return;
+    f.addEventListener("input",()=>{ if((f.value||"").replace(/[^0-9]/g,"").length>=a[2])t.focus(); });
+  });
 }
 function roRender(){
   const el=$("roLine"); if(!el)return;
@@ -6481,7 +6733,12 @@ function garminRender(pos){
     }
     if(cog!=null&&sog!=null&&(onAxis?twd!=null:brgToMark!=null)){
       const ref=onAxis?twd:brgToMark;
-      const v=sog*Math.cos(rad(angdiff(ref,cog)));
+      let v=sog*Math.cos(rad(angdiff(ref,cog)));
+      // SIGN. VMG along the wind axis is positive UPWIND by convention, which made every
+      // downwind leg read negative while the boat was closing on the mark at full speed. What a
+      // sailor wants is progress TOWARD THE MARK, so on a run the reference is reversed: a dead
+      // run at 6 kt now reads +6.0 rather than -6.0, and sailing back up the leg reads negative.
+      if(onAxis&&brgToMark!=null&&angdiff(twd,brgToMark)>=110)v=-v;
       if(lab)lab.textContent=onAxis?"VMG":"VMC";
       vg.innerHTML=`${v>=0?"":"\u2212"}${Math.abs(v).toFixed(1)}<span class="garmin-unit">kt</span>`;
     } else {
