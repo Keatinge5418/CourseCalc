@@ -98,6 +98,11 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--paper);color:var(--ink);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   padding:max(calc(env(safe-area-inset-top) + 10px), 58px) 10px calc(env(safe-area-inset-bottom) + 24px)}
+/* v553: while a tab is open the DOCUMENT does not scroll. The open tab fills the screen and
+   stays where it was put; scrolling out of it used to leave it drifting half off the top.
+   position:fixed rather than overflow:hidden, because iOS Safari ignores overflow:hidden on
+   body. The scroll position is stored and restored on close so the page does not jump. */
+body.tabLock{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
 header{padding:26px 96px 24px 14px;background:#FFF6D0;border-radius:12px;margin:6px 0 10px;min-height:96px;box-sizing:border-box}
 .notes{background:#FFF6D0;border-radius:12px;padding:10px 14px;margin:10px 0;scroll-margin-top:54px}
@@ -986,7 +991,10 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 
   </div><!-- /legGroup -->
 
-  <div class="gpage tpage" id="gpage_tac" data-t="TACTICS">
+  <!-- Tactics is a group of two, the same shape as the Course Chart group: the advice, and
+       below it the geometry that advice rests on. -->
+  <div class="tpage legGroup" id="gpage_tacgrp" data-t="TACTICS">
+  <div class="gpage gsub" id="gpage_tac">
     <div class="bpage-head" style="color:var(--muted-dark)">TACTICS</div>
     <div id="tdcCard" style="margin:0 0 6px"></div>
     <div id="tacWrap" class="legpanel" style="margin:0;flex:1 1 auto;min-height:0;overflow-y:auto">
@@ -995,6 +1003,36 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
       <div id="tacEnd"></div>
     </div>
   </div>
+  <!-- VECTORS. Not a calculator: a window into what the app is assuming. The tide it took from
+       the atlas, the boat speed it took from the polar and the wind it derived from your tacks
+       are three assumptions you cannot otherwise see. Drawn as an hour's motion they are
+       checkable at a glance: a set pointing the wrong way is invisible as a number and obvious
+       as an arrow. -->
+  <div class="gpage gsub" id="gpage_vec">
+    <div class="bpage-head" style="color:var(--muted-dark)">VECTORS</div>
+    <!-- The dark panel, not the cream legpanel: the diagram is drawn for the dark ground, like
+         the instruments panel beside it. On cream the colours washed out to near invisibility. -->
+    <div id="vecWrap" style="margin:0;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
+         background:#1C3D61;border:1px solid #2E5680;border-radius:12px;padding:8px 10px;color:#fff">
+      <div id="vecHead" style="font-size:12px;color:#C6E4D3;margin-bottom:4px"></div>
+      <svg id="vecSvg" viewBox="0 0 320 320" preserveAspectRatio="xMidYMid meet"
+           style="flex:1 1 auto;min-height:0;width:100%"></svg>
+      <div id="vecLegend" style="font-size:11px;line-height:1.5;margin-top:4px"></div>
+    </div>
+  </div>
+  <!-- TIDE EFFECT. The vectors page draws the geometry; this one answers the question the
+       geometry is usually too small to show. At 0.4kt against 5kt the triangle is two nearly
+       parallel lines, but the same 0.4kt up a 1.5 mile leg is worth about a minute, and a
+       minute is a boat length or two at the mark. Along and across the leg, the drift, the
+       heading correction, and the time it costs or saves. -->
+  <div class="gpage gsub" id="gpage_tideff">
+    <div class="bpage-head" style="color:var(--muted-dark)">TIDE EFFECT</div>
+    <div id="tideffWrap" style="margin:0;flex:1 1 auto;min-height:0;overflow-y:auto;
+         background:#1C3D61;border:1px solid #2E5680;border-radius:12px;padding:10px 12px;color:#fff">
+      <div id="tideffBody" style="font-size:13px;line-height:1.5"></div>
+    </div>
+  </div>
+  </div><!-- /tacgrp -->
 
 
   <!-- PAGE 3: the Course Chart, moved out of its own tab. The whole course on the bay, with the
@@ -1029,16 +1067,10 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
     </div>
   </div>
-
-
-  </div>
-</details>
-
-<details class="notes bundle fam-offshore" id="offshoretab"><summary>Offshore</summary>
-  <div class="bundleScroll" id="offScroll" style="height:calc(100dvh - var(--offoff,96px))">
-    <!-- The offshore map: its own tab since v486, passage-making rather than racing. -->
-  <div class="bpage" id="gpage_map">
-    <div class="bpage-head" style="color:#48627A">OFFSHORE MAP</div>
+  <!-- The offshore map, moved in from its own tab (v554): passage-making rather than racing,
+       but it belongs with the other chart views rather than in a tab of its own. -->
+  <div class="gpage tpage" id="gpage_map" data-t="OFFSHORE">
+    <div class="bpage-head" style="color:var(--muted-dark)">OFFSHORE MAP</div>
 
   <div id="map2" style="flex:1 1 auto;min-height:200px;margin-top:10px;border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:#dfeaf0"></div>
   <div style="display:flex;gap:8px;margin-top:8px;align-items:stretch">
@@ -1048,12 +1080,10 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   <div id="gps2Stats" style="font-size:12px;color:#48627A;line-height:1.5;margin-top:6px"></div>
   </div>
+
+
   </div>
 </details>
-
-
-
-
 
 <!-- Settings & Data bundle (v457). Everything you consult rather than sail with: saved
      races, the detection thresholds, the assumptions behind the numbers. The parked leg
@@ -2802,6 +2832,231 @@ function tideProv(){
 const ZONEPOS={inshore:[53.3064,-6.1319], offshore:[53.2970,-6.0900]};
 function streamAt(offHrs,zone,range){return tideAt(ZONEPOS[zone]||ZONEPOS.offshore,offHrs,range);}
 function legMid(L){return [(L.from.pos[0]+L.to.pos[0])/2,(L.from.pos[1]+L.to.pos[1])/2];}
+
+// ---------- VECTORS: one hour of motion, drawn from the app's live values (v555) ----------
+// This is deliberately NOT a calculator with its own inputs. Every number comes from the same
+// place the tactics advice comes from: the leg from CURROUTE, the tide from tideAt(), the boat
+// speed from the polar, the wind from the DMC. So if the triangle looks wrong, the advice IS
+// wrong, which is the whole point of showing it.
+//
+// A bearing difference used as an angle must be wrapped to +-180 first. Unwrapped, a leg of 270
+// against a set of 020 gives -250 rather than +110, and anything built from its magnitude comes
+// out badly wrong while still looking plausible. It only bites when the two straddle north.
+function vecWrap180(d){ return ((d+180)%360+360)%360-180; }
+
+// Solve the hour triangle: what heading through the water makes the leg course good, and what
+// speed results over the ground. Returns null when the tide is too strong to hold the track.
+function vecSolve(trackDeg, stw, tideKt, tideDirDeg){
+  if(!(stw>0))return null;
+  if(!(tideKt>0))return {hdg:trackDeg, sog:stw, beta:0, alpha:0};
+  const R=Math.PI/180;
+  const alpha=vecWrap180(tideDirDeg-trackDeg)*R;
+  const sinBeta=(tideKt*Math.sin(alpha))/stw;
+  if(Math.abs(sinBeta)>1)return null;                 // cannot hold the track against this set
+  const beta=Math.asin(sinBeta);
+  const gamma=Math.PI-Math.abs(alpha)-Math.abs(beta);
+  const sog=Math.sqrt(stw*stw+tideKt*tideKt-2*stw*tideKt*Math.cos(gamma));
+  return {hdg:((trackDeg-beta/R)%360+360)%360, sog, beta:beta/R, alpha:alpha/R};
+}
+
+// TIDE EFFECT: the numbers the triangle is too small to show. Same live values as vecDraw, so
+// the two pages can never disagree; this one just resolves the tide into the leg's own frame and
+// says what it costs in time, which is the part that decides anything.
+function tideEffDraw(){
+  const host=$("tideffBody"); if(!host)return;
+  const r=CURROUTE, L=r&&r.legs&&r.legs[state.leg];
+  if(!L||!L.to||!L.to.pos){ host.innerHTML=`<div style="color:#C6E4D3">Choose a course and this fills in.</div>`; return; }
+
+  const wspd=usedSpd()||1, wdir=usedWind();
+  const co=L.co, dist=L.dist, beat=(L.pos==="Beat"), run=(L.pos==="Run");
+  let stw=null;
+  try{
+    if(beat)stw=interp(P_TWS,P_UP.vel,wspd);
+    else if(run)stw=interp(P_TWS,P_DN.vel,wspd);
+    else stw=polarSpeed(Math.abs(vecWrap180(co-wdir)),wspd);
+  }catch(e){ stw=null; }
+  if(!(stw>0)){ host.innerHTML=`<div style="color:#C6E4D3">No polar speed for this leg yet.</div>`; return; }
+
+  const effOff=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off:null;
+  let st=null;
+  try{ st=effOff!==null?tideAt(legMid(L),effOff,TIDECTX.range):null; }catch(e){ st=null; }
+  const kt=(st&&!st.slack)?st.kt:0, dir=(st&&!st.slack)?st.dir:0;
+  const src=st?(st.src||"atlas"):"none";
+
+  const R=Math.PI/180;
+  // Resolve the set into the LEG's frame: along it, and across it.
+  const rel=vecWrap180(dir-co)*R;
+  const along=kt*Math.cos(rel);          // + with you up the leg, - against
+  const across=kt*Math.sin(rel);         // + setting you to starboard of the track
+
+  const sol=vecSolve(co,stw,kt,dir);
+  const sogStill=stw;
+  const mins=(sog)=>(sog>0&&dist>0)?(dist/sog)*60:null;
+  const tHere=sol?mins(sol.sog):null, tStill=mins(sogStill);
+  const gain=(tHere!=null&&tStill!=null)?(tStill-tHere):null;   // + is time SAVED
+
+  // Uncorrected drift: how far off track the tide alone would put you over this leg.
+  const hours=(tHere!=null)?tHere/60:null;
+  const driftNM=(hours!=null)?Math.abs(across)*hours:null;
+
+  const fmt=(v,d)=>v.toFixed(d==null?1:d);
+  const srcTxt=(src==="measured")?`<span style="color:#5FD08A">measured</span>`
+              :(src==="none")?`<span style="color:#E0C86A">none</span>`
+              :`<span style="color:#E0C86A">atlas</span>`;
+  const row=(k,v,note)=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid rgba(255,255,255,.12)">`+
+    `<div style="color:#C6E4D3">${k}</div><div style="text-align:right;font-weight:700">${v}`+
+    `${note?`<div style="font-weight:400;font-size:11px;color:#C6E4D3">${note}</div>`:""}</div></div>`;
+
+  if(kt<=0){
+    host.innerHTML=`<div style="font-size:12px;color:#C6E4D3;margin-bottom:6px">Leg ${state.leg+1} to ${L.to.name||""}, `+
+      `${fmt(dist,2)} NM on ${Math.round(co)}\u00b0</div>`+
+      `<div style="color:#5FD08A;font-weight:700">Slack water on this leg.</div>`+
+      row("Boat through the water",`${fmt(stw)} kt`)+
+      row("Time on the leg",tStill!=null?`${fmt(tStill,1)} min`:"\u2014");
+    return;
+  }
+
+  const alongTxt=(along>=0?"with you":"against you");
+  const acrossTxt=(across>=0?"to starboard":"to port");
+  const gainTxt=(gain==null)?"\u2014"
+    :(Math.abs(gain)<0.05?"no difference"
+      :`${gain>0?"saves":"costs"} ${fmt(Math.abs(gain),1)} min`);
+  const gainCol=(gain==null||Math.abs(gain)<0.05)?"#C6E4D3":(gain>0?"#5FD08A":"#E06C5A");
+
+  host.innerHTML=
+    `<div style="font-size:12px;color:#C6E4D3;margin-bottom:4px">Leg ${state.leg+1} to ${L.to.name||""}, `+
+      `${fmt(dist,2)} NM on ${Math.round(co)}\u00b0 \u00b7 tide ${srcTxt}, `+
+      `${fmt(kt)} kt setting ${Math.round(dir)}\u00b0</div>`+
+    `<div style="font-size:19px;font-weight:800;color:${gainCol};margin:2px 0 4px">The tide ${gainTxt}</div>`+
+    row("Along the leg",`${fmt(Math.abs(along))} kt`,alongTxt)+
+    row("Across the leg",`${fmt(Math.abs(across))} kt`,acrossTxt)+
+    row("Steer",sol?`${Math.round(sol.hdg)}\u00b0`:"\u2014",sol?`to make ${Math.round(co)}\u00b0 good`:"cannot hold the track")+
+    row("Over the ground",sol?`${fmt(sol.sog)} kt`:"\u2014",`${fmt(stw)} kt through the water`)+
+    row("Time on the leg",tHere!=null?`${fmt(tHere,1)} min`:"\u2014",tStill!=null?`${fmt(tStill,1)} min in still water`:"")+
+    row("If you ignore it",driftNM!=null?`${fmt(driftNM,2)} NM`:"\u2014",`set down ${acrossTxt} by the end of the leg`);
+}
+function vecDraw(){
+  const svg=$("vecSvg"), head=$("vecHead"), leg=$("vecLegend");
+  if(!svg)return;
+  const say=(h,l)=>{ if(head)head.textContent=h; if(leg)leg.innerHTML=l||""; };
+  const r=CURROUTE, L=r&&r.legs&&r.legs[state.leg];
+  if(!L||!L.to||!L.to.pos){ svg.innerHTML=""; say("No leg yet.","Choose a course and the geometry appears here."); return; }
+
+  const wspd=usedSpd()||1, wdir=usedWind();
+  const co=L.co;                                   // the leg's course over the ground
+  const beat=(L.pos==="Beat"), run=(L.pos==="Run");
+  // Boat speed through the water: the polar's target on a beat or a run, and the polar's own
+  // curve otherwise. The same numbers the laylines and the sail calls are built from.
+  let stw=null;
+  try{
+    if(beat)stw=interp(P_TWS,P_UP.vel,wspd);
+    else if(run)stw=interp(P_TWS,P_DN.vel,wspd);
+    else{
+      const twa=Math.abs(vecWrap180(co-wdir));
+      stw=(typeof polarSpeed==="function")?polarSpeed(twa,wspd):interp(P_TWS,P_UP.vel,wspd);
+    }
+  }catch(e){ stw=null; }
+  if(!(stw>0)){ svg.innerHTML=""; say("No polar speed for this leg.",""); return; }
+
+  const effOff=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off:null;
+  let st=null;
+  try{ st=effOff!==null?tideAt(legMid(L),effOff,TIDECTX.range):null; }catch(e){ st=null; }
+  const tideKt=(st&&!st.slack)?st.kt:0, tideDir=(st&&!st.slack)?st.dir:0;
+  const src=st?(st.src||"atlas"):"none";
+
+  const sol=vecSolve(co,stw,tideKt,tideDir);
+
+  // Geometry: north up, one hour of motion, FITTED to the triangle rather than to a fixed rose.
+  // A fixed rose left the triangle occupying a third of the box and the rest empty, and in
+  // Dublin Bay the tide is usually a few tenths of a knot, so the interesting part was the part
+  // that vanished. Fitting to the bounding box of the three points uses the whole panel.
+  const W=320,H=320,PAD=34;
+  const R=Math.PI/180;
+  const vec=(brg,len)=>[len*Math.sin(brg*R), -len*Math.cos(brg*R)];   // screen y is down
+
+  const tv=vec(tideDir,tideKt);
+  const gv=sol?vec(co,sol.sog):tv;
+  const pts=[[0,0],tv,gv];
+  let x0=Math.min(...pts.map(p=>p[0])), x1=Math.max(...pts.map(p=>p[0]));
+  let y0=Math.min(...pts.map(p=>p[1])), y1=Math.max(...pts.map(p=>p[1]));
+  const spanX=Math.max(x1-x0,1e-6), spanY=Math.max(y1-y0,1e-6);
+  const k=Math.min((W-2*PAD)/spanX,(H-2*PAD)/spanY);
+  const ox=(W-(x0+x1)*k)/2, oy=(H-(y0+y1)*k)/2;
+  const S=v=>[ox+v[0]*k, oy+v[1]*k];
+
+  const parts=[];
+  const A=S([0,0]);
+
+  // A short north arrow and the leg course as a reference line, instead of a full rose: two
+  // references you actually read, rather than a dial that competed with the triangle.
+  {const nlen=26, nx=A[0], ny=A[1];
+   parts.push(`<line x1="${nx.toFixed(1)}" y1="${(ny).toFixed(1)}" x2="${nx.toFixed(1)}" y2="${(ny-nlen).toFixed(1)}" stroke="rgba(198,228,211,.55)" stroke-width="1"/>`);
+   parts.push(`<polygon points="${nx.toFixed(1)},${(ny-nlen-5).toFixed(1)} ${(nx-3.5).toFixed(1)},${(ny-nlen+2).toFixed(1)} ${(nx+3.5).toFixed(1)},${(ny-nlen+2).toFixed(1)}" fill="rgba(198,228,211,.55)"/>`);
+   parts.push(`<text x="${(nx+6).toFixed(1)}" y="${(ny-nlen-2).toFixed(1)}" fill="rgba(198,228,211,.75)" font-size="10" font-weight="700">N</text>`);}
+
+  const arrow=(from,to,colour,width,dash,label)=>{
+    const dx=to[0]-from[0], dy=to[1]-from[1];
+    const len=Math.hypot(dx,dy);
+    if(len<0.5)return "";                       // too short to draw an arrow for
+    const ang=Math.atan2(dy,dx), hl=Math.min(9,len*0.4);
+    const d=dash?` stroke-dasharray="5,4"`:"";
+    let o=`<line x1="${from[0].toFixed(1)}" y1="${from[1].toFixed(1)}" x2="${to[0].toFixed(1)}" y2="${to[1].toFixed(1)}" stroke="${colour}" stroke-width="${width}"${d} stroke-linecap="round"/>`;
+    o+=`<polygon points="${to[0].toFixed(1)},${to[1].toFixed(1)} ${(to[0]-hl*Math.cos(ang-Math.PI/6)).toFixed(1)},${(to[1]-hl*Math.sin(ang-Math.PI/6)).toFixed(1)} ${(to[0]-hl*Math.cos(ang+Math.PI/6)).toFixed(1)},${(to[1]-hl*Math.sin(ang+Math.PI/6)).toFixed(1)}" fill="${colour}"/>`;
+    if(label){
+      // Each label sits on its OWN line, pushed perpendicular to it. Placing all three at the
+      // midpoint with the same offset stacked them on top of each other whenever two vectors
+      // nearly coincided, which is exactly what a weak tide does.
+      const side=(label.side||1);
+      const nx=-dy/len, ny=dx/len;
+      const mx=(from[0]+to[0])/2+nx*12*side, my=(from[1]+to[1])/2+ny*12*side;
+      const anchor=(nx*side>0.25)?"start":(nx*side<-0.25)?"end":"middle";
+      o+=`<text x="${mx.toFixed(1)}" y="${(my+3).toFixed(1)}" fill="${colour}" font-size="11" font-weight="700" text-anchor="${anchor}">${label.text}</text>`;
+    }
+    return o;
+  };
+
+  if(!sol){
+    parts.push(arrow(A,S(tv),"#E06C5A",2.5,false,{text:`tide ${tideKt.toFixed(1)}kt`,side:1}));
+    svg.innerHTML=parts.join("");
+    say(`Leg ${state.leg+1} to ${L.to.name||""}, course ${Math.round(co)}\u00b0`,
+      `<span style="color:#E06C5A">The tide is too strong across this leg to hold the track at ${stw.toFixed(1)}kt.</span>`);
+    return;
+  }
+
+  const C=S(tv), B=S(gv);
+  if(tideKt>0)parts.push(arrow(A,C,"#E06C5A",2.5,false,{text:`tide ${tideKt.toFixed(1)}kt ${Math.round(tideDir)}\u00b0`,side:-1}));
+  parts.push(arrow(tideKt>0?C:A,B,"#7FC4E8",2.5,false,{text:`water ${stw.toFixed(1)}kt`,side:1}));
+  parts.push(arrow(A,B,"#5FD08A",2.5,true,{text:`ground ${sol.sog.toFixed(1)}kt`,side:-1}));
+
+  // WEAK TIDE INSET. A few tenths of a knot against 5 knots of boat speed is a triangle that is
+  // visually a straight line, and that is the normal case in the bay. The inset redraws the tide
+  // alone at its own scale, against the leg axis, so which way it is pushing you stays legible.
+  if(tideKt>0&&tideKt<stw*0.25){
+    const bx=W-72, by=H-72, br=30;
+    parts.push(`<circle cx="${bx}" cy="${by}" r="${br}" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.25)" stroke-width="1"/>`);
+    const legEnd=[bx+br*Math.sin(co*R), by-br*Math.cos(co*R)];
+    const legSt=[bx-br*Math.sin(co*R), by+br*Math.cos(co*R)];
+    parts.push(`<line x1="${legSt[0].toFixed(1)}" y1="${legSt[1].toFixed(1)}" x2="${legEnd[0].toFixed(1)}" y2="${legEnd[1].toFixed(1)}" stroke="rgba(198,228,211,.45)" stroke-width="1" stroke-dasharray="3,3"/>`);
+    const te=[bx+br*0.8*Math.sin(tideDir*R), by-br*0.8*Math.cos(tideDir*R)];
+    parts.push(arrow([bx,by],te,"#E06C5A",2,false,null));
+    parts.push(`<text x="${bx}" y="${(by+br+13).toFixed(1)}" fill="rgba(198,228,211,.75)" font-size="9" font-weight="700" text-anchor="middle">tide vs leg</text>`);
+  }
+
+  svg.innerHTML=parts.join("");
+
+  const srcTxt=(src==="measured")?`<span style="color:#5FD08A">measured</span>`
+              :(src==="none")?`<span style="color:#E0C86A">no tide</span>`
+              :`<span style="color:#E0C86A">from the atlas</span>`;
+  say(`Leg ${state.leg+1} to ${L.to.name||""}, course ${Math.round(co)}\u00b0, one hour of motion`,
+    `<div><span style="color:#E06C5A">\u25ac</span> tide, ${srcTxt}`+
+    `${tideKt>0?` \u00b7 sets ${Math.round(tideDir)}\u00b0 at ${tideKt.toFixed(1)}kt`:""}</div>`+
+    `<div><span style="color:#7FC4E8">\u25ac</span> through the water at ${stw.toFixed(1)}kt from the polar`+
+    `${beat?" (beat target)":run?" (run target)":""}</div>`+
+    `<div><span style="color:#5FD08A">\u25ac</span> over the ground: ${sol.sog.toFixed(1)}kt`+
+    `${Math.abs(sol.beta)>0.5?`, so steer ${Math.round(sol.hdg)}\u00b0 to make ${Math.round(co)}\u00b0 good`:""}</div>`+
+    (beat||run?`<div style="color:#C6E4D3;margin-top:3px">This is the rhumb line, not how you will sail it: on a `+
+      `${beat?"beat":"run"} it shows whether the tide is with you up the leg or across it.</div>`:""));
+}
 function offsetPos(p,brgDeg,nm){
   return [p[0]+(nm*Math.cos(rad(brgDeg)))/60,
           p[1]+(nm*Math.sin(rad(brgDeg)))/(60*Math.cos(rad(p[0])))];
@@ -6321,6 +6576,25 @@ function tabPages(tabId,scrollId,hostId,onShow){
 // A tab scroller fills the screen below whatever sits above it (the status scrim and the tab
 // summary), so that offset has to be measured. This is the ONLY measurement left: there is no
 // snap position to land wrong any more, so a stale value costs a little height, not a broken page.
+// While a tab is open the document is pinned. iOS ignores overflow:hidden on body, so the
+// body is taken out of flow at its current offset and put back on close.
+let TABLOCK=null;
+function tabLockHold(det){
+  if(TABLOCK)return;
+  const y=window.scrollY||window.pageYOffset||0;
+  TABLOCK={y:y,det:det};
+  document.body.style.top=(-y)+"px";
+  document.body.classList.add("tabLock");
+}
+function tabLockRelease(det){
+  if(!TABLOCK)return;
+  if(det&&TABLOCK.det&&det!==TABLOCK.det)return;   // a different tab closing: leave the lock
+  const y=TABLOCK.y;
+  TABLOCK=null;
+  document.body.classList.remove("tabLock");
+  document.body.style.top="";
+  window.scrollTo(0,y);                            // back exactly where you were
+}
 function tabFitAll(){
   document.querySelectorAll(".tabScroll").forEach(sc=>{
     const det=sc.closest("details");
@@ -6345,9 +6619,12 @@ function bundlesInit(){
   // the first one runs.
   document.querySelectorAll("details.bundle").forEach(det=>{
     det.addEventListener("toggle",()=>{
-      if(!det.open)return;
+      if(!det.open){ tabLockRelease(det); return; }
       if(det.scrollIntoView)det.scrollIntoView({block:"start"});
-      tabFitAll(); setTimeout(tabFitAll,60); setTimeout(tabFitAll,320);
+      tabFitAll(); setTimeout(tabFitAll,60);
+      // Lock AFTER the scroll has landed: locking first would freeze the page at the old
+      // position and the tab would never reach the top.
+      setTimeout(()=>{ tabFitAll(); tabLockHold(det); },320);
     });
   });
   window.addEventListener("resize",bundleFitSettled);
@@ -6399,19 +6676,24 @@ function gpsPagesInit(){
     window.visualViewport.addEventListener("scroll",gpsFitPages);
   }
 }
+// Leaflet must be told its container has a size the moment the map becomes visible, or it
+// draws into a box it measured as zero. That used to hang off the Offshore tab opening; the
+// map is a PAGE of the GPS Display now, so it hangs off that page being selected.
+function gpsPageShown(label){
+  if(label!=="OFFSHORE")return;
+  gps2Render();
+  setTimeout(()=>{ if(MAP2)MAP2.invalidateSize(); gps2Fit(); },60);
+}
 function gps2Init(){
-  const tab=$("offshoretab");
-  if(tab)tab.addEventListener("toggle",()=>{ if(tab.open){ gps2Render(); setTimeout(()=>{ if(MAP2)MAP2.invalidateSize(); gps2Fit(); },60); } });
   const b=$("gps2Fit"); if(b)b.onclick=gps2Fit;
   const c=$("gps2Clear"); if(c)c.onclick=()=>{ try{trackClear();}catch(e){} gps2Render(); };
   const dl=$("gps2Dl");   if(dl)dl.onclick=()=>{ try{trackDownloadCSV();}catch(e){} };
-  try{ tabPages("garmintab","gpsScroll","gpsBtns"); }catch(e){}
+  try{ tabPages("garmintab","gpsScroll","gpsBtns",gpsPageShown); }catch(e){}
   try{prePagesInit();}catch(e){}
   try{ bundlesInit();
        // Conditions is the first tab converted to button-selected pages (v548): it is no
        // longer a measured snap bundle, so it is deliberately NOT registered with bundle().
        tabPages("condtab","condScroll","condBtns");
-       bundle("offshoretab","offScroll","--offoff");
        bundle("coursetab","courseScroll","--courseoff");
        tabPages("boattab","boatScroll","boatBtns",boatPageShown);
        bundle("sdtab","sdScroll","--sdoff"); }catch(e){}
@@ -7775,6 +8057,8 @@ function render(){
   try{noticePaint();}catch(e){}
   try{tdcPaint();}catch(e){}
   try{coastalInUsePaint();}catch(e){}   // green follows state.card, whatever changed it
+  try{vecDraw();}catch(e){}             // the geometry the advice rests on
+  try{tideEffDraw();}catch(e){}         // and what that geometry costs in time
 }
 let CURROUTE=null;
 const TIDECOL="#123C69";     // dark navy: the tidal stream, on every view that draws it
