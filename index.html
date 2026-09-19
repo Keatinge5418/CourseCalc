@@ -457,6 +457,10 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 #gpage3{justify-content:flex-start}
 
 #mapPlan{flex:0 0 auto}
+/* mapWrap is a flex box now so the svg can take the leftover height; its overlay controls are
+   absolutely positioned against it and are unaffected, but the svg must not be allowed to
+   impose its own portrait height on the row. */
+#gpage3 #mapWrap > svg{flex:1 1 auto;min-height:0}
 #gpage3 #map{flex:0 1 auto;min-height:0;max-height:100%;width:100%;height:auto}
 /* The summary row inherits .tot, which is built for a light tab: ink2 labels and near-black
    values disappear on the GPS Display's dark ground. Give it the same light card the tiles use,
@@ -878,12 +882,16 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        never competes with the vertical scroll on the other two. -->
   <div class="tpage legGroup" id="gpage_leg" data-t="COURSE CHART">
   <div class="gpage gsub" id="gpage3">
-    <div class="bpage-head" style="color:var(--muted-dark)">COURSE CHART</div>
-  <div id="mapWrap" style="position:relative"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
+    <div class="bpage-head" style="color:var(--muted-dark);flex:0 0 auto">COURSE CHART</div>
+  <!-- v560: the chart takes the height LEFT OVER after the panels below it, rather than its own
+       natural portrait height. The bay chart is 710x1008, so on a phone it filled the screen by
+       itself and shunted the leg panel and the summary off the bottom of a page that cannot
+       scroll. Now the chart shrinks on a short screen and the panels stay put. -->
+  <div id="mapWrap" style="position:relative;flex:1 1 auto;min-height:0;display:flex"><svg id="map" viewBox="0 0 710 1008" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;min-height:0;display:block"></svg><div style="position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:6px"><button id="mapIn" aria-label="Zoom in" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">+</button><button id="mapOut" aria-label="Zoom out" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--rule);background:rgba(255,255,255,.92);font-size:22px;font-weight:800;color:#12283A;line-height:1;padding:0">−</button></div><div id="mapZlab" style="position:absolute;bottom:8px;right:10px;font-size:11px;font-weight:800;color:#12283A;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:8px;display:none">1x</div></div>
   <!-- v418: the wind slider and its restore button are gone from this page. Page 2 already has
        one, it drives the same global wind, and this page is now a plan view rather than a place
        you adjust things. The leg plan for the chosen leg sits under the chart instead. -->
-  <div id="mapPlan" style="margin-top:8px"></div>
+  <div id="mapPlan" style="margin-top:6px;flex:0 0 auto"></div>
   </div>
 
   <div class="gpage gsub" id="gpage1">
@@ -948,27 +956,19 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        drive global state, so they act on the entire app from wherever they live. The two mini
        charts are gone: this chart is the same picture, larger. -->
   <div class="gpage gsub" id="gpage2">
-    <div class="bpage-head" style="color:var(--muted-dark)">LEG CHART</div>
-  <!-- Light ink: this row was #12283A, right on the light Course Analysis tab but near-black on
-       near-black once the chart moved onto the dark GPS Display in v403. Measured contrast was
-       1.55:1, which is why it could not be read. -->
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 2px 4px">
-    <div id="legHead" style="font-size:12px;font-weight:800;color:#F2F7FA;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
-    <div style="font-size:10px;color:#9FB4C4;flex:0 0 auto">swipe ← →</div>
+  <!-- v559: no "LEG CHART" heading. The leg panel names the leg, which is the only heading this
+       page needed, and the removed line is a screen's worth of height given back to the chart.
+       The cream panel matches the one under the course chart. The "swipe" hint went at v558:
+       since v551 the leg swipe is on the COURSE CHART only. -->
+  <div style="background:#FBEEB0;border-radius:14px;padding:8px 10px;margin:2px 0 3px">
+    <div id="legHead" style="font-size:13px;font-weight:800;color:#3A2A00;text-align:center;
+         min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
   </div>
-  <!-- Four equal buttons on one row. They used to be a three-button group pushed left and the
-       orientation button pushed right, so the fourth was much wider than the other three.
-       #viewbtns is kept as the wrapper the click handler binds to, but it is display:contents
-       so its three children sit in the SAME four-column grid as the orientation button. -->
-  <div id="viewrow" style="margin-top:6px;margin-bottom:-4px">
-    <div id="viewbtns" style="display:contents">
-      <button class="pick" data-vm="tide">Tide</button>
-      <button class="pick" data-vm="wind">Wind</button>
-      <button class="pick" data-vm="both">Both</button>
-    </div>
-    <button class="pick" id="orientBtn">Course-up</button>
-  </div>
-  <svg id="legview" viewBox="0 0 360 688" preserveAspectRatio="xMidYMid meet" style="margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA;touch-action:pan-y"></svg>
+  <!-- The Tide/Wind/Both and orientation buttons moved to the top of the Settings page (v558),
+       where they are standing preferences in that page's own row style rather than a choice
+       remade on every visit. -->
+  <svg id="legview" viewBox="0 0 360 688" preserveAspectRatio="xMidYMid meet"
+       style="margin-top:3px;flex:1 1 auto;min-height:0;width:100%;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA;touch-action:pan-y"></svg>
   <!-- Slider, R and the summary share one yellow panel, so the controls at the foot of the
        page read as one group the way the four buttons do at the head. -->
   <!-- The error slider replaces the wind slider while a fit is pending, so there is only ever
@@ -982,10 +982,8 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
       <input id="wslide" class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
       <button class="wslideR" aria-label="Restore forecast wind" title="hand the wind back to the forecast" style="flex:0 0 auto;width:var(--btn-sm);height:var(--btn-sm);border-radius:8px;border:1.5px solid #12283A;background:#fff;color:#12283A;font-weight:800;font-size:13px;padding:0">R</button>
     </div>
-    <!-- First row of the Course Tactics summary, repeated under the slider because it describes
-         the chart directly above it. Written by the same code that writes #leginfo, so the two
-         cannot drift. The rest of that panel stays in Course Tactics. -->
-    <div class="tot leginfo" id="legRow1" style="margin-top:7px"></div>
+    <!-- v558: the leg summary strip is gone from here. The same strip already sits under the
+         course chart, and one leg described twice on two pages is one too many. -->
   </div>
   </div>
 
@@ -3198,7 +3196,9 @@ function arrivalInfo(r,idx,wdir,wspd){
 
 // ---------- UI ----------
 const $=id=>document.getElementById(id);
-let state={card:"thublue",letter:"A",num:1,leg:0,northUp:true,boat:"etap28i",viewMode:"both"};
+// northUp defaults FALSE: the leg chart opens course-up, which is how you are looking at the
+// leg. Both this and viewMode are now settings on the Settings page and persist.
+let state={card:"thublue",letter:"A",num:1,leg:0,northUp:false,boat:"etap28i",viewMode:"both"};
 let BOATCHOSEN=false;                            // the ETAP is the app's assumption until you press one
 // Four winds. "used" is what the whole app calculates from; it always equals one of the
 // other three, whichever was set last under these rules:
@@ -8045,10 +8045,8 @@ function render(){
   const legHeadEl=$("legHead");
   if(legHeadEl){const L=r.legs[state.leg];
     legHeadEl.textContent=`Leg ${state.leg+1} of ${r.legs.length} \u00B7 ${(L.from.name||L.from.lbl||"start")} \u2192 ${(L.to.name||L.to.lbl||"finish")}`;}
-  $("orientBtn").textContent=state.northUp?"North-up":"Course-up";
-  $("orientBtn").onclick=()=>{state.northUp=!state.northUp;render();};
-  $("viewbtns").onclick=e=>{if(e.target.dataset.vm){state.viewMode=e.target.dataset.vm;render();}};
-  document.querySelectorAll("#viewbtns .pick").forEach(b=>b.classList.toggle("on",b.dataset.vm===state.viewMode));
+  // v558: the overlay and orientation controls live on the Settings page now, so nothing to
+  // wire here. settingsRender writes them and settingsClick drives them.
   drawLeg(r,state.leg,wdir,wspd);
   drawStart(r,wdir,wspd);
   startCtl();
@@ -10278,7 +10276,22 @@ function drawLeg(r,idx,wdir,wspd){
   lblReset();   // Course Analysis: boxes are per-chart, not cumulative across redraws
   const L=r.legs[idx];
   const elapsed=r.legs.slice(0,idx).reduce((s,x)=>s+x.time,0);
-  const svg=$("legview"); const W=360,H=688,cx=W/2;   // v402: 60% taller than the original 430
+  const svg=$("legview");
+  // v559: the canvas follows the PANEL rather than a fixed 360x688 portrait. A fixed ratio meant
+  // preserveAspectRatio fitted it inside the box and left the spare height as white bands above
+  // and below the beat. Taking H from the panel's own shape uses all of it.
+  const W=360;
+  const cw=(svg&&svg.clientWidth)||360, chh=(svg&&svg.clientHeight)||688;
+  const H=Math.max(420,Math.min(1400,Math.round(W*(chh/Math.max(cw,1)))));
+  const cx=W/2;
+  // Type is in SVG units, so what you actually read depends on how wide the panel is. Work back
+  // from the panel: FS is whatever puts a label at --fs-value on screen, the same size as the
+  // start time box on Setup. This is a RACING page, read wet at arm's length, so it does not
+  // follow the setup-page rule that let those boxes be small.
+  const _cssVal=(()=>{ try{ return parseFloat(getComputedStyle(document.documentElement)
+      .getPropertyValue("--fs-value"))||15; }catch(e){ return 15; } })();
+  const FS=_cssVal*(W/Math.max(cw,1));
+  const FS_SM=FS*0.92, FS_BIG=FS*1.15;
   const bandH=Math.round(W*0.25);   // reserved top band for wind/N/tide, 25% of the diagram width
   const yB=H-20,yT=bandH+20;        // main diagram: from just below the band to near the bottom
   const co=L.co;
@@ -10427,27 +10440,33 @@ function drawLeg(r,idx,wdir,wspd){
   const clearSpan=Math.max(30,legScreenLen-2*(markR+markGap));
   if(steerTh!==null){
     const tc=((((wdir-steerTh+540)%360)-180)>0)?"#007A33":"#C8102E";
-    const boxScale=Math.min(1,clearSpan/118);
-    const bw=118*boxScale, bh=54*boxScale, f1=16*boxScale, f2=12.5*boxScale;
+    // The box is sized FROM the text now, not fixed: bigger type needs a bigger box or it
+    // spills out of it. clearSpan still caps it so it cannot overrun a tight beat.
+    const f1=FS_BIG, f2=FS_SM;
+    const bwWant=Math.max(118,f1*7.2);
+    const boxScale=Math.min(1,clearSpan/bwWant);
+    const bw=bwWant*boxScale, bh=Math.max(54,f1*2.6+f2*1.6)*boxScale;
     lblHold(mlx,mly,bw,bh);
     s+=`<rect x="${mlx-bw/2}" y="${mly-bh/2}" width="${bw}" height="${bh}" rx="${7*boxScale}" fill="#fff" opacity="0.97" stroke="${tc}" stroke-width="2"/>`+
-       `<text x="${mlx}" y="${mly-3*boxScale}" font-size="${f1}" font-weight="800" text-anchor="middle" fill="${tc}" class="mono">${String(Math.round(steerTh)).padStart(3,"0")}\u00B0</text>`+
-       `<text x="${mlx}" y="${mly+17*boxScale}" font-size="${f2}" font-weight="700" text-anchor="middle" fill="#48627A" class="mono">${rhumbTxt}</text>`;
+       `<text x="${mlx}" y="${mly-3*boxScale}" font-size="${(f1*boxScale).toFixed(1)}" font-weight="800" text-anchor="middle" fill="${tc}" class="mono">${String(Math.round(steerTh)).padStart(3,"0")}\u00B0</text>`+
+       `<text x="${mlx}" y="${mly+17*boxScale}" font-size="${(f2*boxScale).toFixed(1)}" font-weight="700" text-anchor="middle" fill="#48627A" class="mono">${rhumbTxt}</text>`;
   } else {
-    const boxScale=Math.min(1,clearSpan/110);
-    const bw=110*boxScale, bh=30*boxScale, f1=13.5*boxScale;
+    const f1=FS;
+    const bwWant=Math.max(110,f1*6.4);
+    const boxScale=Math.min(1,clearSpan/bwWant);
+    const bw=bwWant*boxScale, bh=Math.max(30,f1*1.9)*boxScale;
     lblHold(mlx,mly,bw,bh);
     s+=`<rect x="${mlx-bw/2}" y="${mly-bh/2}" width="${bw}" height="${bh}" rx="${6*boxScale}" fill="#fff" opacity="0.97" stroke="#48627A" stroke-width="2"/>`+
-       `<text x="${mlx}" y="${mly+5*boxScale}" font-size="${f1}" font-weight="700" text-anchor="middle" fill="#48627A" class="mono">${rhumbTxt}</text>`;
+       `<text x="${mlx}" y="${mly+5*boxScale}" font-size="${(f1*boxScale).toFixed(1)}" font-weight="700" text-anchor="middle" fill="#48627A" class="mono">${rhumbTxt}</text>`;
   }
   // wind icon in the reserved band: unified shape/size with N and tide, blue, label above, number below
   const windDegFrame=fr(wdir+180);
   const wIconX=0.10*W, wIconY=0.51*bandH, wR=23;
-  s+=`<text x="${wIconX}" y="${wIconY-33}" font-size="10" font-weight="800" fill="#12283A" text-anchor="middle">Wind</text>`;
+  s+=`<text x="${wIconX}" y="${wIconY-33}" font-size="${FS_SM.toFixed(1)}" font-weight="800" fill="#12283A" text-anchor="middle">Wind</text>`;
   s+=`<circle cx="${wIconX}" cy="${wIconY}" r="${wR}" fill="#FBEEB0"/>`;
   s+=`<g transform="translate(${wIconX} ${wIconY}) rotate(${windDegFrame})">`+
      `<polygon points="0,-14 8,9 0,3 -8,9" fill="#0074D9"/></g>`;
-  s+=`<text x="${wIconX}" y="${wIconY+40}" font-size="10" font-weight="800" fill="#12283A" text-anchor="middle">${d3(wdir)}\u00B0</text>`;
+  s+=`<text x="${wIconX}" y="${wIconY+40}" font-size="${FS_SM.toFixed(1)}" font-weight="800" fill="#12283A" text-anchor="middle">${d3(wdir)}\u00B0</text>`;
   // tidal stream arrow (leg frame), from atlas
   let pref=null, prefGain=0, prefPct=0, sideTxt="", verdictHTML="";
   if(TIDECTX){
@@ -10510,19 +10529,19 @@ function drawLeg(r,idx,wdir,wspd){
       }
     }
     const tIconX=0.90*W, tIconY=0.51*bandH, tR=23;
-    s+=`<text x="${tIconX}" y="${tIconY-33}" font-size="10" font-weight="800" fill="#7B2D8E" text-anchor="middle">Tide</text>`;
+    s+=`<text x="${tIconX}" y="${tIconY-33}" font-size="${FS_SM.toFixed(1)}" font-weight="800" fill="#7B2D8E" text-anchor="middle">Tide</text>`;
     s+=`<circle cx="${tIconX}" cy="${tIconY}" r="${tR}" fill="#FBEEB0"/>`;
     if(!st.slack){
       const tideDegFrame=fr(st.dir);                    // stream sets TOWARD st.dir (course-up frame)
       s+=`<g transform="translate(${tIconX} ${tIconY}) rotate(${tideDegFrame})">`+
          `<polygon points="0,-14 8,9 0,3 -8,9" fill="#A020D0"/></g>`;
-      s+=`<text x="${tIconX}" y="${tIconY+40}" font-size="10" font-weight="800" fill="#7B2D8E" text-anchor="middle">${fmtStream(st)}</text>`;
+      s+=`<text x="${tIconX}" y="${tIconY+40}" font-size="${FS_SM.toFixed(1)}" font-weight="800" fill="#7B2D8E" text-anchor="middle">${fmtStream(st)}</text>`;
     } else {
-      s+=`<text x="${tIconX}" y="${tIconY+40}" font-size="10" font-weight="800" fill="#7B2D8E" text-anchor="middle">slack</text>`;
+      s+=`<text x="${tIconX}" y="${tIconY+40}" font-size="${FS_SM.toFixed(1)}" font-weight="800" fill="#7B2D8E" text-anchor="middle">slack</text>`;
     }
     if(stL){
       const ck=clockAt(elapsed);
-      s+=`<text x="${W-8}" y="${H-10}" font-size="10" text-anchor="end" fill="#0E7C94">tide at ${ck?ck+" ":""}(HW${effOff>=0?"+":"\u2212"}${Math.abs(effOff).toFixed(1)})</text>`;
+      s+=`<text x="${W-8}" y="${H-10}" font-size="${FS_SM.toFixed(1)}" text-anchor="end" fill="#0E7C94">tide at ${ck?ck+" ":""}(HW${effOff>=0?"+":"\u2212"}${Math.abs(effOff).toFixed(1)})</text>`;
     }
   }
   // tacking / gybing routes (corners precomputed for the fit). Every 2-board route tacks or
@@ -10588,10 +10607,10 @@ function drawLeg(r,idx,wdir,wspd){
       { const t=`(\u2212${prefGain.toFixed(1)}m ${prefPct.toFixed(1)}%)`;
         const w2=t.length*5.6, off=anch==="end"?-w2/2:anch==="start"?w2/2:0;
         const [gx2,gy2]=lblPlace(lx+off,y1,w2,12);
-        s+=`<text x="${(gx2-off).toFixed(1)}" y="${gy2.toFixed(1)}" font-size="10" font-weight="800" text-anchor="${anch}" fill="#0E7C94" stroke="#fff" stroke-width="3.5" paint-order="stroke">${t}</text>`; }
+        s+=`<text x="${(gx2-off).toFixed(1)}" y="${gy2.toFixed(1)}" font-size="${FS_SM.toFixed(1)}" font-weight="800" text-anchor="${anch}" fill="#0E7C94" stroke="#fff" stroke-width="3.5" paint-order="stroke">${t}</text>`; }
     }
   }
-  if(target!==null)s+=`<text x="8" y="${H-10}" font-size="10" text-anchor="start" fill="#48627A">${L.pos==="Beat"?"tack":"gybe"} angle \u00B1${Math.round(target)}\u00B0 TWA</text>`;
+  if(target!==null)s+=`<text x="8" y="${H-10}" font-size="${FS_SM.toFixed(1)}" text-anchor="start" fill="#48627A">${L.pos==="Beat"?"tack":"gybe"} angle \u00B1${Math.round(target)}\u00B0 TWA</text>`;
   // approach: hatched line arriving at the from-buoy along the previous leg's course,
   // passing the mark on its rounding side, arrowhead clear of the buoy artwork
   if(idx>0){
@@ -10623,7 +10642,7 @@ function drawLeg(r,idx,wdir,wspd){
     // landing on the bearing pill on two courses. Same treatment as the rest.
     { const t="fm "+pm;
       const [lx2,ly2]=lblPlace(sx-11*tvx, sy-11*tvy+4, t.length*6.2, 12);
-      s+=`<text x="${lx2.toFixed(1)}" y="${ly2.toFixed(1)}" font-size="10" font-weight="700" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="3" paint-order="stroke">${t}</text>`; }
+      s+=`<text x="${lx2.toFixed(1)}" y="${ly2.toFixed(1)}" font-size="${FS_SM.toFixed(1)}" font-weight="700" text-anchor="middle" fill="#12283A" stroke="#fff" stroke-width="3" paint-order="stroke">${t}</text>`; }
   }
   // departure line: the FIRST board of the NEXT leg, shown at this leg's END mark -- the
   // counterpart to the arrival line above, same treatment (solid, bigger arrow, no number).
@@ -10659,7 +10678,7 @@ function drawLeg(r,idx,wdir,wspd){
   {
     const nDegFrame=fr(0);
     const nIconX=0.50*W, nIconY=0.51*bandH, nR=23;
-    s+=`<text x="${nIconX}" y="${nIconY-33}" font-size="10" font-weight="800" fill="#12283A" text-anchor="middle">N</text>`;
+    s+=`<text x="${nIconX}" y="${nIconY-33}" font-size="${FS_SM.toFixed(1)}" font-weight="800" fill="#12283A" text-anchor="middle">N</text>`;
     s+=`<circle cx="${nIconX}" cy="${nIconY}" r="${nR}" fill="#FBEEB0"/>`;
     s+=`<g transform="translate(${nIconX} ${nIconY}) rotate(${nDegFrame})">`+
        `<polygon points="0,-14 8,9 0,3 -8,9" fill="#fff" stroke="#000" stroke-width="1.5"/></g>`;
@@ -10706,6 +10725,9 @@ function drawLeg(r,idx,wdir,wspd){
       s+=`<circle cx="${bp[0].toFixed(1)}" cy="${bp[1].toFixed(1)}" r="9" fill="#0E7C94" stroke="#12283A" stroke-width="2"/>`;
     }
   }
+  // H follows the panel, so the viewBox has to be written each time or the drawing is scaled
+  // against a stale ratio and letterboxed again.
+  svg.setAttribute("viewBox","0 0 "+W+" "+H);
   svg.innerHTML=s;
   let dPref=L.sailed, estMin=L.time*60, splitTxt="", estSplit="";  // routed distance, tide-aware time, board time split
   if(target!==null){
@@ -10795,32 +10817,22 @@ function drawLeg(r,idx,wdir,wspd){
     <div class="row2">Dist (course)<br><b class="mono">${dPref.toFixed(1)}'${splitTxt}</b></div>
     <div class="row2">Tgt VMG<br><b class="mono">${L.smg.toFixed(1)}kt</b></div>
     <div class="row2">Est<br><b class="mono">${Math.round(estMin)} min</b></div>`+breakdownHTML;
-  const lr=$("legRow1"); if(lr)lr.innerHTML=row1HTML;
+  const lr=$("legRow1"); if(lr)lr.innerHTML=row1HTML;   // gone from the leg chart in v558; guarded
   // GPS Display page 3: the same summary under the bay chart, plus the leg's own verdict, so the
   // chosen leg can be read in context of the whole course without leaving the page.
   const mp=$("mapPlan");
   if(mp){
-    // Three matching panels: which leg we are on, this leg's summary, the next leg's summary.
-    const L2=(idx+1<r.legs.length)?r.legs[idx+1]:null;
-    let row2HTML="";
-    if(L2){
-      const est2=Math.round((L2.time||0)*60);
-      row2HTML=`
-    <div>Leg<br><b>${legAbbr(L2.pos)}</b></div>
-    <div>TWA/AW<br><b class="mono">${Math.round(L2.sTwa!=null?L2.sTwa:L2.twa)}\u00B0${L2.tack}${Math.round(L2.sAwa!=null?L2.sAwa:L2.awa)}\u00B0</b></div>
-    <div>Sail<br><b>${sailAbbr(L2.sail)}</b></div>
-    <div>Est<br><b class="mono">${est2}</b></div>`;
-    }
+    // v558: TWO panels, not three. The next leg's summary used to sit here and was costing a
+    // third of the chart on a phone, pushing itself below the fold on a page that cannot scroll
+    // (the three leg views are one screen each and snap). By the time the next leg matters you
+    // are rounding, and the app has already moved you on to it.
     mp.innerHTML=
     `<div style="background:#FBEEB0;border-radius:14px;padding:8px 10px;margin-bottom:6px">
        <div style="font-size:13px;font-weight:800;color:#3A2A00;text-align:center">Leg ${idx+1} of ${r.legs.length}${(L.from||L.to)?` \u00B7 ${(L.from&&(L.from.name||L.from.lbl))||"start"} \u2192 ${(L.to&&(L.to.name||L.to.lbl))||"finish"}`:``}</div>
      </div>
-     <div style="background:#FBEEB0;border-radius:14px;padding:7px;margin-bottom:6px">
+     <div style="background:#FBEEB0;border-radius:14px;padding:7px">
        <div class="tot leginfo" id="legRow3" style="margin:0">${row1HTML}</div>
-     </div>`+
-    (row2HTML?`<div style="background:#FBEEB0;border-radius:14px;padding:7px">
-       <div class="tot leginfo" id="legRow4" style="margin:0">${row2HTML}</div>
-     </div>`:``);
+     </div>`;
   }
 }
 
@@ -11570,10 +11582,19 @@ function settingsLoad(){
   try{ const raw=localStorage.getItem("cc_settings"); if(!raw)return;
     const o=JSON.parse(raw);
     SETTINGS.forEach(d=>{ if(o[d.k]!=null&&isFinite(o[d.k]))window[d.k]=o[d.k]; });
+    // the two leg-chart choices, saved alongside. Absent on an older store, in which case the
+    // defaults stand: both overlays, course-up.
+    if(typeof state!=="undefined"&&state){
+      if(o.__viewMode)state.viewMode=o.__viewMode;
+      if(o.__northUp!=null)state.northUp=!!o.__northUp;
+    }
   }catch(e){}
 }
 function settingsSave(){
   try{ const o={}; SETTINGS.forEach(d=>{o[d.k]=window[d.k];});
+    // the two leg-chart choices ride along, so they survive a restart like every other setting
+    o.__viewMode=(state&&state.viewMode)||"both";
+    o.__northUp=!!(state&&state.northUp);
     localStorage.setItem("cc_settings",JSON.stringify(o)); }catch(e){}
 }
 function settingsChanged(){ return SETTINGS.filter(d=>window[d.k]!==d.def); }
@@ -11592,14 +11613,37 @@ function settingsRender(){
       <div style="font-size:10px;color:#5B6672;line-height:1.35;margin-top:2px">${d.why}${changed?` <b style="color:#8A5A00">default ${dv}</b>`:``}</div>
     </div>`;
   };
+  // v558: the leg chart's overlay and orientation controls, moved here from the chart itself so
+  // they are set once rather than chosen on every visit. Written in this page's own row style,
+  // label left and control right with a note under it, not as the button strip they used to be.
+  const choiceRow=(label,why,opts,cur,attr)=>
+    `<div style="padding:8px 0;border-top:1px solid rgba(0,0,0,.10)">
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="flex:1;min-width:0;font-weight:700;font-size:12px;color:#12283A">${label}</div>
+        <div style="display:flex;gap:5px;flex:0 0 auto">${
+          opts.map(o=>`<button class="pick${o.v===cur?" on":""}" ${attr}="${o.v}"
+            style="min-height:var(--btn-sm);font-size:11px;padding:0 9px;width:auto">${o.t}</button>`).join("")}</div>
+      </div>
+      <div style="font-size:10px;color:#5B6672;line-height:1.35;margin-top:2px">${why}</div>
+    </div>`;
+
   const ch=settingsChanged();
   el.innerHTML=
     `<div style="font-size:12px;color:#48627A;line-height:1.45">Detection thresholds. The defaults were chosen by reasoning, not from real tracks, so they may need moving once you have sailed with them.</div>`+
+    choiceRow("Leg chart: overlay","Which of tide and wind is drawn over the leg. Wind only draws the leg in still water.",
+      [{v:"tide",t:"Tide"},{v:"wind",t:"Wind"},{v:"both",t:"Both"}],(state&&state.viewMode)||"both","data-vm")+
+    choiceRow("Leg chart: orientation","Course-up puts the leg vertical, the way you are looking at it. North-up keeps north at the top.",
+      [{v:"course",t:"Course-up"},{v:"north",t:"North-up"}],(state&&state.northUp)?"north":"course","data-orient")+
     (ch.length?`<div style="margin-top:6px;font-size:12px;color:#8A5A00;font-weight:700">${ch.length} changed from default. Recorded with every race.</div>`:``)+
     SETTINGS.map(row).join("")+
     `<div style="margin-top:10px;text-align:right"><button class="pick" data-reset="__all" style="min-height:var(--btn-sm);font-size:12px;padding:0 12px;width:auto">Reset all</button></div>`;
 }
 function settingsClick(ev){
+  // the two choice rows first: they are settings, not thresholds, so they have no reset button
+  const vm=ev.target.closest?ev.target.closest("[data-vm]"):null;
+  if(vm){ state.viewMode=vm.dataset.vm; settingsSave(); settingsRender(); try{render();}catch(e){} return; }
+  const or=ev.target.closest?ev.target.closest("[data-orient]"):null;
+  if(or){ state.northUp=(or.dataset.orient==="north"); settingsSave(); settingsRender(); try{render();}catch(e){} return; }
   const b=ev.target.closest?ev.target.closest("[data-reset]"):null; if(!b)return;
   const k=b.dataset.reset;
   if(k==="__all")SETTINGS.forEach(d=>{window[d.k]=d.def;});
