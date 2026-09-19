@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="CourseCalc">
-<title>DBSC CourseCalc</title>
+<title>CourseCalc</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
 </style>
@@ -904,6 +904,20 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        page you are looking at. Tappable to undo, because an advance at a luff near the mark must
        be reversible without hunting for a control. -->
   <div id="noticeBar" style="display:none"></div>
+  <!-- v572: while a replay runs this bar is the loudest thing on the page. Confusing a
+       recording for the live picture on the water would be dangerous, so it is amber, it says
+       REPLAY in words, and it names the race and the time being shown. -->
+  <div id="replayBar" style="display:none;background:var(--start);color:#fff;border-radius:12px;
+       padding:8px 10px;margin:2px 0 6px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="font-weight:800;font-size:13px;letter-spacing:.06em;flex:0 0 auto">REPLAY</div>
+      <div id="replayLbl" class="mono" style="font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <button class="pick pk-sm" id="replayPlay"  style="flex:0 0 42px">&#9654;</button>
+      <button class="pick pk-sm" id="replaySpeed" style="flex:0 0 46px">8&times;</button>
+      <button class="pick pk-sm" id="replayExit"  style="flex:0 0 46px">Live</button>
+    </div>
+    <input id="replaySlide" type="range" min="0" max="100" step="1" value="0" style="width:100%;margin-top:6px">
+  </div>
   <div class="tabBtns" id="gpsBtns"></div>
   <div class="tabScroll" id="gpsScroll">
 
@@ -1145,6 +1159,13 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
          End race, Save race. Two buttons that both claimed to save a race but produced different
          things was a trap. -->
     <button class="rtbtn" id="raceExportBtn" style="flex:1;min-height:var(--btn-h);background:#2E6D96;border-color:#5090B8">Export all</button>
+  </div>
+  <!-- v573: a race exported from this phone (or another one) can be handed back. That makes the
+       export a real archive rather than a one-way door: races survive clearing site data,
+       changing phone, or being sent from the boat to a laptop and back. -->
+  <div style="display:flex;gap:6px;align-items:center;margin-top:10px">
+    <button class="pick pk-sm" id="raceImportBtn" style="flex:1">Import a saved race</button>
+    <input id="raceImportFile" type="file" accept="application/json,.json" style="display:none">
   </div>
   <div id="raceList" style="margin-top:10px"></div>
   <div id="raceMsg" style="font-size:12px;color:var(--ink3);line-height:1.45;margin-top:8px"></div>
@@ -5784,6 +5805,113 @@ function trackRedraw(){
 // Fade it by AGE instead, in bands, so the last few minutes read strongly and the earlier part
 // stays visible but quiet. It never disappears: the oldest band keeps a floor opacity.
 const TRACK_BANDS=6, TRACK_OP_NEW=0.95, TRACK_OP_OLD=0.16;
+// ---------- the app's own version (v571) ----------
+// ONE place. Every race was being stamped v405 because CC_VER was never declared anywhere and
+// the race writer fell back to a hard-coded string: races recorded on v570 came out labelled
+// v405, which makes a race record useless for telling which build produced it. The test suite
+// now fails if this and the service worker's cache name disagree, so a build cannot ship with
+// the two out of step.
+const CC_VER="v573";
+// ---------- RACE REPLAY (v572) ----------
+// A saved race already holds everything the app needs to drive itself: every sample carries
+// position, COG, SOG, heading and the leg. So a replay does not need a viewer of its own. It
+// feeds those samples to the SAME entry point the live GPS uses, and every chart, layline and
+// piece of advice is RECOMPUTED by today's code from the real positions. That makes each saved
+// race a test case for the tactics, not just a recording of what was said at the time.
+// The live watch is gated on REPLAY.on so a real fix cannot arrive mid-replay and fight it.
+const REPLAY={on:false, race:null, i:0, playing:false, speed:8, timer:null};
+function replayFix(sm){
+  // the shape the app expects from the Geolocation API, built from a recorded sample
+  return {coords:{latitude:sm.lat, longitude:sm.lon,
+                  speed:(sm.sog!=null?sm.sog*0.514444:null),   // kt to m/s, as the API gives it
+                  heading:(sm.cog!=null?sm.cog:null), accuracy:5, altitude:null},
+          timestamp:sm.t};
+}
+function replayStart(race){
+  if(!race||!race.samples||!race.samples.length)return false;
+  REPLAY.on=true; REPLAY.race=race; REPLAY.i=0; REPLAY.playing=false;
+  // put the app into the state the race was sailed in, or the advice is recomputed against the
+  // wrong course
+  try{
+    if(race.boat)state.boat=race.boat;
+    if(race.card)state.card=race.card;
+    if(race.letter)state.letter=race.letter;
+    if(race.num)state.num=race.num;
+    TIME.cardChosen=true; WIND.chosen=true; WIND.numChosen=true;
+    const s0=race.samples[0];
+    if(s0&&s0.twd!=null)setUsed(s0.twd,"observed");
+    if(s0&&s0.tws!=null&&$("wspd"))$("wspd").value=String(Math.round(s0.tws));
+    TIME.user=race.start; TIME.src="user"; TIME.viaNow=false;
+    ROUND.at=0; ROUND.leg=0;
+    if(typeof TRACK!=="undefined")TRACK.length=0;
+  }catch(e){}
+  replaySeek(0);
+  replayPaint();
+  return true;
+}
+function replayStop(){
+  replayPause();
+  REPLAY.on=false; REPLAY.race=null; REPLAY.i=0;
+  replayPaint();
+  try{render();}catch(e){}
+}
+function replaySeek(i){
+  const r=REPLAY.race; if(!r)return;
+  REPLAY.i=Math.max(0,Math.min(r.samples.length-1,Math.round(i)));
+  const sm=r.samples[REPLAY.i];
+  // the wind as it stood at that moment, so the advice is recomputed against what was believed
+  try{ if(sm.twd!=null)setUsed(sm.twd,"observed"); }catch(e){}
+  try{ if(sm.leg!=null)state.leg=sm.leg; }catch(e){}
+  const fix=replayFix(sm);
+  GPS.last=fix;
+  try{ gpsRender(fix); }catch(e){}
+  replayPaint();
+}
+function replayStep(){
+  const r=REPLAY.race; if(!r)return;
+  if(REPLAY.i>=r.samples.length-1){ replayPause(); return; }
+  replaySeek(REPLAY.i+1);
+}
+function replayPlay(){
+  if(!REPLAY.on||REPLAY.playing)return;
+  REPLAY.playing=true;
+  const r=REPLAY.race;
+  const tick=()=>{
+    if(!REPLAY.playing)return;
+    const a=r.samples[REPLAY.i], b=r.samples[REPLAY.i+1];
+    replayStep();
+    if(!REPLAY.playing)return;
+    // real elapsed between the two fixes, divided by the speed you asked for
+    const gap=(a&&b&&b.t>a.t)?(b.t-a.t):1000;
+    REPLAY.timer=setTimeout(tick,Math.max(16,Math.min(2000,gap/REPLAY.speed)));
+  };
+  tick();
+  replayPaint();
+}
+function replayPause(){
+  REPLAY.playing=false;
+  if(REPLAY.timer){ clearTimeout(REPLAY.timer); REPLAY.timer=null; }
+  replayPaint();
+}
+function replayPaint(){
+  const bar=$("replayBar"); if(!bar)return;
+  bar.style.display=REPLAY.on?"":"none";
+  // Hide it, never empty it. Clearing innerHTML here destroyed the label and the controls, and
+  // nothing rebuilds them, so the bar came back empty on every replay after the first.
+  if(!REPLAY.on)return;
+  const r=REPLAY.race, n=r.samples.length, sm=r.samples[REPLAY.i];
+  const clock=new Date(sm.t).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  const el=Math.round((sm.t-r.start)/60000);
+  const sl=$("replaySlide");
+  if(sl&&document.activeElement!==sl){ sl.max=String(n-1); sl.value=String(REPLAY.i); }
+  const lbl=$("replayLbl");
+  if(lbl)lbl.textContent=clock+" \u00B7 "+el+" min \u00B7 "+(REPLAY.i+1)+"/"+n;
+  const pb=$("replayPlay"); if(pb)pb.textContent=REPLAY.playing?"\u2016":"\u25B6";
+  const sp=$("replaySpeed"); if(sp)sp.textContent=REPLAY.speed+"\u00D7";
+}
+// The title is what the phone shows in its bar, so it reads from the same constant the race
+// record does. If the screen says v571 the record says v571, with nothing to keep in step.
+try{ document.title="CourseCalc "+CC_VER; }catch(e){}
 const ROUND={at:0, leg:0};                       // when the last mark was rounded
 // Every manoeuvre the app has identified, kept with its position so the track can show it.
 // Nothing needs a legend: a dot on your own track where you tacked explains itself.
@@ -5921,13 +6049,15 @@ function gpsStart(){
   else gpsSay("Requesting location\u2026 allow the prompt.");
   // immediate one-shot fix for fast feedback
   navigator.geolocation.getCurrentPosition(
-    p=>{ GPS.last=p; gpsSay("Live \u00B7 tap again to stop"); gpsRender(p); },
+    p=>{ if(REPLAY.on)return;   // a replay owns the position while it runs
+         GPS.last=p; gpsSay("Live \u00B7 tap again to stop"); gpsRender(p); },
     e=>{ gpsSay(gpsErr(e)); },
     {enableHighAccuracy:true, maximumAge:0, timeout:12000});
   // then keep it live
   if(GPS.watch!=null)navigator.geolocation.clearWatch(GPS.watch);
   GPS.watch=navigator.geolocation.watchPosition(
-    p=>{ GPS.last=p; gpsSay("Live \u00B7 tap again to stop"); gpsRender(p); },
+    p=>{ if(REPLAY.on)return;
+         GPS.last=p; gpsSay("Live \u00B7 tap again to stop"); gpsRender(p); },
     e=>{ gpsSay(gpsErr(e)); },
     {enableHighAccuracy:true, maximumAge:1000, timeout:20000});
 }
@@ -6266,7 +6396,7 @@ function raceSettings(){
 function raceRecStart(why){
   if(raceRecActive())return;
   RACEREC={
-    schema:RACEREC_SCHEMA, app:(typeof CC_VER!=="undefined"?CC_VER:"v405"),
+    schema:RACEREC_SCHEMA, app:CC_VER,
     started:Date.now(), startedBy:why||"timer", ended:null,
     opening:raceSettings(),           // every setting at the outset
     // Which polar produced every "exp" below. Without this the expectations cannot be
@@ -6518,6 +6648,66 @@ function raceFixSave(id){
     raceRender();
   };}).catch(e=>raceMsg("Could not save correction: "+e.message));
 }
+// Load a saved race out of the store and hand it to the replay, then take the user to the
+// GPS Display, since that is where a replay is watched.
+// Take a race export back in. The file is whatever raceExport wrote: one race or an array of
+// them. Nothing is trusted: each entry must look like a race (a start and some samples) before
+// it is stored, and an id that already exists is given a new one rather than overwriting the
+// race you have. Import never replaces, only adds.
+function raceImportLooksLikeRace(r){
+  // typeof first: isFinite(null) is TRUE, because null becomes 0, so a sample with no position
+  // would sail through an isFinite-only check and be stored as a fix at 0N 0E.
+  const num=v=>typeof v==="number"&&isFinite(v);
+  return !!(r&&typeof r==="object"&&num(r.start)&&Array.isArray(r.samples)&&r.samples.length&&
+            r.samples.every(sm=>sm&&num(sm.lat)&&num(sm.lon)&&num(sm.t)));
+}
+function raceImportText(text){
+  let data;
+  try{ data=JSON.parse(text); }
+  catch(e){ raceMsg("That file is not a CourseCalc race export: "+e.message); return Promise.resolve(0); }
+  const list=Array.isArray(data)?data:[data];
+  const good=list.filter(raceImportLooksLikeRace);
+  const bad=list.length-good.length;
+  if(!good.length){ raceMsg("No races in that file. "+(bad?bad+" entr"+(bad===1?"y was":"ies were")+" not a race record.":"")); return Promise.resolve(0); }
+  return raceAll().then(have=>{
+    const ids=new Set(have.map(r=>r.id));
+    return raceTx("readwrite").then(st=>{
+      let n=0;
+      good.forEach(r=>{
+        const rec=Object.assign({},r);
+        // never overwrite a race already here: an import adds, it does not replace
+        if(!rec.id||ids.has(rec.id))rec.id="imp"+Date.now()+"_"+(n)+"_"+Math.floor(Math.random()*1e6);
+        ids.add(rec.id);
+        rec.imported=Date.now();
+        st.put(rec); n++;
+      });
+      raceMsg("Imported "+n+" race"+(n===1?"":"s")+
+        (bad?", and skipped "+bad+" entr"+(bad===1?"y that was":"ies that were")+" not a race record.":".")+
+        " Nothing already here was replaced.");
+      raceRender();
+      return n;
+    });
+  }).catch(e=>{ raceMsg("Could not import: "+e.message); return 0; });
+}
+function raceImportFile(f){
+  if(!f){ return Promise.resolve(0); }
+  return new Promise(res=>{
+    const rd=new FileReader();
+    rd.onload=()=>res(raceImportText(String(rd.result||"")));
+    rd.onerror=()=>{ raceMsg("Could not read that file."); res(0); };
+    rd.readAsText(f);
+  });
+}
+function raceReplayOpen(id){
+  raceTx("readonly").then(st=>{ const q=st.get(id); q.onsuccess=()=>{
+    const r=q.result;
+    if(!r||!r.samples||!r.samples.length){ raceMsg("That race has no track to replay."); return; }
+    if(!replayStart(r)){ raceMsg("Could not start the replay."); return; }
+    const t=$("garmintab");
+    if(t){ t.open=true; try{t.dispatchEvent(new Event("toggle"));}catch(e){} }
+    try{ tabPagesShow("garmintab","COURSE CHART"); }catch(e){}
+  };}).catch(e=>raceMsg("Could not read that race: "+e.message));
+}
 function raceRender(){
   const el=$("raceList"); if(!el)return;
   raceAll().then(list=>{
@@ -6536,6 +6726,7 @@ function raceRender(){
         <div style="display:flex;gap:6px;margin-top:7px">
           ${r.confirmed===false?`<div style="font-size:11px;font-weight:800;color:#8A5A00;background:#FFF1DC;border:1px solid #E0A64A;border-radius:8px;padding:3px 7px;display:inline-block;margin:2px 0 4px">UNCONFIRMED \u00b7 recovered</div>`:``}
         <button class="pick pk-sm" data-racefix="${r.id}"  style="flex:1">${r.corrections?"Corrected \u2713":"Correct"}</button>
+          <button class="pick pk-sm" data-racereplay="${r.id}" style="flex:1">Replay</button>
           <button class="pick pk-sm" data-race="${r.id}"  style="flex:1">Export</button>
           <button class="pick pk-sm pk-pill" data-racedel="${r.id}"  style="flex:0 0 auto">Delete</button>
         </div>
@@ -6544,6 +6735,7 @@ function raceRender(){
     }).join("");
     el.querySelectorAll("[data-racefix]").forEach(b=>b.onclick=()=>raceFixOpen(b.getAttribute("data-racefix")));
     el.querySelectorAll("[data-race]").forEach(b=>b.onclick=()=>raceExport(b.getAttribute("data-race")));
+    el.querySelectorAll("[data-racereplay]").forEach(b=>b.onclick=()=>raceReplayOpen(b.getAttribute("data-racereplay")));
     el.querySelectorAll("[data-racedel]").forEach(b=>b.onclick=()=>raceDelete(b.getAttribute("data-racedel")));
   }).catch(e=>{ el.innerHTML=""; raceMsg("Could not read saved races: "+e.message); });
 }
@@ -6784,6 +6976,16 @@ function gps2Init(){
   const c=$("gps2Clear"); if(c)c.onclick=()=>{ try{trackClear();}catch(e){} gps2Render(); };
   const dl=$("gps2Dl");   if(dl)dl.onclick=()=>{ try{trackDownloadCSV();}catch(e){} };
   try{ tabPages("garmintab","gpsScroll","gpsBtns",gpsPageShown); }catch(e){}
+  { const ib=$("raceImportBtn"), inp=$("raceImportFile");
+    if(ib&&inp){ ib.onclick=()=>inp.click();
+      inp.addEventListener("change",()=>{ const f=inp.files&&inp.files[0];
+        raceImportFile(f).then(()=>{ inp.value=""; }); }); } }
+  { const pb=$("replayPlay"), sl=$("replaySlide"), sp=$("replaySpeed"), ex=$("replayExit");
+    if(pb)pb.onclick=()=>{ REPLAY.playing?replayPause():replayPlay(); };
+    if(sl)sl.addEventListener("input",()=>{ replayPause(); replaySeek(+sl.value); });
+    if(sp)sp.onclick=()=>{ const steps=[1,2,4,8,16,32];
+      REPLAY.speed=steps[(steps.indexOf(REPLAY.speed)+1)%steps.length]; replayPaint(); };
+    if(ex)ex.onclick=()=>replayStop(); }
   try{prePagesInit();}catch(e){}
   try{ bundlesInit();
        // Conditions is the first tab converted to button-selected pages (v548): it is no
