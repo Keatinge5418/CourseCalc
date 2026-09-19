@@ -65,6 +65,8 @@
   --fs-label:10px; --fs-body:12px; --fs-value:15px; --fs-head:19px;
   /* controls: two heights, neither below the 44px that a wet thumb needs */
   --ctlh:52px; --btn-h:46px; --btn-sm:34px;
+  /* how far either side of the wind in force the wind slider reaches, in degrees */
+  --wslide-span:40;
   /* the fill that means "you chose this", on every pick button. It began as the boat blue. */
   --chosen:#2C5F8A;
   --r-panel:12px; --r-ctl:8px;
@@ -226,6 +228,21 @@ input[type=number]:focus,input[type=date]:focus,input[type=time]:focus{outline:n
 button.pick{min-height:var(--btn-h);border:1.5px solid var(--rule);background:var(--card);
   border-radius:var(--r-ctl);font-size:var(--fs-value);font-weight:700;color:var(--ink);padding:0}
 button.pick.on{background:var(--chosen);color:#fff;border-color:var(--chosen)}
+/* ---------- the button system (v561) ----------
+   Every button used to invent its own height, font and padding at the call site, which is how
+   one app ended up with three heights and five font sizes that nearly match. There are now
+   THREE sizes and nothing else. A call site sets layout (flex, width) and never type.
+     .pick            standard control, 46px. The default: most buttons need no size class.
+     .pick.pk-md      38px, for a dense row where the standard is too tall.
+     .pick.pk-sm      34px, the smallest a wet thumb can still hit, for inline actions.
+     .pick.pk-pill    a modifier: width to its text rather than its column.
+     .pick.pk-icon    square, for a single glyph.
+   Sizes are on-water minimums and are not to be shrunk further at a call site. */
+button.pick.pk-md{min-height:38px;font-size:var(--fs-value);padding:0 10px}
+button.pick.pk-sm{min-height:var(--btn-sm);font-size:var(--fs-body);padding:0 10px}
+button.pick.pk-pill{width:auto;flex:0 0 auto}
+button.pick.pk-icon{min-height:var(--btn-sm);width:var(--btn-sm);padding:0;flex:0 0 auto;
+  font-size:var(--fs-value)}
 /* One grammar on the Setup page: white is the app's default, an orange RING is what the app is
    tracking or assuming, and a BLUE fill is your explicit choice. The blue started as the boat
    button alone and black did the same job everywhere else, which made one meaning wear two
@@ -345,9 +362,20 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
    scroll-out drift and the fit-on-open timing all stop existing rather than being patched.
    The buttons use the page's own colour grammar, so the chosen page fills blue like any
    other explicit choice. */
+/* ---------- the panel below a chart (v569) ----------
+   Four things sit in two slots under the leg chart: the leg name or the fit's five buttons, and
+   the wind slider or the error slider. They had four different treatments between them, two
+   cream panels and two bare rows on the dark ground, at two different heights. One class now
+   fixes all of it. The height is set by the tallest legitimate content, a row of pk-sm buttons
+   plus the panel's own padding, so swapping either slot changes the content and nothing else. */
+.legpan{background:#FBEEB0;border-radius:14px;padding:8px 10px;box-sizing:border-box;
+  min-height:calc(var(--btn-sm) + 16px);display:flex;align-items:center}
+.legpan > *{width:100%;min-width:0}
 .tabBtns{display:flex;gap:6px;margin:2px 0 10px;flex-wrap:wrap}
-.tabBtns button.pick{flex:1 1 0;min-width:0;min-height:var(--btn-sm);font-size:var(--fs-body);
-  padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* The row gives its buttons their layout; pk-sm gives them their size. With short labels they
+   no longer need to be cut, but the ellipsis stays as a backstop for a long one. */
+.tabBtns button.pick{flex:1 1 0;min-width:0;padding:0 6px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* A tab still fills the screen: the page height was never the problem, the vertical SNAP was.
    min-height rather than height, so a page taller than the screen (Setup, Marks) scrolls on
    past instead of being clipped to one screen. */
@@ -490,7 +518,10 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
    controls read as two groups bracketing the chart rather than as loose items on the dark ground. */
 #viewrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
   background:#FBEEB0;border-radius:14px;padding:7px}
-#legFoot{background:#FBEEB0;border-radius:14px;padding:7px;margin-top:8px;flex:0 0 auto}
+/* v569: the panel itself is .legpan now, so this rule keeps only what is specific to this one:
+   it must not stretch, and its own label colours. The background, radius, padding and height
+   come from the component, or the four panels drift apart again. */
+#legFoot{flex:0 0 auto}
 #legFoot > div:first-of-type{margin-top:0 !important}
 #legFoot .wslideLbl{color:#12283A}
 #legFoot label{color:#5B4A00}
@@ -568,7 +599,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <div class="inrow" style="margin-bottom:12px">
     <div style="flex:1.15"><label>Race date</label><input id="rdate" type="date"></div>
     <div style="flex:0.95"><label>Start time</label><input id="rtime" type="time" value="19:00"></div>
-    <div style="flex:0 0 58px"><label>&nbsp;</label><button id="rdtNowBtn" class="pick" style="width:100%;padding:0;font-weight:800;font-size:13px" title="Set race date and time to now">NOW</button></div>
+    <div style="flex:0 0 58px"><label>&nbsp;</label><button id="rdtNowBtn" class="pick" style="width:100%" title="Set race date and time to now">NOW</button></div>
   </div>
   <div class="inrow">
     <div><label>Wind &deg;T</label><input id="wdir" type="number" inputmode="numeric" value="0" min="0" max="359" title="the wind the app is using; type to override"></div>
@@ -593,7 +624,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 
 
   </div>
-  <div class="bpage tpage" id="boat_wardrobe" data-t="SAIL WARDROBE">
+  <div class="bpage tpage" id="boat_wardrobe" data-short="SAILS" data-t="SAIL WARDROBE">
     <div class="bpage-head">SAIL WARDROBE</div>
 
   <div id="wardrobeBody" style="margin-top:6px"></div>
@@ -720,7 +751,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   <div id="tideCurve" style="background:#fff;border-radius:10px;padding:6px 4px;margin-top:6px"></div>
   </div>
-  <div class="bpage tpage" id="cond_windmodel" data-t="WIND MODEL">
+  <div class="bpage tpage" id="cond_windmodel" data-short="MODEL" data-t="WIND MODEL">
     <div class="bpage-head">WIND MODEL</div>
 
 
@@ -880,7 +911,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   <!-- One page, three views of the same leg, scrolled through vertically and each snapping to
        the top. Only the FIRST of them carries the left/right leg swipe, so a horizontal drag
        never competes with the vertical scroll on the other two. -->
-  <div class="tpage legGroup" id="gpage_leg" data-t="COURSE CHART">
+  <div class="tpage legGroup" id="gpage_leg" data-short="CHART" data-t="COURSE CHART">
   <div class="gpage gsub" id="gpage3">
     <div class="bpage-head" style="color:var(--muted-dark);flex:0 0 auto">COURSE CHART</div>
   <!-- v560: the chart takes the height LEFT OVER after the panels below it, rather than its own
@@ -960,27 +991,39 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        page needed, and the removed line is a screen's worth of height given back to the chart.
        The cream panel matches the one under the course chart. The "swipe" hint went at v558:
        since v551 the leg swipe is on the COURSE CHART only. -->
-  <div style="background:#FBEEB0;border-radius:14px;padding:8px 10px;margin:2px 0 3px">
-    <div id="legHead" style="font-size:13px;font-weight:800;color:#3A2A00;text-align:center;
-         min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
-  </div>
   <!-- The Tide/Wind/Both and orientation buttons moved to the top of the Settings page (v558),
        where they are standing preferences in that page's own row style rather than a choice
        remade on every visit. -->
   <svg id="legview" viewBox="0 0 360 688" preserveAspectRatio="xMidYMid meet"
-       style="margin-top:3px;flex:1 1 auto;min-height:0;width:100%;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA;touch-action:pan-y"></svg>
+       style="margin-top:2px;flex:1 1 auto;min-height:0;width:100%;border:1px solid var(--rule);border-radius:12px;background:#F2F7FA;touch-action:pan-y"></svg>
+  <!-- v566: the leg panel sits BELOW the chart, so the chart is the first thing on the page.
+       v568: the fit's five buttons take this same slot rather than adding a row of their own.
+       Both are one cream panel of the same height, so switching between them does not change
+       how much room is left for the chart, and the chart no longer resizes when you press F. -->
+  <div id="legSlot" style="margin:3px 0 0;flex:0 0 auto">
+    <div id="legPanel" class="legpan">
+      <div id="legHead" style="font-size:13px;font-weight:800;color:#3A2A00;text-align:center;
+           min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+    </div>
+    <div id="fitBtns" class="legpan" style="display:none"></div>
+  </div>
   <!-- Slider, R and the summary share one yellow panel, so the controls at the foot of the
        page read as one group the way the four buttons do at the head. -->
   <!-- The error slider replaces the wind slider while a fit is pending, so there is only ever
        one slider on the page. They do different jobs and must not be confused: the wind slider
        moves BOTH boards and changes the app's wind; the error slider moves ONE board and records
        an offset. Swapped by context rather than by a mode the user has to remember. -->
-  <div id="fitFoot" style="display:none"></div>
-  <div id="legFoot">
-    <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
+  <div id="fitFoot" class="legpan" style="display:none;margin-top:3px;flex:0 0 auto"></div>
+  <div id="legFoot" class="legpan" style="margin-top:3px">
+    <div style="display:flex;align-items:center;gap:10px">
       <label style="white-space:nowrap;margin:0">Wind <span id="wslideLbl" class="wslideLbl mono" style="font-weight:800;color:#12283A">000°</span></label>
       <input id="wslide" class="wslide" type="range" min="0" max="359" step="1" style="flex:1">
       <button class="wslideR" aria-label="Restore forecast wind" title="hand the wind back to the forecast" style="flex:0 0 auto;width:var(--btn-sm);height:var(--btn-sm);border-radius:8px;border:1.5px solid #12283A;background:#fff;color:#12283A;font-weight:800;font-size:13px;padding:0">R</button>
+      <!-- v562: a way IN to the error slider. It was reachable only by starting a tuning run,
+           so the control that fits one board was hidden exactly when you had noticed by eye that
+           one board misses your track. This hands the single slider row over to the fit; Done
+           hands it back. Still one slider on the page, never two. -->
+      <button class="pick pk-icon" id="fitOpen" title="fit one board to your track" style="flex:0 0 auto">F</button>
     </div>
     <!-- v558: the leg summary strip is gone from here. The same strip already sits under the
          course chart, and one leg described twice on two pages is one too many. -->
@@ -991,7 +1034,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
 
   <!-- Tactics is a group of two, the same shape as the Course Chart group: the advice, and
        below it the geometry that advice rests on. -->
-  <div class="tpage legGroup" id="gpage_tacgrp" data-t="TACTICS">
+  <div class="tpage legGroup" id="gpage_tacgrp" data-short="TACTICS" data-t="TACTICS">
   <div class="gpage gsub" id="gpage_tac">
     <div class="bpage-head" style="color:var(--muted-dark)">TACTICS</div>
     <div id="tdcCard" style="margin:0 0 6px"></div>
@@ -1043,7 +1086,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        apparent wind angle, apparent wind speed, heading and boat speed. On Aurelia with NMEA
        most of those arrive electrically; on Red Tape they are typed, derived or assumed. The
        maths downstream never changes, only the provenance and the confidence. -->
-  <div class="gpage tpage" id="gpage_inst" data-t="INSTRUMENTS">
+  <div class="gpage tpage" id="gpage_inst" data-short="INSTR" data-t="INSTRUMENTS">
     <div id="instHead" class="bpage-head" style="color:var(--muted-dark)">INSTRUMENTS</div>
     <div id="instWrap" style="background:#1C3D61;border:1px solid #2E5680;border-radius:12px;padding:7px 9px;color:#fff;flex:1 1 auto;min-height:0;overflow-y:auto;font-size:13px;line-height:1.35">
       <div id="instSrc" style="margin-bottom:8px"></div>
@@ -1067,7 +1110,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   <!-- The offshore map, moved in from its own tab (v554): passage-making rather than racing,
        but it belongs with the other chart views rather than in a tab of its own. -->
-  <div class="gpage tpage" id="gpage_map" data-t="OFFSHORE">
+  <div class="gpage tpage" id="gpage_map" data-short="OFFSHORE" data-t="OFFSHORE">
     <div class="bpage-head" style="color:var(--muted-dark)">OFFSHORE MAP</div>
 
   <div id="map2" style="flex:1 1 auto;min-height:200px;margin-top:10px;border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:#dfeaf0"></div>
@@ -2831,6 +2874,35 @@ const ZONEPOS={inshore:[53.3064,-6.1319], offshore:[53.2970,-6.0900]};
 function streamAt(offHrs,zone,range){return tideAt(ZONEPOS[zone]||ZONEPOS.offshore,offHrs,range);}
 function legMid(L){return [(L.from.pos[0]+L.to.pos[0])/2,(L.from.pos[1]+L.to.pos[1])/2];}
 
+// ---------- two things the app knew and never said (v570) ----------
+// (a) RECORDING. The race record starts itself with the countdown and until now said so only on
+// the Settings and Data page, which is not where you are looking during a start sequence. GO is
+// the button that turned it on, so GO is where it belongs: filled green while recording, back to
+// white when it stops. Green is already the app's colour for a live state you can act on.
+function goRecPaint(){
+  const b=$("goBtn"); if(!b)return;
+  let on=false; try{ on=raceRecActive(); }catch(e){}
+  if(on){ b.style.background="var(--stbd)"; b.style.color="#fff"; b.style.borderColor="var(--stbd)";
+          b.title="recording this race"; }
+  else  { b.style.background=""; b.style.color=""; b.style.borderColor="";
+          b.title="Start location, compass and get forecast"; }
+}
+// (b) ROUNDING. The app moves you to the next leg on its own, and the only sign was a notice you
+// could easily miss. The leg panel names the leg, so the leg panel is what should react: it goes
+// green for ROUND_FLASH_MS after a rounding is read, then settles back to cream. Long enough to
+// catch if you were looking away, short enough not to become the normal state of the panel.
+const ROUND_FLASH_MS=25000;
+function roundFresh(){ try{ return ROUND.at>0&&(Date.now()-ROUND.at)<ROUND_FLASH_MS; }catch(e){ return false; } }
+function roundPaint(){
+  const p=$("legPanel"); if(!p)return;
+  const fresh=roundFresh();
+  if(fresh){ p.style.background="var(--stbd)"; p.style.borderColor="var(--stbd)"; }
+  else     { p.style.background=""; p.style.borderColor=""; }
+  // Put the header's own ink back rather than clearing it: an empty string drops the colour
+  // from the element and it inherits, which is not the same thing.
+  const h=$("legHead"); if(h)h.style.color=fresh?"#fff":"#3A2A00";
+}
+
 // ---------- VECTORS: one hour of motion, drawn from the app's live values (v555) ----------
 // This is deliberately NOT a calculator with its own inputs. Every number comes from the same
 // place the tactics advice comes from: the leg from CURROUTE, the tide from tideAt(), the boat
@@ -3233,8 +3305,20 @@ function windResume(){ if(!(typeof NMEA!=="undefined"&&NMEA.sock))return;
   render(); }
 // Hand the wind back to the forecast held in memory, and recentre the band (and so the
 // sliders) on it. The stored figure is the last one fetched or pasted, not a fresh pull.
+const WSLIDE_SPAN=40;    // see the wind slider: a fine control, not a 360 degree dial
 function fcResume(){
-  if(WIND.forecast===null)return;
+  // v569: with no forecast fetched this used to return here and the R button was dead, which is
+  // exactly the case on the water with no signal. Hand the wind back to the card's expected wind
+  // instead: the point of R is to undo your override, and the app always has something it would
+  // have used on its own.
+  if(WIND.forecast===null){
+    if(WIND.expected===null||WIND.expected===undefined)return;
+    WIND.observed=null; WIND.manual=null; WIND.dbb=null;
+    setUsed(WIND.expected,"expected");
+    WSPD.manual=null; WGST.manual=null;
+    windAvail(); render();
+    return;
+  }
   WIND.observed=null; WIND.manual=null; WIND.dbb=null;
   WIND.src="forecast"; setUsed(WIND.forecast,"forecast");
   WSPD.manual=null; if(WSPD.forecast!==null)setUsedSpd(WSPD.forecast,"forecast");
@@ -3442,9 +3526,9 @@ function leg1Render(){
   el.style.display="";
   el.innerHTML=`<div style="margin-bottom:6px">First leg to <b>${nm}</b> reads as a <b>${c.type}</b>, `+
     `${Math.round(c.twa)}\u00B0 off the ${roFresh()?"race officer's":"working"} wind. Confirm:</div>`+
-    `<button class="pick" data-t="beat" style="padding:4px 10px;font-size:12px">Beat</button> `+
-    `<button class="pick" data-t="run" style="padding:4px 10px;font-size:12px">Run</button> `+
-    `<button class="pick" data-t="reach" style="padding:4px 10px;font-size:12px">Reach</button>`;
+    `<button class="pick" data-t="beat" >Beat</button> `+
+    `<button class="pick" data-t="run" >Run</button> `+
+    `<button class="pick" data-t="reach" >Reach</button>`;
   el.querySelectorAll("button").forEach(b=>b.onclick=()=>leg1Confirm(b.dataset.t));
 }
 // ---------- The shift reset: the fix for the 5 September lockout ----------
@@ -3690,8 +3774,8 @@ function myMarksRender(){
           `<div style="font-size:13px;font-weight:700;color:#12283A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.name}</div>`+
           `<div style="font-size:11px;color:#6B5A20">${fmtDDM(m.lat,"lat")} &nbsp; ${fmtDDM(m.lon,"lon")}</div>`+
         `</div>`+
-        `<button class="pick myMarkEdit" data-i="${i}" style="flex:0 0 58px;min-height:var(--btn-sm);padding:0;font-size:12px">Edit</button>`+
-        `<button class="pick myMarkDrop" data-i="${i}" style="flex:0 0 34px;min-height:var(--btn-sm);padding:0;font-size:13px">\u00d7</button>`+
+        `<button class="pick pk-sm myMarkEdit" data-i="${i}" style="flex:0 0 58px">Edit</button>`+
+        `<button class="pick pk-icon myMarkDrop" data-i="${i}">\u00d7</button>`+
       `</div>`).join("")
     : `<div style="font-size:12px;color:#6B5A20">Marks you enter by hand are saved here, and turn up in Find.</div>`;
   host.querySelectorAll(".myMarkEdit").forEach(b=>b.onclick=()=>myMarksEditStart(+b.dataset.i));
@@ -3769,7 +3853,7 @@ function coastalRender(){
         `<div class="coastalHit" data-i="${i}" style="flex:1;padding:8px 6px;font-size:13px;color:#12283A;cursor:pointer">`+
         `${h.name}${h.dbsc?' <span style="color:#6B5A20;font-size:11px">bay mark</span>':''}`+
         `${h.mine?' <span style="color:#6B5A20;font-size:11px">my mark</span>':''}</div>`+
-        (h.mine?`<button class="pick myMarkDel" data-m="${h.myIdx}" title="Forget this saved mark" style="flex:0 0 30px;min-height:0;padding:3px 0;font-size:12px">\u00d7</button>`:``)+
+        (h.mine?`<button class="pick pk-icon myMarkDel" data-m="${h.myIdx}" title="Forget this saved mark">\u00d7</button>`:``)+
         `</div>`).join("")
     : ((find&&find.value.trim().length>=2)?`<div style="font-size:12px;color:#6B5A20;padding:4px 2px">No mark of that name.</div>`:``);
   // Clear the search box BEFORE adding. coastalAdd re-renders, and a render that still sees
@@ -3785,10 +3869,10 @@ function coastalRender(){
     ? COASTAL_SEQ.map((m,i)=>`<div style="display:flex;gap:6px;align-items:center;padding:3px 0;font-size:13px;color:#12283A">`+
         `<div style="flex:0 0 18px;color:#6B5A20">${i+1}</div>`+
         `<div style="flex:1">${m.name}</div>`+
-        `<button class="pick coastalSide" data-i="${i}" style="flex:0 0 96px;padding:3px 0;font-size:12px;font-weight:800;`+
+        `<button class="pick pk-sm coastalSide" data-i="${i}" style="flex:0 0 96px;`+
         `background:${m.side==="P"?"var(--port)":"var(--stbd)"};border-color:${m.side==="P"?"var(--port)":"var(--stbd)"};color:#fff">`+
         `${m.side==="P"?"leave to port":"leave to stbd"}</button>`+
-        `<button class="pick coastalDel" data-i="${i}" style="flex:0 0 30px;padding:3px 0;font-size:12px">\u00d7</button></div>`).join("")
+        `<button class="pick coastalDel" data-i="${i}" style="flex:0 0 30px">\u00d7</button></div>`).join("")
     : `<div style="font-size:12px;color:#6B5A20">Add each mark in order. The last one is the finish. Tap the side button to change which side you leave a mark.</div>`;
   seq.querySelectorAll(".coastalSide").forEach(b=>b.onclick=()=>{ const i=+b.dataset.i;
     COASTAL_SEQ[i].side=(COASTAL_SEQ[i].side==="P")?"S":"P"; coastalSave(); coastalRender(); });
@@ -4235,7 +4319,12 @@ function trRateShow(){
 
 // Which controls make sense right now. Anything that cannot do its job is dimmed or hidden.
 function fcOverridden(){
-  return (WIND.forecast!==null||WSPD.forecast!==null||WGST.forecast!==null)&&
+  // Something to hand the wind BACK to (a forecast, or failing that the card's expected wind),
+  // and something overriding it now. The expected-wind arm is v569: without it R was dead
+  // whenever no forecast had been fetched.
+  const haveBase=(WIND.forecast!==null||WSPD.forecast!==null||WGST.forecast!==null||
+                  (WIND.expected!==null&&WIND.expected!==undefined));
+  return haveBase&&
          (WIND.observed!==null||WIND.manual!==null||WIND.dbb!==null||WSPD.manual!==null||WGST.manual!==null);
 }
 // Which source is driving the wind, said in colour so the boxes answer "why does it say that"
@@ -6105,6 +6194,10 @@ function garminCompassInit(){
   });
   // and keep them alive while the tab is open, so they fill in as soon as data appears
   setInterval(()=>{ try{ if(tab.open){ sixRender(); setRender(); } }catch(e){} },1000);
+  // The two v570 indicators change on their own: recording starts with the countdown, and the
+  // rounding flash has to clear itself when it expires. Neither triggers a render, so repaint
+  // them on this tick. Both are cheap style writes, not a full render.
+  setInterval(()=>{ try{ goRecPaint(); roundPaint(); }catch(e){} },1000);
 }
 // ---------- saved races ----------
 // Stored in IndexedDB rather than localStorage: a season of tracks would not fit in the ~5 MB
@@ -6385,8 +6478,8 @@ function raceFixOpen(id){
         <input id="fixNote_${id}" type="text" placeholder="anything worth remembering" value="${(c.note||"").replace(/"/g,"&quot;")}"
           style="width:100%;box-sizing:border-box;margin-top:2px"></div>
       <div style="display:flex;gap:8px;margin-top:9px">
-        <button class="pick" id="fixSave_${id}" style="flex:1;min-height:38px;font-size:12px">Save correction</button>
-        <button class="pick" id="fixCancel_${id}" style="flex:0 0 auto;min-height:38px;font-size:12px;padding:0 12px;width:auto">Close</button>
+        <button class="pick pk-md" id="fixSave_${id}"  style="flex:1">Save correction</button>
+        <button class="pick pk-md pk-pill" id="fixCancel_${id}"  style="flex:0 0 auto">Close</button>
       </div>
       ${c.saved?`<div style="font-size:11px;color:#48627A;margin-top:6px">Last corrected ${new Date(c.saved).toLocaleString()}.</div>`:""}
     </div>`;
@@ -6442,9 +6535,9 @@ function raceRender(){
         </div>
         <div style="display:flex;gap:6px;margin-top:7px">
           ${r.confirmed===false?`<div style="font-size:11px;font-weight:800;color:#8A5A00;background:#FFF1DC;border:1px solid #E0A64A;border-radius:8px;padding:3px 7px;display:inline-block;margin:2px 0 4px">UNCONFIRMED \u00b7 recovered</div>`:``}
-        <button class="pick" data-racefix="${r.id}" style="flex:1;min-height:34px;font-size:12px;padding:0 8px">${r.corrections?"Corrected \u2713":"Correct"}</button>
-          <button class="pick" data-race="${r.id}" style="flex:1;min-height:34px;font-size:12px;padding:0 8px">Export</button>
-          <button class="pick" data-racedel="${r.id}" style="flex:0 0 auto;min-height:34px;font-size:12px;padding:0 12px;width:auto">Delete</button>
+        <button class="pick pk-sm" data-racefix="${r.id}"  style="flex:1">${r.corrections?"Corrected \u2713":"Correct"}</button>
+          <button class="pick pk-sm" data-race="${r.id}"  style="flex:1">Export</button>
+          <button class="pick pk-sm pk-pill" data-racedel="${r.id}"  style="flex:0 0 auto">Delete</button>
         </div>
       </div>
       <div id="fix_${r.id}" style="display:none"></div>`;
@@ -6569,7 +6662,9 @@ function tabPages(tabId,scrollId,hostId,onShow){
   const pages=[...sc.querySelectorAll(":scope > .tpage")];
   if(!pages.length)return;
   TABPAGES[tabId]={scroll:scrollId,host:hostId,current:null,onShow:onShow||null};
-  host.innerHTML=pages.map(p=>`<button class="pick" data-t="${p.dataset.t}">${p.dataset.t}</button>`).join("");
+  // A page head reads in full; a button has a column to fit in. data-short gives the button a
+  // shorter word where the full one would be cut to "COURS...".
+  host.innerHTML=pages.map(p=>`<button class="pick pk-sm" data-t="${p.dataset.t}">${p.dataset.short||p.dataset.t}</button>`).join("");
   host.onclick=e=>{ const b=e.target.closest(".pick"); if(b&&b.dataset.t)tabPagesShow(tabId,b.dataset.t); };
   tabPagesShow(tabId,pages[0].dataset.t);
 }
@@ -7774,15 +7869,20 @@ function buildPickers(){
   ["tuneCap","tuneCmp","tuneAct"].forEach(id=>{
     const el=$(id); if(el)el.addEventListener("click",tuningClick);
   });
-  { const f=$("fitFoot"); if(f)f.addEventListener("click",fitClick); try{fitFootPaint();}catch(e){} }
+  { const f=$("fitFoot"); if(f)f.addEventListener("click",fitClick);
+    const fb=$("fitBtns"); if(fb)fb.addEventListener("click",fitClick);
+    try{fitFootPaint();}catch(e){} }
+  { const fo=$("fitOpen");
+    if(fo)fo.onclick=()=>{ FIT.open=true; fitFootPaint(); render(); }; }
   { const n=$("noticeBar"); if(n)n.addEventListener("click",noticeClick); }
   try{tuningCtl();}catch(e){}
   // Wind sliders: one under the leg diagram, one under the course chart. Both drive the
   // app's wind, so whichever you reach for, everything re-renders together.
   document.querySelectorAll("input.wslide").forEach(sl=>{
-    let last=0;
+    let last=0, base=null;                           // base: the wind the gesture started from
     const rd=()=>{
-      const d=((Math.round(+sl.value))%360+360)%360;
+      if(base===null)base=usedWind();                // first move of this drag sets the anchor
+      const d=((Math.round(base+(+sl.value)))%360+360)%360;
       WIND.manual=null;                              // sliding clears a manual override
       setUsed(d,"observed");                         // slider is the observed wind, and takes over used
       $("wsMean").value=String(d);                   // moves the mean; From/To stay fixed
@@ -7791,8 +7891,21 @@ function buildPickers(){
       document.querySelectorAll(".wslideLbl").forEach(l=>l.textContent=t);
       document.querySelectorAll("input.wslide").forEach(o=>{ if(o!==sl)o.value=sl.value; });
     };
-    sl.addEventListener("input",()=>{rd();const now=Date.now();if(now-last>140){last=now;window.holdBand=true;render();window.holdBand=false;}});
-    sl.addEventListener("change",()=>{rd();window.holdBand=true;render();window.holdBand=false;});
+    sl.addEventListener("input",()=>{
+      window.wslideDrag=true;
+      rd();
+      const now=Date.now();
+      if(now-last>140){last=now;window.holdBand=true;render();window.holdBand=false;}
+    });
+    // On release the offset goes back to zero and the wind just set becomes the new centre, so
+    // the next drag is another fine adjustment rather than a jump. The wind was already applied
+    // by the last input, so do NOT re-read the handle here: it may since have been re-centred.
+    sl.addEventListener("change",()=>{
+      if(base===null)rd();                 // a keyboard change with no preceding drag
+      base=null; window.wslideDrag=false;
+      document.querySelectorAll("input.wslide").forEach(o=>{ o.value="0"; });
+      window.holdBand=true;render();window.holdBand=false;
+    });
   });
   document.querySelectorAll(".wslideR").forEach(rb=>{ rb.onclick=fcResume; });
   syncWindTab();
@@ -7844,16 +7957,21 @@ function render(){
   const wd=$("wdir");
   if(wd&&document.activeElement!==wd)wd.value=String(Math.round(wdir));   // show used, unless you are typing
   try{syncWindTab();updateWindTab();}catch(e){}
-  try{let lo2=+($("wsLo").value||0), hi2=+($("wsHi").value||0);
-      if(hi2<=lo2)hi2+=360;                        // band may cross north
+  // v569: the wind slider is RELATIVE. It used to be an absolute 0-359 control whose min and
+  // max were clamped to the shift band, so a wind outside the band was unreachable AND setting
+  // one landed silently at the band's edge: asking for 120 with the band near 341 gave 341, not
+  // a refusal. Full 360 is not the answer either, since at about 1.5 degrees per pixel on a
+  // phone it is far too coarse for the job, and the true wind rarely swings more than 40.
+  // So the slider now spans WSLIDE_SPAN either side of the wind you currently have and
+  // re-centres on it when you let go: about a quarter of a degree per pixel, every wind
+  // reachable by dragging more than once, and nothing to clamp.
+  try{
       document.querySelectorAll("input.wslide").forEach(sl=>{
-        sl.min=String(lo2+1); sl.max=String(hi2-1);
-        if(document.activeElement!==sl){
-          let v=usedWind();
-          while(v<lo2)v+=360;
-          v=Math.max(lo2,Math.min(hi2,v));
-          sl.value=String(v);
-        }
+        sl.min=String(-WSLIDE_SPAN); sl.max=String(WSLIDE_SPAN); sl.step="1";
+        // Never re-centre a slider that is being dragged. The renders a drag triggers would
+        // otherwise put the handle back to zero under the finger, and the release would then
+        // read zero and undo the whole move. activeElement alone is not enough to rely on.
+        if(document.activeElement!==sl&&!window.wslideDrag)sl.value="0";
       });
       const dtxt=String(Math.round(usedWind())).padStart(3,"0")+"\u00B0";
       document.querySelectorAll(".wslideLbl").forEach(l=>l.textContent=dtxt);}catch(e){}
@@ -8044,7 +8162,8 @@ function render(){
   if(state.leg>=r.legs.length||state.leg<0)state.leg=0;
   const legHeadEl=$("legHead");
   if(legHeadEl){const L=r.legs[state.leg];
-    legHeadEl.textContent=`Leg ${state.leg+1} of ${r.legs.length} \u00B7 ${(L.from.name||L.from.lbl||"start")} \u2192 ${(L.to.name||L.to.lbl||"finish")}`;}
+    legHeadEl.textContent=(roundFresh()?"ROUNDED \u00B7 ":"")+
+      `Leg ${state.leg+1} of ${r.legs.length} \u00B7 ${(L.from.name||L.from.lbl||"start")} \u2192 ${(L.to.name||L.to.lbl||"finish")}`;}
   // v558: the overlay and orientation controls live on the Settings page now, so nothing to
   // wire here. settingsRender writes them and settingsClick drives them.
   drawLeg(r,state.leg,wdir,wspd);
@@ -8055,6 +8174,8 @@ function render(){
   try{noticePaint();}catch(e){}
   try{tdcPaint();}catch(e){}
   try{coastalInUsePaint();}catch(e){}   // green follows state.card, whatever changed it
+  try{goRecPaint();}catch(e){}          // GO says whether the race is being recorded
+  try{roundPaint();}catch(e){}          // the leg panel says when a rounding has been read
   try{vecDraw();}catch(e){}             // the geometry the advice rests on
   try{tideEffDraw();}catch(e){}         // and what that geometry costs in time
 }
@@ -8859,7 +8980,8 @@ const BEAT={stbd:null, port:null, rec:null};     // rec = {tack, pts:[...]} whil
 // antisymmetric, and so put the two tacks wrong in OPPOSITE directions when the truth was that
 // both were wrong the same way. It would also corrupt the favoured end, the T line, the shift
 // baseline and the sail crossover to fix one leg's laylines. Leeway gets its own term instead.
-const FIT={run:null, stbd:null, port:null, err:{stbd:0,port:0}, tack:"stbd", accepted:false, expected:null};
+const FIT={run:null, stbd:null, port:null, err:{stbd:0,port:0}, tack:"stbd", accepted:false, expected:null,
+  open:false};   // open: the fit was reached by hand from the chart, not by a tuning run
 function fitRunning(){ return !!(FIT.run); }
 // The expectation is frozen when you round onto the leg. If it moved, the judgement would
 // dissolve: nudge anything and the prediction walks over to meet your track.
@@ -8904,7 +9026,11 @@ function fitEnd(){
   FIT[R.tack]=st;
   // seed the slider with the offset between the track made good and the heading steered, which
   // is the whole unresolved error before anything is attributed
-  if(st.hdg!=null)FIT.err[R.tack]=Math.round(((st.brg-st.hdg+540)%360)-180);
+  // v565: seed the slider with the same quantity it sets, which is the angle between the track
+  // you sailed and the ground track the app PREDICTED for this board. It used to be seeded with
+  // track minus compass heading, which is leeway plus drift: a different number written into the
+  // same variable, so the two paths disagreed about what the slider meant.
+  FIT.err[R.tack]=fitPredErr(R.tack,st.brg);
   FIT.accepted=false;
   try{tuningCtl();}catch(e){}
   fitGoToChart();
@@ -8928,26 +9054,102 @@ function fitEnd(){
 //
 // Without a log speed the along-track term is ambiguous: slow could be tide or could be the boat
 // simply not making its polar. It is reported as unattributed rather than called tide.
+// The ground track the app PREDICTS for a board: the polar's boat vector on that tack plus the
+// tide the app believes in. This is what the ladder rungs are drawn from, so the angle between
+// it and the track you sailed is exactly what the slider moves. One definition, both paths.
+function fitPredGround(tack){
+  const r=CURROUTE, L=r&&r.legs&&r.legs[state.leg];
+  if(!L)return null;
+  const wdir=usedWind(), wspd=usedSpd()||1;
+  const beat=(L.pos==="Beat"), run=(L.pos==="Run");
+  let th; try{ th=interp(P_TWS,(beat?P_UP:P_DN).twa,wspd); }catch(e){ return null; }
+  if(!beat&&!run)return null;                 // a reach has no two boards to fit
+  let Vb; try{ Vb=interp(P_TWS,(beat?P_UP:P_DN).vel,wspd); }catch(e){ return null; }
+  const h=norm(wdir+(tack==="stbd"?+th:-th)); // starboard tack: wind on the starboard side
+  const effOff=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off:null;
+  let st=null; try{ st=effOff!==null?tideAt(legMid(L),effOff,TIDECTX.range):null; }catch(e){}
+  const T=(st&&!st.slack)?[st.kt*Math.sin(rad(st.dir)),st.kt*Math.cos(rad(st.dir))]:[0,0];
+  const g=[Vb*Math.sin(rad(h))+T[0], Vb*Math.cos(rad(h))+T[1]];
+  return {brg:norm(Math.atan2(g[0],g[1])*180/Math.PI), kt:Math.hypot(g[0],g[1]), hdg:h, Vb,
+          tide:(st&&!st.slack)?st:null};
+}
+function fitPredErr(tack,observedBrg){
+  const p=fitPredGround(tack);
+  if(!p||observedBrg==null)return FIT.err[tack]||0;
+  return Math.round(((observedBrg-p.brg+540)%360)-180);
+}
+// ONE board is enough when the tide is strong, which is the only time this control is wanted.
+// The two-board requirement exists to avoid trusting the polar's tacking angle and to split
+// leeway out; in 2 knots of tide, leeway is 3 to 5 degrees against 15 or more of drift, so
+// insisting on two boards demands a precision the situation does not need.
+// The solve: the board's ground vector, rotated by your fitted error, minus the boat's own
+// water vector from the polar, IS the tide. Two dimensions from one board, because the speed
+// comes with the direction. What it cannot do is separate leeway from the set, so the leeway is
+// taken as assumed rather than measured and the result says so.
+function fitResolveOne(tack){
+  const p=fitPredGround(tack);
+  if(!p)return null;
+  const e=FIT.err[tack]||0;
+  const rec=FIT[tack];
+  // speed over the ground: measured if a run recorded it, else the polar's own prediction
+  const sog=(rec&&rec.sog>0)?rec.sog:p.kt;
+  const brg=norm(p.brg+e);                      // the track you actually sailed
+  const G=[sog*Math.sin(rad(brg)), sog*Math.cos(rad(brg))];
+  const B=[p.Vb*Math.sin(rad(p.hdg)), p.Vb*Math.cos(rad(p.hdg))];
+  const T=[G[0]-B[0], G[1]-B[1]];
+  const kt=Math.hypot(T[0],T[1]);
+  return {leeway:0, leewayAssumed:true,
+          crossDeg:e, tideDir:norm(Math.atan2(T[0],T[1])*180/Math.PI), tideKt:kt,
+          vb:p.Vb, across:null, along:null, alongIs:"one",
+          sogAvg:sog, haveLog:!!(rec&&rec.log), haveSog:!!(rec&&rec.sog>0),
+          manual:!(rec&&rec.sog>0), measured:!!(rec&&rec.sog>0),
+          axis:norm(p.brg), oneBoardOnly:true, tack};
+}
 function fitResolve(){
+  // one board fitted: solve it rather than refuse
+  if(FIT.stbd&&!FIT.port)return fitResolveOne("stbd");
+  if(FIT.port&&!FIT.stbd)return fitResolveOne("port");
   if(!FIT.stbd||!FIT.port)return null;
   const es=FIT.err.stbd, ep=FIT.err.port;
-  const leeway=(es+ep)/2;          // symmetric: the boat
-  const crossDeg=(es-ep)/2;        // antisymmetric: the ground
+  // v562: corrected. Each slider records (ground track - heading) on that tack. Leeway is
+  // always to LEEWARD, which is to starboard on one tack and to port on the other, so it FLIPS
+  // SIGN across the tack and is the ANTISYMMETRIC half. A tide is one fixed ground vector added
+  // to both boards, so it bends both tracks the same way and is the SYMMETRIC half. Checked
+  // against known truths: 5 degrees of leeway with no tide gives +5 / -5; 2 knots of cross-set
+  // with no leeway gives +17.1 / +10.8, both positive. These were the wrong way round, so a
+  // boat making leeway was reported as set by the tide, and a real set was reported as leeway.
+  // The split is first-order. A given set bends the two boards by different amounts (2kt across
+  // a beat gives 17.1 degrees on one and 10.8 on the other), because the angle a set produces
+  // depends on the heading relative to it. So with both leeway and set present the residual
+  // leaks into leeway: 5 degrees of real leeway reads as about 8 at 2kt. Each is attributed to
+  // the right side, which is the part that matters; the magnitudes are approximate. An exact
+  // solve is possible from the two board vectors plus the speeds and is not built.
+  const leeway=(es-ep)/2;          // antisymmetric: the boat, always to leeward
+  const crossDeg=(es+ep)/2;        // symmetric: the ground, the same vector on either tack
   const haveLog=!!(FIT.stbd.log&&FIT.port.log);
   const vb=haveLog
     ? ((FIT.stbd.log||0)+(FIT.port.log||0))/((FIT.stbd.log?1:0)+(FIT.port.log?1:0))
     : (FIT.expected?FIT.expected.vb:4);
   const across=vb*Math.tan(rad(Math.abs(crossDeg)))*(crossDeg>=0?1:-1);
-  const sogAvg=((FIT.stbd.sog||0)+(FIT.port.sog||0))/2;
-  const along=sogAvg-vb;
-  // attribution of the along-track term
-  const alongIs = haveLog ? "tide"                       // ground minus water: unambiguous
+  // A hand fit has no speeds at all, so there is no along-track term to report. Saying nothing
+  // is the honest answer; inventing one from the polar alone would be a guess dressed as a
+  // measurement.
+  const haveSog=!!(FIT.stbd.sog&&FIT.port.sog);
+  const sogAvg=haveSog?((FIT.stbd.sog+FIT.port.sog)/2):null;
+  const along=haveSog?(sogAvg-vb):0;
+  const alongIs = !haveSog ? "none"                      // dragged by hand: angle only
+                : haveLog ? "tide"                       // ground minus water: unambiguous
                 : (FIT.expected&&FIT.expected.vb) ? "unattributed" : "unknown";
   const kt=Math.hypot(across,along);
-  const mean=norm(((FIT.stbd.brg+FIT.port.brg)/2));
+  // A hand fit has no recorded bearings either, so fall back to the leg's own course for the
+  // axis the set is reported against.
+  const haveBrg=(FIT.stbd.brg!=null&&FIT.port.brg!=null);
+  const mean=haveBrg?norm(((FIT.stbd.brg+FIT.port.brg)/2))
+                    :norm((FIT.expected&&FIT.expected.co!=null)?FIT.expected.co:0);
   const dir=norm(mean+(Math.atan2(across,along)*180/Math.PI));
   return {leeway, crossDeg, tideDir:dir, tideKt:kt, vb,
-          across, along, alongIs, sogAvg, haveLog,
+          across, along, alongIs, sogAvg, haveLog, haveSog,
+          manual:!haveSog,
           // the leg's own axis, so "along" and "across" mean something on the chart
           axis:mean,
           oneBoardOnly:false, measured:haveLog};
@@ -9143,7 +9345,7 @@ function beatPress(tack){
     try{
       if(!FIT.expected)fitFreezeExpected();
       FIT[tack]=st; FIT.tack=tack; FIT.accepted=false;
-      if(st.hdg!=null)FIT.err[tack]=Math.round(((st.brg-st.hdg+540)%360)-180);
+      FIT.err[tack]=fitPredErr(tack,st.brg);
       fitFootPaint();
     }catch(e){}
     // v400: no longer applied automatically. The point of the Tuning tab is to see the
@@ -9834,7 +10036,7 @@ function startCtl(){
   // for a stray thumb.
   if(START.cv||START.pin)
     h+=`<div style="text-align:right;margin-top:6px">`+
-       `<button class="pick" data-s="clearline" style="min-height:var(--btn-sm);font-size:12px;padding:0 10px;width:auto">Clear line</button></div>`;
+       `<button class="pick pk-sm pk-pill" data-s="clearline" >Clear line</button></div>`;
   // The two-beat wind and tide test used to live here. It moved to the Tuning tab in v400,
   // where it has room to show the measurement against the prediction and to be accepted or
   // rejected deliberately. Nothing about the solve itself changed.
@@ -9884,7 +10086,7 @@ function wardrobeRender(){
         ? ` The headsail furls, so calls are given as rolls rather than a change of sail.`:``)+
     `</div>`+
     `<div style="margin-top:8px;text-align:right">
-       <button class="pick" data-sail="__reset" style="min-height:var(--btn-sm);font-size:12px;padding:0 12px;width:auto">Reset to default</button></div>`;
+       <button class="pick pk-sm pk-pill" data-sail="__reset" >Reset to default</button></div>`;
 }
 function wardrobeClick(ev){
   const t=ev.target;
@@ -9901,63 +10103,85 @@ function wardrobeClick(ev){
   render();                       // sail calls, estimates and tactics all change with this
 }
 // ---------- fit UI, on the chart where the track is ----------
-function fitFootHTML(){
-  const st=fitStatus();
-  const t=FIT.tack, other=t==="stbd"?"port":"stbd";
-  const err=FIT.err[t]||0;
-  const res=fitResolve();
-  const btn=(k,lab,on)=>`<button class="pick" data-fit="${k}" style="flex:1;min-height:34px;font-size:12px;padding:0 6px;${on?"background:#12283A;color:#fff;border-color:#12283A":""}">${lab}</button>`;
-  let head=`<div style="display:flex;gap:6px;align-items:center">`+
-    btn("tack_stbd","Starboard"+(FIT.stbd?" \u2713":""),t==="stbd")+
-    btn("tack_port","Port"+(FIT.port?" \u2713":""),t==="port")+
+// v568: the panel is in TWO parts that live in two places, so neither adds a row.
+//   the five buttons take the leg panel's slot below the chart, replacing it;
+//   the error slider takes the wind slider's row, replacing that.
+// Both swaps are like for like in height, so the chart keeps exactly the room it had and stops
+// resizing when the fit opens.
+function fitBtnsHTML(){
+  const st=fitStatus(), t=FIT.tack;
+  const canAccept=(st==="both"||st==="one")&&!!fitResolve();
+  const b=(k,lab,style,dis)=>`<button class="pick pk-sm" data-fit="${k}"${dis?" disabled":""} `+
+    `style="flex:1;min-width:0;${style||""}">${lab}</button>`;
+  const onPort =(t==="port")  ? `background:var(--port);color:#fff;border-color:var(--port)` : ``;
+  const onStbd =(t==="stbd")  ? `background:var(--stbd);color:#fff;border-color:var(--stbd)` : ``;
+  const onAcc  = FIT.accepted ? `background:var(--start);color:#fff;border-color:var(--start)`
+               : canAccept    ? `` : `opacity:.45`;
+  return `<div style="display:flex;gap:5px;align-items:stretch">`+
+    b("tack_port","P",onPort)+
+    b("accept","Acc",onAcc,!canAccept&&!FIT.accepted)+
+    b("clear","R")+
+    b("done","D")+
+    b("tack_stbd","S",onStbd)+
     `</div>`;
-  let slider=`<div style="display:flex;align-items:center;gap:10px;margin-top:7px">
-      <label style="white-space:nowrap;margin:0;color:#5B4A00">Error <span class="mono" style="font-weight:800;color:#12283A">${err>0?"+":""}${err}\u00B0</span></label>
+}
+function fitFootHTML(){
+  const err=FIT.err[FIT.tack]||0;
+  return `<div style="display:flex;align-items:center;gap:10px">
+      <label style="white-space:nowrap;margin:0">Error <span id="fitErrLbl" class="mono" style="font-weight:800;color:#12283A">${err>0?"+":""}${err}\u00B0</span></label>
       <input id="fitSlide" type="range" min="-25" max="25" step="1" value="${err}" style="flex:1">
-      <button class="pick" data-fit="zero" style="flex:0 0 auto;width:var(--btn-sm);height:var(--btn-sm);padding:0;width:auto;min-height:var(--btn-sm);font-size:11px">0</button>
+      <button class="pick pk-sm pk-pill" data-fit="zero" style="flex:0 0 auto">0</button>
     </div>`;
-  let note;
-  if(st==="none")
-    note=`Run a tuning run on the Tuning tab first. Then drag until this board's ladder lies along your track.`;
-  else if(st==="one")
-    note=`<b>${FIT.stbd?"Starboard":"Port"} fitted.</b> One board cannot separate leeway from tide: any value will fit. Sail the other board and run it too.`;
-  else
-    // Two components, because they have different answers on the water. Along track: are you
-    // being carried or held back. Across track: are you being set sideways, and is that the
-    // boat (leeway) or the ground (tide).
-    note=`<b>Both fitted.</b>`+
-      `<div style="margin-top:4px">Across: <b>${Math.abs(res.across).toFixed(1)} kt ${res.across>=0?"right":"left"}</b>`+
-      ` \u00b7 leeway ${res.leeway>0?"+":""}${res.leeway.toFixed(1)}\u00B0</div>`+
-      `<div>Along: <b>${res.along>=0?"+":""}${res.along.toFixed(1)} kt</b> `+
-      (res.alongIs==="tide" ? `(tide, from your log)` :
-       res.alongIs==="unattributed" ? `<span style="opacity:.8">(could be tide or boat speed: enter the log to separate them)</span>`
-       : `<span style="opacity:.8">(unknown)</span>`)+`</div>`+
-      `<div style="opacity:.85;margin-top:2px">Combined ${d3(res.tideDir)}\u00B0 at ${res.tideKt.toFixed(1)} kt</div>`;
-         (res.measured?``:` <span style="opacity:.75">(no log speed entered, so the drift is from the polar)</span>`);
-  const canAccept=st==="both"&&!FIT.accepted;
-  return `<div style="background:#FBEEB0;border-radius:14px;padding:7px;margin-top:8px">
-    ${head}${slider}
-    <div style="font-size:11px;line-height:1.45;color:#5A4020;margin-top:6px">${note}</div>
-    <div style="display:flex;gap:6px;margin-top:7px">
-      <button class="pick" data-fit="accept"${canAccept?"":" disabled"} style="flex:1;min-height:34px;font-size:12px;${canAccept?"background:#1E8449;color:#fff;border-color:#2FA35C":"opacity:.45"}">${FIT.accepted?"Accepted":"Accept fit"}</button>
-      <button class="pick" data-fit="clear" style="flex:0 0 auto;min-height:34px;font-size:12px;padding:0 12px;width:auto">Clear</button>
-    </div></div>`;
+}
+// Coalesce the chart redraws a drag produces into one per animation frame. Without this the
+// chart was redrawn on every input event, and each redraw re-measures the panel it lives in.
+let _fitRAF=null;
+function fitDrawSoon(){
+  if(_fitRAF)return;
+  _fitRAF=(window.requestAnimationFrame||setTimeout)(()=>{ _fitRAF=null; try{render();}catch(e){} },16);
 }
 function fitFootPaint(){
   const f=$("fitFoot"), lf=$("legFoot");
   if(!f)return;
-  // pending means: a run has been done and not yet accepted
-  const pending=(fitStatus()!=="none"&&!FIT.accepted)||fitRunning();
-  f.style.display=pending?"block":"none";
-  if(lf)lf.style.display=pending?"none":"block";
+  // pending means: a run has been done and not yet accepted, OR you opened the fit by hand.
+  // The hand-opened case exists because noticing a board misses your track is reason enough to
+  // fit it; a tuning run is the better path only because it brings speed data with it.
+  const pending=(fitStatus()!=="none"&&!FIT.accepted)||fitRunning()||!!FIT.open;
+  // Empty string, not "block": these four are .legpan, whose own display is flex, and an inline
+  // block would beat the class and undo the alignment that keeps the four the same height.
+  f.style.display=pending?"":"none";
+  if(lf)lf.style.display=pending?"none":"";
+  // the five buttons replace the leg panel rather than sitting under it
+  const lp=$("legPanel"), fb=$("fitBtns");
+  if(lp)lp.style.display=pending?"none":"";
+  if(fb){ fb.style.display=pending?"":"none"; fb.innerHTML=pending?fitBtnsHTML():""; }
   if(!pending){ f.innerHTML=""; return; }
   f.innerHTML=fitFootHTML();
   const sl=$("fitSlide");
-  if(sl)sl.addEventListener("input",()=>{ FIT.err[FIT.tack]=+sl.value; fitFootPaint(); render(); });
+  if(sl)sl.addEventListener("input",()=>{
+    FIT.err[FIT.tack]=+sl.value;
+    // A hand fit has to RECORD the board it fitted, or fitStatus never leaves "none" and Accept
+    // can never come live. The record carries no speeds, because dragging a ladder measures an
+    // angle and nothing else; fitResolve reports the along-track term as unknown accordingly.
+    if(!FIT[FIT.tack])FIT[FIT.tack]={manual:true, brg:null, hdg:null, sog:null, log:null};
+    // Do NOT repaint the panel here. fitFootPaint rebuilds it with innerHTML, which destroys and
+    // recreates this very slider under the user's finger on every input event, and each rebuild
+    // triggered a full render, which redraws the chart, which re-measures its panel and rewrites
+    // its viewBox, which changes the layout again. Dragging produced a continuous stream of that
+    // and iOS killed the page. Update the label in place, and let the chart redraw at most once
+    // per animation frame.
+    const lbl=$("fitErrLbl");
+    if(lbl)lbl.textContent=(FIT.err[FIT.tack]>0?"+":"")+FIT.err[FIT.tack]+"\u00B0";
+    fitDrawSoon();
+  });
+  // Repaint the rest of the panel (the note, the Accept state) when the drag FINISHES, not
+  // during it, so the slider node survives the gesture.
+  if(sl)sl.addEventListener("change",()=>{ fitFootPaint(); render(); });
 }
 function fitClick(ev){
   const b=ev.target.closest?ev.target.closest("[data-fit]"):null; if(!b)return;
   const k=b.dataset.fit;
+  if(k==="done"){ FIT.open=false; fitFootPaint(); render(); return; }   // hand the row back to the wind
   if(k==="tack_stbd")FIT.tack="stbd";
   else if(k==="tack_port")FIT.tack="port";
   else if(k==="zero")FIT.err[FIT.tack]=0;
@@ -9965,12 +10189,20 @@ function fitClick(ev){
   else if(k==="accept"){
     // Nothing is adopted until both boards are fitted: one board makes the picture consistent
     // while measuring nothing, which is exactly the trap Saturday set.
-    if(fitStatus()!=="both")return;
-    FIT.accepted=true;
     const r=fitResolve();
-    if(r){ START.leeway=r.leeway; START.obsTide={dir:r.tideDir,kt:r.tideKt,src:"fit"}; startSave();
-           tideMeasuredSet(r.tideDir,r.tideKt,GPS.last?[GPS.last.coords.latitude,GPS.last.coords.longitude]:null); }
-    try{ const bs=beatSolve(); if(bs&&bs.wind!=null)windSet("dir",bs.wind,"solved"); }catch(e2){}
+    if(!r)return;
+    FIT.accepted=true;
+    // Adopt ONLY what was actually measured. A one-board fit has no leeway of its own, so it
+    // must not overwrite a leeway that was measured properly; and an angles-only fit has no
+    // measured speed, so the tide strength it reports comes from the polar and is not handed to
+    // the TDC as a measured tide.
+    if(!r.leewayAssumed){ START.leeway=r.leeway; }
+    START.obsTide={dir:r.tideDir,kt:r.tideKt,src:r.oneBoardOnly?"fit1":"fit"}; startSave();
+    if(r.measured)tideMeasuredSet(r.tideDir,r.tideKt,GPS.last?[GPS.last.coords.latitude,GPS.last.coords.longitude]:null);
+    // the wind solve needs both tracks; one board cannot see it
+    if(!r.oneBoardOnly){ try{ const bs=beatSolve(); if(bs&&bs.wind!=null)windSet("dir",bs.wind,"solved"); }catch(e2){} }
+    // v567: Accept no longer closes. The Acc button turns orange to say the fit has been
+    // adopted, and you could not see that if pressing it shut the panel. D closes.
     try{raceRecEvent("tuning","fit accepted",fitResolve());}catch(e){}
   }
   fitFootPaint(); render();
@@ -10272,6 +10504,7 @@ function startClick(ev){
   render();
 }
 
+let DRAWLEG_BOX=null;    // last accepted measurement of the chart's box; see drawLeg
 function drawLeg(r,idx,wdir,wspd){
   lblReset();   // Course Analysis: boxes are per-chart, not cumulative across redraws
   const L=r.legs[idx];
@@ -10281,7 +10514,15 @@ function drawLeg(r,idx,wdir,wspd){
   // preserveAspectRatio fitted it inside the box and left the spare height as white bands above
   // and below the beat. Taking H from the panel's own shape uses all of it.
   const W=360;
-  const cw=(svg&&svg.clientWidth)||360, chh=(svg&&svg.clientHeight)||688;
+  // The chart reads the size of the box it sits in, and then writes a viewBox that changes how
+  // that box is filled. Measuring on every redraw made that a feedback path: a redraw could
+  // change the layout, which changed the measurement, which redrew it again. Measure once and
+  // keep it, and only take a new reading when the box has genuinely changed size by more than a
+  // pixel or two. Dragging a slider then costs a redraw, not a relayout.
+  const cwNow=(svg&&svg.clientWidth)||360, chNow=(svg&&svg.clientHeight)||688;
+  if(!DRAWLEG_BOX||Math.abs(DRAWLEG_BOX.w-cwNow)>2||Math.abs(DRAWLEG_BOX.h-chNow)>2)
+    DRAWLEG_BOX={w:cwNow,h:chNow};
+  const cw=DRAWLEG_BOX.w, chh=DRAWLEG_BOX.h;
   const H=Math.max(420,Math.min(1400,Math.round(W*(chh/Math.max(cw,1)))));
   const cx=W/2;
   // Type is in SVG units, so what you actually read depends on how wide the panel is. Work back
@@ -10300,6 +10541,19 @@ function drawLeg(r,idx,wdir,wspd){
   const D=L.dist;
   const upT=interp(P_TWS,P_UP.twa,wspd), dnT=interp(P_TWS,P_DN.twa,wspd);
   let target=null; if(L.pos==="Beat")target=upT; else if(L.pos==="Run")target=dnT;
+  // ---- the fit, applied to the drawing (v565) ----
+  // FIT.err[tack] is the angle by which that board's PREDICTED GROUND TRACK must be rotated to
+  // lie along the track you actually sailed. Until now nothing read it, so the slider moved a
+  // number and the chart stayed still while the panel told you to drag until the ladder lined
+  // up. Rotating the ground velocity is the whole of it: the board line and its rungs are both
+  // built from that vector, so both follow.
+  // Which board is which: starboard tack is the one with the wind on the starboard side, the
+  // same test the app uses to colour them green and red.
+  const fitTackOf=habs=>((((wdir-habs+540)%360)-180)>0)?"stbd":"port";
+  const fitErrOf=habs=>{ try{ return FIT.err[fitTackOf(habs)]||0; }catch(e){ return 0; } };
+  // Rotate [x,y] by d degrees clockwise, which is the direction bearings increase.
+  const fitRot=(v,d)=>{ if(!d)return v; const r=rad(d), c=Math.cos(r), n=Math.sin(r);
+    return [v[0]*c+v[1]*n, v[1]*c-v[0]*n]; };
   const effOff=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off+elapsed:null;
   let stL=effOff!==null?tideAt(legMid(L),effOff,TIDECTX.range):null;  // stream over this leg
   const stLTrue=stL;                         // real stream, kept for the ladder even in wind-only view
@@ -10311,8 +10565,9 @@ function drawLeg(r,idx,wdir,wspd){
     const Tv=stL&&!stL.slack?[stL.kt*Math.sin(rad(stL.dir-co)),stL.kt*Math.cos(rad(stL.dir-co))]:[0,0];
     for(const sgn of [1,-1]){
       const h1=frL(wdir+sgn*target), h2=frL(wdir-sgn*target);
-      const g1=[Vb*Math.sin(rad(h1))+Tv[0],Vb*Math.cos(rad(h1))+Tv[1]];   // ground velocity, board 1
-      const g2=[Vb*Math.sin(rad(h2))+Tv[0],Vb*Math.cos(rad(h2))+Tv[1]];   // ground velocity, board 2
+      // ground velocity per board, then rotated by that board's fitted error
+      const g1=fitRot([Vb*Math.sin(rad(h1))+Tv[0],Vb*Math.cos(rad(h1))+Tv[1]],fitErrOf(wdir+sgn*target));
+      const g2=fitRot([Vb*Math.sin(rad(h2))+Tv[0],Vb*Math.cos(rad(h2))+Tv[1]],fitErrOf(wdir-sgn*target));
       const den=g1[0]*g2[1]-g1[1]*g2[0];
       if(Math.abs(den)>1e-6){
         const tt=(0*g2[1]-D*g2[0])/den;                                    // hours on board 1
@@ -10391,7 +10646,8 @@ function drawLeg(r,idx,wdir,wspd){
     const o=F(0,0);
     const dirs=[1,-1].map(sg=>{
       const h=frL(wdir+sg*target);
-      const g=[VbL*Math.sin(rad(h))+TvL[0], VbL*Math.cos(rad(h))+TvL[1]];   // ground velocity
+      const g=fitRot([VbL*Math.sin(rad(h))+TvL[0], VbL*Math.cos(rad(h))+TvL[1]],
+                     fitErrOf(wdir+sg*target));                             // ground velocity, fitted
       const p=F(g[0],g[1]);                                                 // F is affine, so this
       return [p[0]-o[0], p[1]-o[1]];                                        // gives the screen direction
     });
@@ -11608,7 +11864,7 @@ function settingsRender(){
         <input type="number" data-set="${d.k}" value="${v}" step="${d.step||1}"
           style="width:74px;text-align:center;padding:5px 4px;font-size:14px">
         <div style="width:24px;font-size:11px;color:#48627A">${d.unit}</div>
-        <button class="pick" data-reset="${d.k}" style="min-height:var(--btn-sm);font-size:10px;padding:0 8px;width:auto;${changed?"":"opacity:.35"}">${changed?"reset":"\u00b7"}</button>
+        <button class="pick pk-sm pk-pill" data-reset="${d.k}" style="${changed?"":"opacity:.35"}">${changed?"reset":"\u00b7"}</button>
       </div>
       <div style="font-size:10px;color:#5B6672;line-height:1.35;margin-top:2px">${d.why}${changed?` <b style="color:#8A5A00">default ${dv}</b>`:``}</div>
     </div>`;
@@ -11621,8 +11877,7 @@ function settingsRender(){
       <div style="display:flex;gap:8px;align-items:center">
         <div style="flex:1;min-width:0;font-weight:700;font-size:12px;color:#12283A">${label}</div>
         <div style="display:flex;gap:5px;flex:0 0 auto">${
-          opts.map(o=>`<button class="pick${o.v===cur?" on":""}" ${attr}="${o.v}"
-            style="min-height:var(--btn-sm);font-size:11px;padding:0 9px;width:auto">${o.t}</button>`).join("")}</div>
+          opts.map(o=>`<button class="pick pk-sm pk-pill${o.v===cur?" on":""}" ${attr}="${o.v}">${o.t}</button>`).join("")}</div>
       </div>
       <div style="font-size:10px;color:#5B6672;line-height:1.35;margin-top:2px">${why}</div>
     </div>`;
@@ -11636,7 +11891,7 @@ function settingsRender(){
       [{v:"course",t:"Course-up"},{v:"north",t:"North-up"}],(state&&state.northUp)?"north":"course","data-orient")+
     (ch.length?`<div style="margin-top:6px;font-size:12px;color:#8A5A00;font-weight:700">${ch.length} changed from default. Recorded with every race.</div>`:``)+
     SETTINGS.map(row).join("")+
-    `<div style="margin-top:10px;text-align:right"><button class="pick" data-reset="__all" style="min-height:var(--btn-sm);font-size:12px;padding:0 12px;width:auto">Reset all</button></div>`;
+    `<div style="margin-top:10px;text-align:right"><button class="pick pk-sm pk-pill" data-reset="__all">Reset all</button></div>`;
 }
 function settingsClick(ev){
   // the two choice rows first: they are settings, not thresholds, so they have no reset button
@@ -11671,8 +11926,8 @@ function noticePaint(){
   el.innerHTML=`<div style="display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.10);
       border:1.5px solid ${col};border-radius:11px;padding:8px 10px;margin:0 0 6px">
       <div style="flex:1;min-width:0;font-size:12px;font-weight:700;color:${col};line-height:1.35">${n.text}</div>
-      ${n.undo?`<button class="pick" data-notice="undo" style="flex:0 0 auto;min-height:var(--btn-sm);font-size:11px;padding:0 10px;width:auto">Undo</button>`:``}
-      <button class="pick" data-notice="ok" style="flex:0 0 auto;min-height:var(--btn-sm);font-size:11px;padding:0 10px;width:auto">OK</button>
+      ${n.undo?`<button class="pick pk-sm pk-pill" data-notice="undo">Undo</button>`:``}
+      <button class="pick pk-sm pk-pill" data-notice="ok">OK</button>
     </div>`;
 }
 function noticeClick(ev){
