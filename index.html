@@ -899,7 +899,8 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
 </details>
 
-<details class="notes bundle fam-race-dark" id="garmintab"><summary>GPS Display</summary>
+<details class="notes bundle fam-race-dark" id="garmintab"><summary>GPS Display<span id="raceLegTag"
+  style="font-size:13px;font-weight:700;margin-left:10px;opacity:.9;cursor:pointer"></span></summary>
   <!-- Notices sit ABOVE the pages, not inside one, so a leg change announces itself whichever
        page you are looking at. Tappable to undo, because an advance at a luff near the mark must
        be reversible without hunting for a control. -->
@@ -937,6 +938,10 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
        one, it drives the same global wind, and this page is now a plan view rather than a place
        you adjust things. The leg plan for the chosen leg sits under the chart instead. -->
   <div id="mapPlan" style="margin-top:6px;flex:0 0 auto"></div>
+  <!-- v578: shown only when the chart is on a leg other than the one being raced. It is how a
+       missed rounding is corrected: swipe to the leg you are really on and say so. -->
+  <button class="pick pk-sm" id="racingThisLeg" style="display:none;flex:0 0 auto;margin-top:4px;width:100%">
+    Racing this leg</button>
   </div>
 
   <div class="gpage gsub" id="gpage1">
@@ -2026,8 +2031,43 @@ R:["Cs Js Sp Ep Qs Np Ws","Cs Js Qs Mp Ts","Cs Js Ys Mp Ts","Cs Js Ys Kp Ts",
    "Cs Js Qs Np Vs","Cs Js Ts","Cs Js Ys","Cs Js Hs"]};
 
 // ---------- DATA: polars (from CourseCalc_V3_0) ----------
-const BOATS={"j122": {"label": "J/122", "note": "ORC targets", "d": {"tws": [6, 8, 10, 12, 14, 16, 20], "up": {"twa": [45.0, 43.0, 40.0, 39.5, 39.0, 38.5, 38.5], "vel": [5.1, 6.1, 6.6, 6.95, 7.1, 7.15, 7.25], "vmg": [3.61, 4.46, 5.06, 5.36, 5.52, 5.6, 5.67]}, "dn": {"twa": [145.0, 146.0, 155.5, 161.5, 167.0, 167.5, 168.5], "vel": [4.9, 5.98, 6.32, 6.94, 7.39, 7.78, 8.64], "vmg": [4.01, 4.96, 5.76, 6.58, 7.2, 7.59, 8.47]}, "polar": {"twa": [32.0, 36.0, 40.0, 45.0, 52.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0, 160.0, 170.0, 180.0], "tws": [4, 6, 8, 10, 12, 14, 16, 20, 25, 30], "v": [[2.4, 3.6, 4.7, 5.6, 6.0, 6.3, 6.4, 6.5, 6.5, 6.1], [2.8, 4.1, 5.3, 6.2, 6.6, 6.8, 6.9, 7.0, 7.1, 6.9], [3.2, 4.6, 5.8, 6.6, 7.0, 7.2, 7.3, 7.4, 7.4, 7.4], [3.6, 5.1, 6.3, 7.0, 7.3, 7.5, 7.6, 7.7, 7.7, 7.7], [4.0, 5.6, 6.7, 7.4, 7.7, 7.8, 7.9, 8.0, 8.1, 8.1], [4.4, 6.0, 7.1, 7.7, 7.9, 8.0, 8.1, 8.2, 8.3, 8.4], [4.6, 6.2, 7.3, 7.8, 8.1, 8.2, 8.4, 8.5, 8.7, 8.8], [4.7, 6.3, 7.4, 7.8, 8.1, 8.4, 8.6, 8.8, 9.0, 9.2], [4.7, 6.4, 7.6, 7.8, 8.1, 8.4, 8.7, 9.1, 9.3, 9.5], [4.8, 6.4, 7.5, 8.0, 8.3, 8.6, 8.9, 9.3, 9.5, 9.6], [4.7, 6.4, 7.5, 8.1, 8.5, 8.8, 9.0, 9.4, 9.8, 10.2], [4.4, 6.1, 7.4, 8.0, 8.4, 8.9, 9.2, 9.8, 10.4, 11.0], [4.0, 5.7, 7.0, 7.7, 8.2, 8.6, 9.1, 10.1, 11.1, 12.0], [3.5, 5.2, 6.4, 7.3, 7.8, 8.3, 8.8, 9.9, 11.3, 12.7], [3.0, 4.6, 5.7, 6.6, 7.4, 7.9, 8.3, 9.2, 11.0, 13.3], [2.7, 4.0, 5.1, 6.1, 7.0, 7.6, 8.0, 8.9, 10.4, 12.7], [2.4, 3.7, 4.7, 5.6, 6.6, 7.3, 7.7, 8.6, 9.8, 11.8], [2.3, 3.4, 4.4, 5.3, 6.2, 7.0, 7.5, 8.3, 9.4, 11.0]]}}}, "j109": {"label": "J/109", "note": "ORC targets", "d": {"tws": [6, 8, 10, 12, 14, 16, 20], "up": {"twa": [46.0, 45.0, 43.0, 42.0, 40.0, 41.5, 41.0], "vel": [4.79, 5.7, 6.2, 6.4, 6.4, 6.55, 6.6], "vmg": [3.32, 4.03, 4.53, 4.76, 4.9, 4.91, 4.98]}, "dn": {"twa": [147.0, 148.0, 151.5, 161.0, 166.0, 166.5, 167.5], "vel": [4.45, 5.52, 6.31, 6.66, 6.92, 7.21, 7.88], "vmg": [3.73, 4.68, 5.55, 6.3, 6.71, 7.01, 7.69]}, "polar": {"twa": [32.0, 36.0, 40.0, 45.0, 52.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0, 160.0, 170.0, 180.0], "tws": [4, 6, 8, 10, 12, 14, 16, 20, 25, 30], "v": [[2.1, 3.1, 4.0, 4.7, 5.1, 5.3, 5.4, 5.5, 5.3, 4.8], [2.5, 3.6, 4.6, 5.3, 5.7, 5.9, 6.0, 6.1, 6.0, 5.6], [2.8, 4.1, 5.1, 5.9, 6.2, 6.4, 6.4, 6.5, 6.4, 6.0], [3.3, 4.7, 5.7, 6.4, 6.7, 6.8, 6.9, 7.0, 6.9, 6.5], [3.8, 5.3, 6.3, 7.0, 7.2, 7.4, 7.4, 7.5, 7.4, 7.1], [4.2, 5.7, 6.7, 7.2, 7.4, 7.6, 7.6, 7.7, 7.7, 7.4], [4.4, 5.9, 6.9, 7.3, 7.6, 7.8, 7.9, 8.1, 8.1, 7.7], [4.5, 6.0, 6.9, 7.4, 7.7, 7.9, 8.1, 8.4, 8.4, 8.1], [4.4, 6.0, 6.9, 7.4, 7.7, 8.0, 8.3, 8.7, 8.7, 8.4], [4.4, 5.9, 7.0, 7.4, 7.8, 8.1, 8.4, 8.8, 8.8, 8.5], [4.3, 5.8, 7.0, 7.5, 7.9, 8.2, 8.5, 8.9, 9.1, 9.0], [4.1, 5.7, 6.8, 7.4, 7.9, 8.4, 8.8, 9.4, 9.7, 9.8], [3.7, 5.3, 6.5, 7.2, 7.7, 8.1, 8.6, 9.5, 10.3, 10.6], [3.3, 4.8, 6.0, 6.9, 7.4, 7.8, 8.2, 9.2, 10.3, 11.1], [2.9, 4.3, 5.4, 6.4, 7.0, 7.4, 7.7, 8.5, 9.9, 11.3], [2.5, 3.8, 4.8, 5.8, 6.7, 7.1, 7.4, 8.1, 9.3, 10.9], [2.3, 3.5, 4.5, 5.4, 6.3, 6.8, 7.1, 7.8, 8.8, 10.1], [2.1, 3.2, 4.2, 5.1, 5.9, 6.5, 6.9, 7.6, 8.4, 9.4]]}}}, "etap28i": {"label": "ETAP 28i", "note": "derived from Etap 30 \u00d70.96", "d": {"tws": [6, 8, 10, 12, 14, 16, 20], "up": {"twa": [48.0, 45.0, 43.0, 40.5, 40.0, 43.5, 40.0], "vel": [3.56, 4.22, 4.73, 5.12, 5.36, 5.8, 5.56], "vmg": [2.38, 2.98, 3.46, 3.89, 4.11, 4.2, 4.26]}, "dn": {"twa": [150.0, 152.0, 151.5, 163.0, 169.0, 165.0, 166.0], "vel": [3.35, 4.14, 5.01, 5.37, 5.77, 6.18, 6.73], "vmg": [2.9, 3.65, 4.4, 5.14, 5.66, 5.97, 6.53]}, "polar": {"twa": [32.0, 36.0, 40.0, 45.0, 52.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0, 160.0, 170.0, 180.0], "tws": [4, 6, 8, 10, 12, 14, 16, 20, 25, 30], "v": [[1.44, 2.2, 2.97, 3.64, 4.12, 4.5, 4.6, 4.69, 4.6, 4.12], [1.82, 2.59, 3.35, 4.12, 4.69, 4.98, 5.08, 5.17, 5.08, 4.79], [2.01, 2.97, 3.74, 4.5, 5.08, 5.36, 5.46, 5.56, 5.46, 5.17], [2.4, 3.35, 4.22, 4.89, 5.46, 5.75, 5.94, 5.94, 5.94, 5.65], [2.78, 3.83, 4.69, 5.36, 5.84, 6.13, 6.32, 6.42, 6.32, 6.04], [3.07, 4.12, 4.98, 5.65, 6.13, 6.32, 6.51, 6.61, 6.61, 6.32], [3.16, 4.31, 5.17, 5.84, 6.23, 6.51, 6.71, 6.9, 6.9, 6.71], [3.26, 4.41, 5.36, 6.04, 6.42, 6.61, 6.8, 7.09, 7.18, 6.9], [3.35, 4.5, 5.46, 6.13, 6.51, 6.8, 6.9, 7.18, 7.28, 6.99], [3.35, 4.5, 5.56, 6.13, 6.51, 6.8, 7.09, 7.47, 7.47, 7.28], [3.35, 4.5, 5.56, 6.13, 6.51, 6.9, 7.18, 7.76, 7.86, 7.86], [3.16, 4.31, 5.36, 6.04, 6.42, 6.71, 7.09, 7.76, 8.14, 8.14], [2.78, 4.02, 4.98, 5.75, 6.23, 6.61, 6.9, 7.57, 8.14, 8.43], [2.49, 3.64, 4.6, 5.46, 6.04, 6.42, 6.71, 7.38, 8.24, 8.81], [2.2, 3.35, 4.22, 5.08, 5.75, 6.23, 6.51, 7.09, 8.33, 9.48], [1.92, 2.87, 3.83, 4.6, 5.46, 5.94, 6.32, 6.9, 7.86, 9.1], [1.72, 2.68, 3.54, 4.31, 5.17, 5.75, 6.04, 6.61, 7.38, 8.43], [1.63, 2.49, 3.26, 4.02, 4.89, 5.46, 5.84, 6.42, 7.09, 7.86]]}}}};
+const BOATS={"j122": {"label": "J/122", "note": "ORC targets", "d": {"tws": [6, 8, 10, 12, 14, 16, 20], "up": {"twa": [45.0, 43.0, 40.0, 39.5, 39.0, 38.5, 38.5], "vel": [5.1, 6.1, 6.6, 6.95, 7.1, 7.15, 7.25], "vmg": [3.61, 4.46, 5.06, 5.36, 5.52, 5.6, 5.67]}, "dn": {"twa": [145.0, 146.0, 155.5, 161.5, 167.0, 167.5, 168.5], "vel": [4.9, 5.98, 6.32, 6.94, 7.39, 7.78, 8.64], "vmg": [4.01, 4.96, 5.76, 6.58, 7.2, 7.59, 8.47]}, "polar": {"twa": [32.0, 36.0, 40.0, 45.0, 52.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0, 160.0, 170.0, 180.0], "tws": [4, 6, 8, 10, 12, 14, 16, 20, 25, 30], "v": [[2.4, 3.6, 4.7, 5.6, 6.0, 6.3, 6.4, 6.5, 6.5, 6.1], [2.8, 4.1, 5.3, 6.2, 6.6, 6.8, 6.9, 7.0, 7.1, 6.9], [3.2, 4.6, 5.8, 6.6, 7.0, 7.2, 7.3, 7.4, 7.4, 7.4], [3.6, 5.1, 6.3, 7.0, 7.3, 7.5, 7.6, 7.7, 7.7, 7.7], [4.0, 5.6, 6.7, 7.4, 7.7, 7.8, 7.9, 8.0, 8.1, 8.1], [4.4, 6.0, 7.1, 7.7, 7.9, 8.0, 8.1, 8.2, 8.3, 8.4], [4.6, 6.2, 7.3, 7.8, 8.1, 8.2, 8.4, 8.5, 8.7, 8.8], [4.7, 6.3, 7.4, 7.8, 8.1, 8.4, 8.6, 8.8, 9.0, 9.2], [4.7, 6.4, 7.6, 7.8, 8.1, 8.4, 8.7, 9.1, 9.3, 9.5], [4.8, 6.4, 7.5, 8.0, 8.3, 8.6, 8.9, 9.3, 9.5, 9.6], [4.7, 6.4, 7.5, 8.1, 8.5, 8.8, 9.0, 9.4, 9.8, 10.2], [4.4, 6.1, 7.4, 8.0, 8.4, 8.9, 9.2, 9.8, 10.4, 11.0], [4.0, 5.7, 7.0, 7.7, 8.2, 8.6, 9.1, 10.1, 11.1, 12.0], [3.5, 5.2, 6.4, 7.3, 7.8, 8.3, 8.8, 9.9, 11.3, 12.7], [3.0, 4.6, 5.7, 6.6, 7.4, 7.9, 8.3, 9.2, 11.0, 13.3], [2.7, 4.0, 5.1, 6.1, 7.0, 7.6, 8.0, 8.9, 10.4, 12.7], [2.4, 3.7, 4.7, 5.6, 6.6, 7.3, 7.7, 8.6, 9.8, 11.8], [2.3, 3.4, 4.4, 5.3, 6.2, 7.0, 7.5, 8.3, 9.4, 11.0]]}}}, "j109": {"label": "J/109", "note": "ORC targets", "d": {"tws": [6, 8, 10, 12, 14, 16, 20], "up": {"twa": [46.0, 45.0, 43.0, 42.0, 40.0, 41.5, 41.0], "vel": [4.79, 5.7, 6.2, 6.4, 6.4, 6.55, 6.6], "vmg": [3.32, 4.03, 4.53, 4.76, 4.9, 4.91, 4.98]}, "dn": {"twa": [147.0, 148.0, 151.5, 161.0, 166.0, 166.5, 167.5], "vel": [4.45, 5.52, 6.31, 6.66, 6.92, 7.21, 7.88], "vmg": [3.73, 4.68, 5.55, 6.3, 6.71, 7.01, 7.69]}, "polar": {"twa": [32.0, 36.0, 40.0, 45.0, 52.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0, 160.0, 170.0, 180.0], "tws": [4, 6, 8, 10, 12, 14, 16, 20, 25, 30], "v": [[2.1, 3.1, 4.0, 4.7, 5.1, 5.3, 5.4, 5.5, 5.3, 4.8], [2.5, 3.6, 4.6, 5.3, 5.7, 5.9, 6.0, 6.1, 6.0, 5.6], [2.8, 4.1, 5.1, 5.9, 6.2, 6.4, 6.4, 6.5, 6.4, 6.0], [3.3, 4.7, 5.7, 6.4, 6.7, 6.8, 6.9, 7.0, 6.9, 6.5], [3.8, 5.3, 6.3, 7.0, 7.2, 7.4, 7.4, 7.5, 7.4, 7.1], [4.2, 5.7, 6.7, 7.2, 7.4, 7.6, 7.6, 7.7, 7.7, 7.4], [4.4, 5.9, 6.9, 7.3, 7.6, 7.8, 7.9, 8.1, 8.1, 7.7], [4.5, 6.0, 6.9, 7.4, 7.7, 7.9, 8.1, 8.4, 8.4, 8.1], [4.4, 6.0, 6.9, 7.4, 7.7, 8.0, 8.3, 8.7, 8.7, 8.4], [4.4, 5.9, 7.0, 7.4, 7.8, 8.1, 8.4, 8.8, 8.8, 8.5], [4.3, 5.8, 7.0, 7.5, 7.9, 8.2, 8.5, 8.9, 9.1, 9.0], [4.1, 5.7, 6.8, 7.4, 7.9, 8.4, 8.8, 9.4, 9.7, 9.8], [3.7, 5.3, 6.5, 7.2, 7.7, 8.1, 8.6, 9.5, 10.3, 10.6], [3.3, 4.8, 6.0, 6.9, 7.4, 7.8, 8.2, 9.2, 10.3, 11.1], [2.9, 4.3, 5.4, 6.4, 7.0, 7.4, 7.7, 8.5, 9.9, 11.3], [2.5, 3.8, 4.8, 5.8, 6.7, 7.1, 7.4, 8.1, 9.3, 10.9], [2.3, 3.5, 4.5, 5.4, 6.3, 6.8, 7.1, 7.8, 8.8, 10.1], [2.1, 3.2, 4.2, 5.1, 5.9, 6.5, 6.9, 7.6, 8.4, 9.4]]}}}, "etap28i": {"label": "ETAP 28i", "note": "derived from Etap 30 \u00d70.96", "d": {"tws": [6, 8, 10, 12, 14, 16, 20], "up": {"twa": [48.0, 45.0, 43.0, 40.5, 40.0, 43.5, 40.0], "vel": [3.56, 4.22, 4.73, 5.12, 5.36, 5.8, 5.56], "vmg": [2.38, 2.98, 3.46, 3.89, 4.11, 4.2, 4.26], "twaSailed": [59.0, 62.0, 65.5, 66.0, 66.0, 66.0, 66.0], "sailedSrc": [4, 0, 2, 0, 0, 0, 0]}, "dn": {"twa": [150.0, 152.0, 151.5, 163.0, 169.0, 165.0, 166.0], "vel": [3.35, 4.14, 5.01, 5.37, 5.77, 6.18, 6.73], "vmg": [2.9, 3.65, 4.4, 5.14, 5.66, 5.97, 6.53]}, "polar": {"twa": [32.0, 36.0, 40.0, 45.0, 52.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0, 160.0, 170.0, 180.0], "tws": [4, 6, 8, 10, 12, 14, 16, 20, 25, 30], "v": [[1.44, 2.2, 2.97, 3.64, 4.12, 4.5, 4.6, 4.69, 4.6, 4.12], [1.82, 2.59, 3.35, 4.12, 4.69, 4.98, 5.08, 5.17, 5.08, 4.79], [2.01, 2.97, 3.74, 4.5, 5.08, 5.36, 5.46, 5.56, 5.46, 5.17], [2.4, 3.35, 4.22, 4.89, 5.46, 5.75, 5.94, 5.94, 5.94, 5.65], [2.78, 3.83, 4.69, 5.36, 5.84, 6.13, 6.32, 6.42, 6.32, 6.04], [3.07, 4.12, 4.98, 5.65, 6.13, 6.32, 6.51, 6.61, 6.61, 6.32], [3.16, 4.31, 5.17, 5.84, 6.23, 6.51, 6.71, 6.9, 6.9, 6.71], [3.26, 4.41, 5.36, 6.04, 6.42, 6.61, 6.8, 7.09, 7.18, 6.9], [3.35, 4.5, 5.46, 6.13, 6.51, 6.8, 6.9, 7.18, 7.28, 6.99], [3.35, 4.5, 5.56, 6.13, 6.51, 6.8, 7.09, 7.47, 7.47, 7.28], [3.35, 4.5, 5.56, 6.13, 6.51, 6.9, 7.18, 7.76, 7.86, 7.86], [3.16, 4.31, 5.36, 6.04, 6.42, 6.71, 7.09, 7.76, 8.14, 8.14], [2.78, 4.02, 4.98, 5.75, 6.23, 6.61, 6.9, 7.57, 8.14, 8.43], [2.49, 3.64, 4.6, 5.46, 6.04, 6.42, 6.71, 7.38, 8.24, 8.81], [2.2, 3.35, 4.22, 5.08, 5.75, 6.23, 6.51, 7.09, 8.33, 9.48], [1.92, 2.87, 3.83, 4.6, 5.46, 5.94, 6.32, 6.9, 7.86, 9.1], [1.72, 2.68, 3.54, 4.31, 5.17, 5.75, 6.04, 6.61, 7.38, 8.43], [1.63, 2.49, 3.26, 4.02, 4.89, 5.46, 5.84, 6.42, 7.09, 7.86]]}}}};
 let P_TWS,P_UP,P_DN,POLAR;
+// ---------- TARGET angle against SAILED angle (v577) ----------
+// up.twa is the VMG optimum of the boat's own polar grid: what the helm should AIM at. It is
+// correct and must not be replaced with what the boat actually does. But the app was using it
+// for two different jobs, and the second one is wrong: laylines, leg times and the tack call
+// need the angle the boat ACTUALLY SAILS, or the app says "you are laying" before you are, you
+// tack, you do not lay, and it costs two more tacks at the mark.
+// Measured from tack pairs on 5 and 19 September 2026: 59 degrees at 6 kt (4 clean pairs) and
+// 65.5 at 10.4 kt (2 pairs) against targets of about 48. The boat was making 99% of its polar
+// speed AT THE ANGLE SAILED on 5 September, so the polar is right and the habit is the cost.
+// twaSailed defaults to the target wherever nothing has been measured, so an unmeasured boat
+// behaves exactly as before.
+function twaTarget(up,tws){ return interp(P_TWS,(up?P_UP:P_DN).twa,tws); }
+function twaSailed(up,tws){
+  const t=(up?P_UP:P_DN);
+  if(!t.twaSailed||!t.twaSailed.length)return twaTarget(up,tws);
+  const src=t.sailedSrc||[];
+  // a column with no tack pairs behind it falls back to the target rather than to a guess
+  const blended=t.twaSailed.map((v,i)=>((src[i]||0)>0||v!=null)?v:t.twa[i]);
+  return interp(P_TWS,blended,tws);
+}
+// How far off the target the boat is actually sailing, and what that costs in VMG. This is the
+// number that is worth putting on screen: it is directly actionable.
+function twaGap(up,tws){
+  const tgt=twaTarget(up,tws), sailed=twaSailed(up,tws);
+  if(!isFinite(tgt)||!isFinite(sailed))return null;
+  let vTgt=null,vSail=null;
+  try{ vTgt=polarSpeed(tgt,tws); vSail=polarSpeed(sailed,tws); }catch(e){}
+  const R=Math.PI/180;
+  const vmgTgt=(vTgt!=null)?vTgt*Math.cos(tgt*R):null;
+  const vmgSail=(vSail!=null)?vSail*Math.cos(sailed*R):null;
+  return {target:tgt, sailed, deg:sailed-tgt,
+          vmgTarget:vmgTgt, vmgSailed:vmgSail,
+          vmgLoss:(vmgTgt!=null&&vmgSail!=null)?(vmgSail-vmgTgt):null,
+          measured:!!((up?P_UP:P_DN).twaSailed)};
+}
 function setBoat(k){
   const b=BOATS[k].d;
   P_TWS=b.tws; P_UP=b.up; P_DN=b.dn; POLAR=b.polar;
@@ -2297,13 +2337,13 @@ const isKite=s=>/^A[1-4]\*?$/.test(s)||/^Kite\*?$/.test(s);
 // Returns null when the angle is fine, otherwise what is achievable and by how much.
 function angleEnvelope(twa,tws){
   if(twa==null||!isFinite(twa))return null;
-  const up=interp(P_TWS,P_UP.twa,tws), dn=interp(P_TWS,P_DN.twa,tws);
+  const up=twaSailed(true,tws), dn=twaSailed(false,tws);
   if(twa<up-0.5) return {side:"high", limit:up, short:up-twa};
   if(twa>dn+0.5) return {side:"deep", limit:dn, short:twa-dn};
   return null;
 }
 function sailFor(twa,tws){
-  const upT=interp(P_TWS,P_UP.twa,tws);
+  const upT=twaSailed(true,tws);
   const rowTwa = twa<S_TWA[0] ? upT : twa;        // beats read the chart at the target beat TWA
   let r=0; for(let i=0;i<S_TWA.length;i++) if(S_TWA[i]<=rowTwa) r=i;  // floor row (matches CourseCalc V3)
   const c=Math.min(Math.max(Math.round(tws)-S_TWS0,0),SAILS[0].length-1);
@@ -2369,7 +2409,7 @@ function furlLabel(sail,tws){
 const WS_SPEED_FACTOR=0.85;      // heated-up speed as a fraction of the kite polar at that angle
 const WS_MAX_TWA=150;            // a genoa to leeward will not hold deeper than this and draw
 function whiteSailDown(tws){
-  const kiteTwa=interp(P_TWS,P_DN.twa,tws);
+  const kiteTwa=twaSailed(false,tws);
   const twa=Math.min(WS_MAX_TWA,kiteTwa);
   const heatV=polarSpeed(twa,tws)*WS_SPEED_FACTOR;
   const heatVmg=heatV*Math.cos(rad(180-twa));
@@ -2389,7 +2429,7 @@ function whiteSailDown(tws){
 // rather than P_DN.
 function whiteSailMode(){ return !hasKiteAboard(); }
 function legModel(twa,tws){
-  const upT=interp(P_TWS,P_UP.twa,tws), dnT=interp(P_TWS,P_DN.twa,tws);
+  const upT=twaSailed(true,tws), dnT=twaSailed(false,tws);
   const upV=interp(P_TWS,P_UP.vel,tws), dnV=interp(P_TWS,P_DN.vel,tws);
   const upG=interp(P_TWS,P_UP.vmg,tws), dnG=interp(P_TWS,P_DN.vmg,tws);
   let pos,smg,spd;
@@ -2691,7 +2731,7 @@ function courseTrack(px,pts,curLeg){
       if(L&&(L.pos==="Beat"||L.pos==="Run")){
         const wB=usedWind(), wspd=windSpd(10);
         const up=(L.pos==="Beat");
-        const tgt=up?interp(P_TWS,P_UP.twa,wspd):interp(P_TWS,P_DN.twa,wspd);
+        const tgt=up?twaSailed(true,wspd):twaSailed(false,wspd);
         const co=brgDist(pts[cur].pos,pts[cur+1].pos).brg;
         const D=brgDist(pts[cur].pos,pts[cur+1].pos).dist;
         const Vb=up?interp(P_TWS,P_UP.vel,wspd):interp(P_TWS,P_DN.vel,wspd);
@@ -3223,7 +3263,7 @@ function firstBoardHeading(L,wdir,wspd){
   // via the mark's own rounding hand, else a flat default. Mirrors the same tie-break
   // computeLegAdvice/drawLeg use everywhere else, so the start leg never falls back to the
   // straight rhumb bearing, which is not sailable close-hauled or on a run.
-  const upT=interp(P_TWS,P_UP.twa,wspd), dnT=interp(P_TWS,P_DN.twa,wspd);
+  const upT=twaSailed(true,wspd), dnT=twaSailed(false,wspd);
   let target=null; if(L.pos==="Beat")target=upT; else if(L.pos==="Run")target=dnT;
   if(target===null)return {target:null,sgn:null,heading:L.co};
   let sgn=null;
@@ -3250,7 +3290,7 @@ function arrivalInfo(r,idx,wdir,wspd){
   // arriving downwind = port tack (mirrored for a starboard-hand rounding).
   const prev=r.legs[idx-1], side=r.legs[idx].from.side;
   const ext=prev.co;
-  const upT=interp(P_TWS,P_UP.twa,wspd), dnT=interp(P_TWS,P_DN.twa,wspd);
+  const upT=twaSailed(true,wspd), dnT=twaSailed(false,wspd);
   const ti=angdiff(wdir,ext);
   if(prev.pos==="Beat"){
     // closing board of the previous leg's tide-preferred route; else the clean side (no pre-mark tack)
@@ -3291,7 +3331,7 @@ function arrivalInfo(r,idx,wdir,wspd){
 const $=id=>document.getElementById(id);
 // northUp defaults FALSE: the leg chart opens course-up, which is how you are looking at the
 // leg. Both this and viewMode are now settings on the Settings page and persist.
-let state={card:"thublue",letter:"A",num:1,leg:0,northUp:false,boat:"etap28i",viewMode:"both"};
+let state={card:"thublue",letter:"A",num:1,leg:0,view:null,northUp:false,boat:"etap28i",viewMode:"both"};
 let BOATCHOSEN=false;                            // the ETAP is the app's assumption until you press one
 // Four winds. "used" is what the whole app calculates from; it always equals one of the
 // other three, whichever was set last under these rules:
@@ -3388,7 +3428,14 @@ function windSet(field,v,src){
   f.src=src||"typed"; f.t=Date.now();
   const el=$(field==="dir"?"wdir":field==="spd"?"wspd":"wgst");
   if(el){ const shown=String(Math.round(f.v)); if(el.value!==shown)el.value=shown; }
-  try{raceRecEvent("wind",field,{v:f.v,src:f.src});}catch(e){}
+  // Not while a control is being dragged: the slider fires on every frame, and 318 events
+  // carrying six pieces of information is worse than six events. The settled value is written
+  // when the hand comes off (see windSetSettle).
+  if(!window.windQuiet){
+    const prov=(f.src==="hand"||f.src==="typed")?"hand"
+              :(f.src==="dbb")?"measured":"app";
+    try{raceRecEvent("wind",field,{v:f.v,src:f.src},prov);}catch(e){}
+  }
   try{ windTintPaint(); }catch(e){}
 }
 // Age and provenance, which is the whole point of the exercise.
@@ -3449,7 +3496,10 @@ function usedWind(){
 // Existing code names its sources expected/forecast/observed/dbb/manual. The store uses the
 // provenance names, so translate in one place rather than at every call site.
 function windSrcName(src){
-  return src==="forecast"?"forecast" : src==="dbb"?"dbb" : src==="observed"?"nmea"
+  // v576: "observed" used to map to "nmea", so a finger on the wind slider was recorded as
+  // instrument data. There is no NMEA feed on this phone. The slider and the boxes are a HAND,
+  // and any calibration that trusts provenance must be able to tell the two apart.
+  return src==="forecast"?"forecast" : src==="dbb"?"dbb" : src==="observed"?"hand"
        : src==="manual"?"typed" : src==="solved"?"solved" : "card";
 }
 function setUsed(v,src){                        // v degrees, src expected|forecast|observed
@@ -5319,7 +5369,7 @@ function updateWindTab(){
   const dTot=dShift+dPersBeat;                                      // combined expected move on the beat
   const persistDom=Math.abs(dPersBeat)>=3&&Math.abs(dPersBeat)>=Math.abs(dShift);
   const ladder=Math.round(185.2*Math.abs(Math.sin(rad(dTot))));     // metres gained per 0.1 NM of leverage
-  const upTWA=interp(P_TWS,P_UP.twa,windSpd(10));        // boat close-hauled angle at current wind speed
+  const upTWA=twaSailed(true,windSpd(10));        // boat close-hauled angle at current wind speed
   const pad3=h=>String((((Math.round(h))%360)+360)%360).padStart(3,"0");
   const hLeft=pad3(wnow-upTWA);    // starboard leg takes you to the left of the beat
   const hRight=pad3(wnow+upTWA);   // port leg takes you to the right
@@ -5583,7 +5633,7 @@ function gpsNextMark(){
   // the mark ending the leg currently selected in Course Analysis (state.leg), so GPS tracks
   // the same mark the sailor is looking at there, not always the first rounding after the start.
   try{ const r=compute(state.card,windDir(),windSpd(10),windGust(),state.letter,state.num);
-    const idx=Math.max(0,Math.min(state.leg,r.legs.length-1));
+    const idx=viewLeg();
     return {line:r.pts[0], from:r.pts[idx]||null, mark:r.pts[idx+1]||null, markNo:idx+2}; }catch(e){ return null; }
 }
 // Before the gun: target is the start line. Once the timer has actually reached zero
@@ -5761,6 +5811,12 @@ function trackAdd(pos){
   TRACK.push({lat,lon,t:now,cog,sog,twd,tws,twa});
   // a beat being recorded gets every fix, unthinned: the heading is fitted from these
   if(typeof BEAT!=="undefined"&&BEAT.rec)BEAT.rec.pts.push({lat,lon,t:now});
+  // v575: a fix arriving long after the last one means the app was suspended, almost always the
+  // screen locking with the phone in a pocket: iOS stops the geolocation watch and nothing is
+  // recorded until you look at it again. That is the platform, not a bug, but the RECORD must
+  // say so, or a tack detector will invent a tack across the hole and any speed average will be
+  // taken over time the boat was not measured.
+  try{ gapWatch(now); }catch(e){}
   try{ raceRecSample(TRACK[TRACK.length-1]); }catch(e){}   // recorder rides the same thinning
   try{ tackWatch(); }catch(e){}                            // tack/gybe detection, same path
   try{ legAdvanceWatch(); }catch(e){}                      // rounding detection, same path
@@ -5811,7 +5867,7 @@ const TRACK_BANDS=6, TRACK_OP_NEW=0.95, TRACK_OP_OLD=0.16;
 // v405, which makes a race record useless for telling which build produced it. The test suite
 // now fails if this and the service worker's cache name disagree, so a build cannot ship with
 // the two out of step.
-const CC_VER="v573";
+const CC_VER="v578";
 // ---------- RACE REPLAY (v572) ----------
 // A saved race already holds everything the app needs to drive itself: every sample carries
 // position, COG, SOG, heading and the leg. So a replay does not need a viewer of its own. It
@@ -5901,11 +5957,18 @@ function replayPaint(){
   if(!REPLAY.on)return;
   const r=REPLAY.race, n=r.samples.length, sm=r.samples[REPLAY.i];
   const clock=new Date(sm.t).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
-  const el=Math.round((sm.t-r.start)/60000);
+  // elapsed from the GUN, so a replay of a postponed sequence does not count the waiting about
+  const el=Math.round((sm.t-raceStartAt(r))/60000);
   const sl=$("replaySlide");
   if(sl&&document.activeElement!==sl){ sl.max=String(n-1); sl.value=String(REPLAY.i); }
   const lbl=$("replayLbl");
-  if(lbl)lbl.textContent=clock+" \u00B7 "+el+" min \u00B7 "+(REPLAY.i+1)+"/"+n;
+  // "-3 min" before the gun reads as what it is: the sequence, not the race
+  // crossing a hole in the record: say so, because the boat appears to jump
+  const nxt=r.samples[REPLAY.i+1];
+  const gapNext=nxt&&(nxt.t-sm.t)>=GAP_MIN_MS;
+  if(lbl)lbl.textContent=clock+" \u00B7 "+(el>=0?"+":"")+el+" min"+
+    (raceStartIsGun(r)?"":" (no gun)")+" \u00B7 "+(REPLAY.i+1)+"/"+n+
+    (gapNext?"  \u26A0 "+Math.round((nxt.t-sm.t)/60000)+" min gap next":"");
   const pb=$("replayPlay"); if(pb)pb.textContent=REPLAY.playing?"\u2016":"\u25B6";
   const sp=$("replaySpeed"); if(sp)sp.textContent=REPLAY.speed+"\u00D7";
 }
@@ -5913,6 +5976,60 @@ function replayPaint(){
 // record does. If the screen says v571 the record says v571, with nothing to keep in step.
 try{ document.title="CourseCalc "+CC_VER; }catch(e){}
 const ROUND={at:0, leg:0};                       // when the last mark was rounded
+// ---------- the leg you are RACING against the leg you are LOOKING AT (v578) ----------
+// state.leg used to do both jobs, so swiping ahead to look at leg 6 made the app believe you
+// were racing leg 6: the rounding detector started watching the wrong mark, and the tactics and
+// the recorder followed the browsing. On 19 September 2026 that produced 72 leg changes in the
+// record against one real rounding.
+// Now state.leg is the RACE leg: only a detected rounding, its undo, or "Racing this leg" moves
+// it. state.view is what the charts show; null means "follow the race leg".
+// ROUNDS keeps every rounding with its time, so a leg already sailed can show its own track.
+const ROUNDS=[];
+function viewLeg(){
+  const r=(typeof CURROUTE!=="undefined")?CURROUTE:null;
+  const n=(r&&r.legs)?r.legs.length:0;
+  const v=(state.view==null)?state.leg:state.view;
+  return n?Math.max(0,Math.min(n-1,v|0)):(v|0);
+}
+function viewIsRace(){ return state.view==null||state.view===state.leg; }
+// When did leg k start and end? Leg 0 starts at the gun. A leg still being sailed ends now; a
+// leg not yet reached has no span at all.
+function legSpan(k){
+  if(k>(state.leg|0))return null;                   // not sailed yet: nothing to show
+  const into=ROUNDS.filter(x=>x.leg===k).map(x=>x.at);
+  const out=ROUNDS.filter(x=>x.leg===k+1).map(x=>x.at);
+  let t0=into.length?Math.max(...into):0;
+  if(k===0){ try{ const g=(typeof RT!=="undefined"&&RT.target)?RT.target:null; if(g)t0=g; }catch(e){} }
+  const t1=(k===(state.leg|0))?Infinity:(out.length?Math.max(...out):Infinity);
+  return {t0,t1};
+}
+function viewReset(){ state.view=null; try{render();}catch(e){} }
+// The bar always says the RACE leg, whatever the chart below has been swiped to. Looking at a
+// different leg adds where you are looking, so the two can never be confused.
+function raceLegPaint(){
+  const tag=$("raceLegTag"), btn=$("racingThisLeg");
+  const r=(typeof CURROUTE!=="undefined")?CURROUTE:null;
+  const n=(r&&r.legs)?r.legs.length:0;
+  if(tag){
+    if(!n){ tag.textContent=""; }
+    else{
+      const race=(state.leg|0)+1, view=viewLeg()+1;
+      tag.textContent="\u00B7 Leg "+race+" of "+n+(viewIsRace()?"":"  (viewing "+view+")");
+    }
+  }
+  if(btn)btn.style.display=(n&&!viewIsRace())?"":"none";
+}
+function racingThisLeg(){
+  // Correct a MISSED rounding: make the leg on screen the one the app believes you are racing.
+  const v=viewLeg();
+  if(v===state.leg){ state.view=null; return; }
+  const now=Date.now();
+  state.leg=v; state.view=null;
+  ROUND.at=now; ROUND.leg=v; ROUNDS.push({leg:v, at:now, manual:true});
+  try{ raceRecEvent("round","manual",{leg:v,at:now},"hand"); }catch(e){}
+  try{ ADV.last=now; ADV.armed=false; ADV.minDist=Infinity; ADV.brgAtMin=null; }catch(e){}
+  try{render();}catch(e){}
+}
 // Every manoeuvre the app has identified, kept with its position so the track can show it.
 // Nothing needs a legend: a dot on your own track where you tacked explains itself.
 const TACKPTS=[];
@@ -5936,8 +6053,17 @@ function boatSettled(){
   const t=lastManoeuvreAt();
   return !t || (Date.now()-t)>=MANOEUVRE_SETTLE_MIN*60000;
 }
+// v578: only the track belonging to the leg on screen. The whole race drawn at once was clutter,
+// and the part that matters is the leg you are looking at. A leg already sailed shows its own
+// track; a leg not yet reached has none, because there is none.
+function trackForView(){
+  if(typeof TRACK==="undefined"||!TRACK.length)return [];
+  let sp=null; try{ sp=legSpan(viewLeg()); }catch(e){ sp=null; }
+  if(!sp)return [];
+  return TRACK.filter(p=>p&&p.t>=sp.t0&&p.t<sp.t1);
+}
 function trackFadeBands(pts){
-  const P=pts||TRACK;
+  const P=pts||trackForView();
   if(!P||P.length<2)return [];
   const tN=P[P.length-1].t, t0=P[0].t, span=Math.max(1,tN-t0);
   const bandOf=p=>{
@@ -5951,6 +6077,10 @@ function trackFadeBands(pts){
     // Legs already sailed are dimmed harder: half the colour and a thinner line, so the current
     // leg stands out as the one being sailed.
     const done=(ROUND.at>0&&P[i].t<ROUND.at);
+    // v575: BREAK the track across a gap. Joining P[i-1] to P[i] over eleven minutes of
+    // unrecorded water draws a straight line the boat never sailed, and it reads as fact.
+    const gap=!!P[i-1].gapAfter||((P[i].t-P[i-1].t)>=GAP_MIN_MS);
+    if(gap){ cur=null; continue; }
     if(!cur||cur.b!==b||cur.done!==done){
       cur={b,done,op:opOf(b)*(done?0.5:1),w:(done?0.55:1),pts:[P[i-1],P[i]]}; out.push(cur);
     } else cur.pts.push(P[i]);
@@ -6241,7 +6371,7 @@ function gps2Render(){
     // thin and grey; only the leg chosen on the leg chart is drawn in full, with its rhumb
     // dashed and, on a beat or a run, the two candidate boards in tack colours. One selection
     // drives every view, so the three charts always show the same leg.
-    const curLeg=(state&&state.leg!=null)?state.leg:-1;
+    const curLeg=viewLeg();
     if(r.legs)r.legs.forEach((Lg,i)=>{
       if(!Lg.from||!Lg.from.pos||!Lg.to||!Lg.to.pos)return;
       const seg=[Lg.from.pos,Lg.to.pos];
@@ -6257,7 +6387,7 @@ function gps2Render(){
       try{
         if(Lg.pos==="Beat"||Lg.pos==="Run"){
           const wB=usedWind(), wspd=windSpd(10), up=(Lg.pos==="Beat");
-          const tgt=up?interp(P_TWS,P_UP.twa,wspd):interp(P_TWS,P_DN.twa,wspd);
+          const tgt=up?twaSailed(true,wspd):twaSailed(false,wspd);
           const bd=brgDist(Lg.from.pos,Lg.to.pos), co=bd.brg, D=bd.dist;
           const Vb=up?interp(P_TWS,P_UP.vel,wspd):interp(P_TWS,P_DN.vel,wspd);
           for(const sg of [1,-1]){
@@ -6350,6 +6480,23 @@ function raceAll(){
     const rq=st.getAll(); rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error); }));
 }
 function raceMsg(t){ const el=$("raceMsg"); if(el)el.innerHTML=t; }
+// ---------- when a race began (v574) ----------
+// THE GUN IS THE START. The recorder opens itself on the countdown, and a postponed sequence
+// opens it again, so r.start is only when recording began: on 19 September that was 13:01 for a
+// race that started at 14:25. The gun event carries the timer's own target time, which is the
+// one moment the app knows to the second, so everything that measures a race measures from it.
+// r.start keeps its own meaning: when the recording opened.
+function raceGunAt(r){
+  if(!r||!Array.isArray(r.events))return null;
+  const g=r.events.filter(e=>e&&e.kind==="gun"&&e.what==="start");
+  if(!g.length)return null;
+  // the LAST gun: a postponed sequence can leave an earlier one in the same recording
+  const last=g[g.length-1];
+  const at=(last.detail&&last.detail.at)||last.t;
+  return (typeof at==="number"&&isFinite(at))?at:null;
+}
+function raceStartAt(r){ return raceGunAt(r)||(r&&r.start)||null; }
+function raceStartIsGun(r){ return raceGunAt(r)!=null; }
 // One fix every 5 s is plenty for working out performance afterwards, and keeps a two-hour
 // race to a sensible size.
 function raceThin(track,everyMs){
@@ -6416,13 +6563,55 @@ function raceRecStart(why){
   raceRecEvent("record","started",{why:why||"timer"});
   try{raceRecPaint();}catch(e){}
 }
-function raceRecEvent(kind,what,detail){
+// prov says where the event CAME FROM, and it was hard-coded to "measured" on every event ever
+// written, which is how 318 wind events from a dragged slider came to be tagged as measurements.
+// Callers now say. "measured" means an instrument or a fix; "hand" means a person set it;
+// "app" means the app worked it out.
+function raceRecEvent(kind,what,detail,prov){
   if(!raceRecActive())return;
-  RACEREC.events.push({t:Date.now(),kind,what,detail:detail==null?null:detail,prov:"measured"});
+  RACEREC.events.push({t:Date.now(),kind,what,detail:detail==null?null:detail,
+                       prov:prov||"app"});
   if(RACEREC.events.length>4000)RACEREC.events.splice(0,500);   // a long day cannot exhaust memory
 }
 // One sample per accepted track point, so sampling inherits the 3 m / 5 s thinning already
 // applied to the track rather than inventing a second rate.
+// A fix more than GAP_MIN_MS after the last one is a hole in the record. It is written as an
+// event so the saved race carries it, and TRACK is broken at that point so the chart does not
+// draw a straight line across minutes of unmeasured water.
+const GAP_MIN_MS=25000;          // comfortably longer than the 2s fix rate and any thinning
+let GAPLAST=0;
+function gapWatch(now){
+  const prev=GAPLAST; GAPLAST=now;
+  if(!prev)return;
+  const ms=now-prev;
+  if(ms<GAP_MIN_MS)return;
+  try{ raceRecEvent("gap","fixes",{ms, from:prev, to:now,
+        why:(document.hidden?"page hidden":"no fixes")}); }catch(e){}
+  try{ if(typeof TRACK!=="undefined"&&TRACK.length)TRACK[TRACK.length-1].gapAfter=true; }catch(e){}
+  try{ noticeSet("gap","No fixes for "+Math.round(ms/1000)+"s \u00b7 the track is broken there"); }catch(e){}
+}
+// What a saved race lost. Returns total missing time and the gaps themselves.
+function raceGaps(r){
+  if(!r||!Array.isArray(r.events))return {n:0, ms:0, list:[]};
+  const list=r.events.filter(e=>e&&e.kind==="gap").map(e=>({
+    ms:(e.detail&&e.detail.ms)||0, from:(e.detail&&e.detail.from)||null, to:(e.detail&&e.detail.to)||null}));
+  return {n:list.length, ms:list.reduce((a,g)=>a+g.ms,0), list};
+}
+// Older recordings have no gap events, so work them out from the samples themselves. That is
+// how the 19 September races get their holes back.
+function raceGapsFromSamples(r){
+  const sm=(r&&r.samples)||[];
+  const list=[];
+  for(let i=1;i<sm.length;i++){
+    const ms=sm[i].t-sm[i-1].t;
+    if(ms>=GAP_MIN_MS)list.push({ms, from:sm[i-1].t, to:sm[i].t});
+  }
+  return {n:list.length, ms:list.reduce((a,g)=>a+g.ms,0), list};
+}
+function raceGapsAny(r){
+  const ev=raceGaps(r);
+  return ev.n?ev:raceGapsFromSamples(r);
+}
 function raceRecSample(pt){
   if(!raceRecActive()||!pt)return;
   let sail=null;
@@ -6444,7 +6633,10 @@ function raceRecSample(pt){
     if(twd!=null&&tws!=null&&pt.cog!=null){
       const twa=Math.abs(((twd-pt.cog+540)%360)-180);
       exp={twa, spd:polarSpeed(twa,tws),
-           tgtUp:interp(P_TWS,P_UP.twa,tws), tgtDn:interp(P_TWS,P_DN.twa,tws),
+           // the record keeps the TARGET as the expectation, and the SAILED angle beside it,
+           // so a race can later be judged on both what was aimed at and what was done
+           tgtUp:twaTarget(true,tws), tgtDn:twaTarget(false,tws),
+           sailedUp:twaSailed(true,tws), sailedDn:twaSailed(false,tws),
            vmg:polarSpeed(twa,tws)*Math.cos(rad(twa))};
     }
   }catch(e){}
@@ -6555,6 +6747,15 @@ function raceRecCommit(){
 // On startup, an unconfirmed record means a race that was collected but never confirmed: an app
 // that was closed, a phone that slept, or simply a forgotten press. Say so rather than leaving it
 // silently in the list looking like a saved race.
+// A record is worth resuming only if it is recent and unfinished. An old one from a previous
+// day is history, not an interrupted race, and picking it up would append today's sailing to it.
+const RESUME_MAX_MS=3*3600*1000;      // three hours: long enough for a postponed start
+function raceRecResumable(r){
+  if(!r||r.kind!=="race"||r.confirmed!==false)return false;
+  if(!Array.isArray(r.samples))return false;
+  const last=(r.end||r.start||0);
+  return (Date.now()-last)<RESUME_MAX_MS;
+}
 function raceRecRecover(){
   raceTx("readonly").then(st=>{
     const q=st.getAll(); q.onsuccess=()=>{
@@ -6562,11 +6763,29 @@ function raceRecRecover(){
       if(!un.length)return;
       un.sort((a,b)=>b.start-a.start);
       const r=un[0];
-      const mins=Math.round(((r.end||r.start)-r.start)/60000);
+      const mins=Math.round(((r.end||r.start)-raceStartAt(r))/60000);
+      // v576: RESUME it, do not just report it. RACEREC lives in memory only. When iOS discards
+      // the page (a locked phone in a pocket), RACEREC is gone; this used to leave the
+      // autosaved row on disk and the next tick of the timer opened a brand NEW record. That is
+      // why 19 September 2026, which was ONE race, came back as three fragments.
+      // Resuming means the fixes taken after the reload are appended to the same race. The gaps
+      // stay, because those fixes genuinely were not taken, but the race stays one race.
+      let resumed=false;
+      if(!raceRecActive()&&(!RACEREC||!RACEREC.ended)&&raceRecResumable(r)){
+        RACEREC=r;
+        RACEREC.ended=null;              // it is running again
+        RACEREC.resumedAt=(RACEREC.resumedAt||[]).concat([Date.now()]);
+        GAPLAST=0;                       // the reload itself is not a fix interval
+        try{ raceRecEvent("resume","reload",{after:Date.now()-(r.end||r.start)},"app"); }catch(e){}
+        resumed=true;
+      }
       // render FIRST: raceRender clears the message line, so a message set before it is wiped
       try{raceRender();}catch(e){}
-      raceMsg("Recovered an unconfirmed race from "+new Date(r.start).toLocaleString()+
-              ": "+mins+" min, "+r.n+" fixes. It is in the list below, marked unconfirmed.");
+      raceMsg(resumed
+        ? "Resumed the race from "+new Date(raceStartAt(r)).toLocaleTimeString()+
+          ": "+mins+" min, "+r.n+" fixes so far. Recording continues into the same race."
+        : "Recovered an unconfirmed race from "+new Date(r.start).toLocaleString()+
+          ": "+mins+" min, "+r.n+" fixes. It is in the list below, marked unconfirmed.");
     };
   }).catch(()=>{});
 }
@@ -6626,12 +6845,13 @@ function raceFixSave(id){
     let finMs=null;
     if(fin){
       const m=fin.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-      if(m){ const d=new Date(r.start); d.setHours(+m[1],+m[2],+(m[3]||0),0);
+      const t0=raceStartAt(r);
+      if(m){ const d=new Date(t0); d.setHours(+m[1],+m[2],+(m[3]||0),0);
              // A finish before the start is normally a race that crossed midnight, but it is
              // just as often a mistyped hour. Roll the day only if that gives a plausible race;
              // otherwise refuse the value rather than storing a 20-hour elapsed time.
-             if(d.getTime()<r.start)d.setDate(d.getDate()+1);
-             const el=d.getTime()-r.start;
+             if(d.getTime()<t0)d.setDate(d.getDate()+1);
+             const el=d.getTime()-t0;
              if(el>0&&el<=8*3600*1000)finMs=d.getTime();
              else { raceMsg("That finish time gives an elapsed of "+(el/3600000).toFixed(1)+
                     " hours, so it has not been saved. Check the hour."); return; } }
@@ -6641,7 +6861,7 @@ function raceFixSave(id){
     r.provenance=Object.assign({},r.provenance||{},{
       sail: sail?"corrected":(r.provenance&&r.provenance.sail)||"inferred",
       finish: finMs?"corrected":"none"});
-    if(finMs)r.elapsedMs=finMs-r.start;
+    if(finMs)r.elapsedMs=finMs-raceStartAt(r);   // elapsed runs from the GUN, not from recording
     st.put(r);
     raceMsg("Correction saved. The original recording is unchanged.");
     const box=$("fix_"+id); if(box){ box.style.display="none"; box.innerHTML=""; }
@@ -6713,7 +6933,7 @@ function raceRender(){
   raceAll().then(list=>{
     list.sort((a,b)=>b.start-a.start);
     if(!list.length){ el.innerHTML=`<div style="font-size:12px;color:var(--ink3)">No races saved yet.</div>`; return; }
-    const mins=r=>Math.max(1,Math.round((r.end-r.start)/60000));
+    const mins=r=>Math.max(1,Math.round((r.end-raceStartAt(r))/60000));
     el.innerHTML=list.map(r=>{
       const d=new Date(r.start);
       // Three buttons on one line squeezed the summary into a narrow column and wrapped it.
@@ -6721,7 +6941,18 @@ function raceRender(){
       return `<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.12)">
         <div style="min-width:0">
           <div style="font-weight:800;font-size:13px;color:#12283A">${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})} \u00B7 ${r.letter||"?"}${r.num||""}</div>
-          <div style="font-size:11px;color:#48627A">${r.courseName||""} \u00B7 ${mins(r)} min \u00B7 ${r.n} pts \u00B7 wind ${d3(r.wind&&r.wind.dir||0)}\u00B0/${Math.round((r.wind&&r.wind.spd)||0)}kt</div>
+          <div style="font-size:11px;color:#48627A">${r.courseName||""} \u00B7 ${mins(r)} min \u00B7 ${r.n} pts \u00B7 wind ${d3(r.wind&&r.wind.dir||0)}\u00B0/${Math.round((r.wind&&r.wind.spd)||0)}kt`+
+          `${raceStartIsGun(r)?``:` \u00B7 <span style="color:#8A5A00">no gun</span>`}</div>`+
+          // What the record LOST. iOS stops the geolocation watch when the screen locks, so a
+          // phone in a pocket leaves holes; saying so is the difference between a race you can
+          // analyse and one that quietly averages over water it never measured.
+          `${(()=>{ const g=raceGapsAny(r);
+            if(!g.n)return ``;
+            const lost=Math.round(g.ms/60000), pc=Math.round(100*g.ms/Math.max(1,r.end-raceStartAt(r)));
+            return `<div style="font-size:11px;color:#8A5A00;margin-top:2px">`+
+              `\u26A0 ${g.n} gap${g.n===1?"":"s"} \u00B7 ${lost} min not recorded`+
+              `${pc>=5?` (${pc}% of the race)`:``} \u00B7 screen locked?</div>`;
+          })()}
         </div>
         <div style="display:flex;gap:6px;margin-top:7px">
           ${r.confirmed===false?`<div style="font-size:11px;font-weight:800;color:#8A5A00;background:#FFF1DC;border:1px solid #E0A64A;border-radius:8px;padding:3px 7px;display:inline-block;margin:2px 0 4px">UNCONFIRMED \u00b7 recovered</div>`:``}
@@ -6976,6 +7207,11 @@ function gps2Init(){
   const c=$("gps2Clear"); if(c)c.onclick=()=>{ try{trackClear();}catch(e){} gps2Render(); };
   const dl=$("gps2Dl");   if(dl)dl.onclick=()=>{ try{trackDownloadCSV();}catch(e){} };
   try{ tabPages("garmintab","gpsScroll","gpsBtns",gpsPageShown); }catch(e){}
+  { const tag=$("raceLegTag");
+    // A tap inside a <summary> toggles the tab open or shut. Stop that, so tapping the leg
+    // brings the view home instead of slamming the whole display closed.
+    if(tag)tag.addEventListener("click",e=>{ e.preventDefault(); e.stopPropagation(); viewReset(); });
+    const rb=$("racingThisLeg"); if(rb)rb.onclick=()=>racingThisLeg(); }
   { const ib=$("raceImportBtn"), inp=$("raceImportFile");
     if(ib&&inp){ ib.onclick=()=>inp.click();
       inp.addEventListener("change",()=>{ const f=inp.files&&inp.files[0];
@@ -7296,7 +7532,7 @@ function funnelInfo(){
     const off=((bd.brg-L.co+540)%360)-180;
     const across=D*Math.sin(rad(off));              // NM, + = right of the rhumb line
     const half=Math.max(0.02, D*FUNNEL_FRAC);       // the band narrows as D shrinks
-    const target=interp(P_TWS,P_UP.twa,wspd);
+    const target=twaSailed(true,wspd);
     // Where the laylines are, so the band can never be wider than them.
     const layHalf=D*Math.tan(rad(Math.min(target,80)))/2;
     const halfUse=Math.min(half,layHalf);
@@ -8095,6 +8331,7 @@ function buildPickers(){
     };
     sl.addEventListener("input",()=>{
       window.wslideDrag=true;
+      window.windQuiet=true;        // do not record the dial being turned, only where it stops
       rd();
       const now=Date.now();
       if(now-last>140){last=now;window.holdBand=true;render();window.holdBand=false;}
@@ -8105,6 +8342,10 @@ function buildPickers(){
     sl.addEventListener("change",()=>{
       if(base===null)rd();                 // a keyboard change with no preceding drag
       base=null; window.wslideDrag=false;
+      // the hand has come off: record the value it settled on, once
+      window.windQuiet=false;
+      try{ const f=WINDDMC.dir;
+           if(f)raceRecEvent("wind","dir",{v:f.v,src:f.src,settled:true},"hand"); }catch(e){}
       document.querySelectorAll("input.wslide").forEach(o=>{ o.value="0"; });
       window.holdBand=true;render();window.holdBand=false;
     });
@@ -8363,12 +8604,12 @@ function render(){
   try{ if(MAP2&&$("gps2tab")&&$("gps2tab").open)gps2Render(); }catch(e){}
   if(state.leg>=r.legs.length||state.leg<0)state.leg=0;
   const legHeadEl=$("legHead");
-  if(legHeadEl){const L=r.legs[state.leg];
+  if(legHeadEl){const L=r.legs[viewLeg()];
     legHeadEl.textContent=(roundFresh()?"ROUNDED \u00B7 ":"")+
-      `Leg ${state.leg+1} of ${r.legs.length} \u00B7 ${(L.from.name||L.from.lbl||"start")} \u2192 ${(L.to.name||L.to.lbl||"finish")}`;}
+      `Leg ${viewLeg()+1} of ${r.legs.length} \u00B7 ${(L.from.name||L.from.lbl||"start")} \u2192 ${(L.to.name||L.to.lbl||"finish")}`;}
   // v558: the overlay and orientation controls live on the Settings page now, so nothing to
   // wire here. settingsRender writes them and settingsClick drives them.
-  drawLeg(r,state.leg,wdir,wspd);
+  drawLeg(r,viewLeg(),wdir,wspd);
   drawStart(r,wdir,wspd);
   startCtl();
   try{tuningCtl();}catch(e){}
@@ -8377,6 +8618,7 @@ function render(){
   try{tdcPaint();}catch(e){}
   try{coastalInUsePaint();}catch(e){}   // green follows state.card, whatever changed it
   try{goRecPaint();}catch(e){}          // GO says whether the race is being recorded
+  try{raceLegPaint();}catch(e){}        // which leg the app believes you are racing
   try{roundPaint();}catch(e){}          // the leg panel says when a rounding has been read
   try{vecDraw();}catch(e){}             // the geometry the advice rests on
   try{tideEffDraw();}catch(e){}         // and what that geometry costs in time
@@ -8599,7 +8841,7 @@ function drawMap(r,wdir){
   }
   if(r&&r.pts){
   // track
-  s+=courseTrack(px,r.pts,(state&&state.leg!=null)?state.leg:null);
+  s+=courseTrack(px,r.pts,viewLeg());
   // The whole race so far, on the bay chart. Same projection as the marks, so it lands where it
   // actually happened. Drawn over the course lines but under the mark badges.
   try{
@@ -8632,7 +8874,7 @@ function drawMap(r,wdir){
     // inverted -- white disc, coloured number, thin coloured ring -- so the course reads as
     // context and the leg in hand stands out. The colours still mean the same thing, red for a
     // port rounding and green for starboard; only the weight changes.
-    const curLeg=(state&&state.leg!=null)?state.leg:-1;
+    const curLeg=viewLeg();
     const onLeg=(i===curLeg||i===curLeg+1);
     const n=(seen[key]=(seen[key]||0)+1)-1;           // 0 first visit, 1 second, ...
     const o=BOFF[n%4], grow=1+Math.floor(n/4)*0.8;
@@ -8822,7 +9064,7 @@ function tdcCall(){
       if(mark&&GPS.last){
         const me=[GPS.last.coords.latitude,GPS.last.coords.longitude];
         const bd=brgDist(me,mark);
-        const w=windDir(), tgt=interp(P_TWS,beat?P_UP.twa:P_DN.twa,windSpd(10));
+        const w=windDir(), tgt=twaSailed(beat,windSpd(10));
         const twaToMark=Math.abs(((w-bd.brg+540)%360)-180);
         // on the layline when the mark bears at the tacking angle from the wind
         const off=Math.abs(twaToMark-(beat?tgt:180-(180-tgt)));
@@ -9264,7 +9506,7 @@ function fitPredGround(tack){
   if(!L)return null;
   const wdir=usedWind(), wspd=usedSpd()||1;
   const beat=(L.pos==="Beat"), run=(L.pos==="Run");
-  let th; try{ th=interp(P_TWS,(beat?P_UP:P_DN).twa,wspd); }catch(e){ return null; }
+  let th; try{ th=twaSailed(beat,wspd); }catch(e){ return null; }
   if(!beat&&!run)return null;                 // a reach has no two boards to fit
   let Vb; try{ Vb=interp(P_TWS,(beat?P_UP:P_DN).vel,wspd); }catch(e){ return null; }
   const h=norm(wdir+(tack==="stbd"?+th:-th)); // starboard tack: wind on the starboard side
@@ -9388,7 +9630,7 @@ function beatSolve(){
   const S=BEAT.stbd, P=BEAT.port;
   if(!S||!P)return null;
   const wspd=windSpd(10);
-  const th=interp(P_TWS,P_UP.twa,wspd), Vpolar=interp(P_TWS,P_UP.vel,wspd);
+  const th=twaSailed(true,wspd), Vpolar=interp(P_TWS,P_UP.vel,wspd);
   // Measured speed through the water, if the log was entered. This is the whole point: the
   // wind below comes from the DIRECTION of the difference between the two ground tracks and is
   // immune to boat speed (verified: assumed speeds 2.0 to 5.0 kt all return the same wind),
@@ -9739,7 +9981,7 @@ function distToLine(L,p){                       // + over the line, - shy of it
 function timeToPoint(p,tgt,wdir,tws,tide){
   const bd=brgDist(p,tgt), d=bd.dist*M_PER_NM;
   if(d<2)return {sec:0,dist:d,brg:bd.brg,lay:true};
-  const th=interp(P_TWS,P_UP.twa,tws);
+  const th=twaSailed(true,tws);
   const a=angdiff(bd.brg,wdir);
   const lay=a>=th-0.5;
   let sp = lay ? polarSpeed(a,tws)
@@ -9937,7 +10179,7 @@ function drawStart(r,wdir,wspd){
       const ws=windSeriesStats();
       const fitted=!!(ws&&ws.ready);
       const wUseL=fitted?ws.mean:startWind();
-      const tgtA=interp(P_TWS,P_UP.twa,windSpd(10));
+      const tgtA=twaSailed(true,windSpd(10));
       // Spacing and opacity matter more than they look. At 30px the two families cross-hatch the
       // whole panel and the lattice becomes the loudest thing on a chart whose subject is the
       // line. Wide and faint reads as texture you can measure against.
@@ -9991,7 +10233,7 @@ function drawStart(r,wdir,wspd){
     // by a factor of seven, and these boards would have been wrong with it.
     if(me){
       const wB=startWind();
-      const tgtTwa=interp(P_TWS,P_UP.twa,wspd), Vb=interp(P_TWS,P_UP.vel,wspd);
+      const tgtTwa=twaSailed(true,wspd), Vb=interp(P_TWS,P_UP.vel,wspd);
       const midLL2=[(L.cv[0]+L.pin[0])/2,(L.cv[1]+L.pin[1])/2];
       const bd=brgDist(me,midLL2), co2=bd.brg, D2=bd.dist;
       let Tv=[0,0];
@@ -10741,7 +10983,7 @@ function drawLeg(r,idx,wdir,wspd){
   const up=state.northUp?0:co;               // course-up: leg vertical; north-up: N vertical
   const fr=a=>a-up;                          // heading -> frame angle from up
   const D=L.dist;
-  const upT=interp(P_TWS,P_UP.twa,wspd), dnT=interp(P_TWS,P_DN.twa,wspd);
+  const upT=twaSailed(true,wspd), dnT=twaSailed(false,wspd);
   let target=null; if(L.pos==="Beat")target=upT; else if(L.pos==="Run")target=dnT;
   // ---- the fit, applied to the drawing (v565) ----
   // FIT.err[tack] is the angle by which that board's PREDICTED GROUND TRACK must be rotated to
@@ -11068,7 +11310,20 @@ function drawLeg(r,idx,wdir,wspd){
         s+=`<text x="${(gx2-off).toFixed(1)}" y="${gy2.toFixed(1)}" font-size="${FS_SM.toFixed(1)}" font-weight="800" text-anchor="${anch}" fill="#0E7C94" stroke="#fff" stroke-width="3.5" paint-order="stroke">${t}</text>`; }
     }
   }
-  if(target!==null)s+=`<text x="8" y="${H-10}" font-size="${FS_SM.toFixed(1)}" text-anchor="start" fill="#48627A">${L.pos==="Beat"?"tack":"gybe"} angle \u00B1${Math.round(target)}\u00B0 TWA</text>`;
+  // v577: the caption says BOTH angles and what the difference costs. target is the sailed
+  // angle now (the boards are drawn where the boat actually goes); the polar's optimum sits
+  // beside it so the gap is visible. That gap is where the time is.
+  if(target!==null){
+    let cap=`${L.pos==="Beat"?"tack":"gybe"} angle \u00B1${Math.round(target)}\u00B0 TWA`;
+    try{
+      const g=twaGap(L.pos!=="Run",wspd);
+      if(g&&g.measured&&Math.abs(g.deg)>=1.5){
+        cap+=` \u00b7 target ${Math.round(g.target)}\u00B0`;
+        if(g.vmgLoss!=null)cap+=` (${g.vmgLoss>0?"+":""}${g.vmgLoss.toFixed(2)} kt VMG)`;
+      }
+    }catch(e){}
+    s+=`<text x="8" y="${H-10}" font-size="${FS_SM.toFixed(1)}" text-anchor="start" fill="#48627A">${cap}</text>`;
+  }
   // approach: hatched line arriving at the from-buoy along the previous leg's course,
   // passing the mark on its rounding side, arrowhead clear of the buoy artwork
   if(idx>0){
@@ -11369,7 +11624,7 @@ function computeLegAdvice(r,idx,wdir,wspd){
   const manoeuvre1=(markSideRight===windSideRight)?"harden up":"bear away";
 
   const co=L.co, D=L.dist;
-  const upT=interp(P_TWS,P_UP.twa,wspd), dnT=interp(P_TWS,P_DN.twa,wspd);
+  const upT=twaSailed(true,wspd), dnT=twaSailed(false,wspd);
   let target=null; if(L.pos==="Beat")target=upT; else if(L.pos==="Run")target=dnT;
 
   const el=r.legs.slice(0,idx).reduce((s,x)=>s+x.time,0);
@@ -11713,7 +11968,7 @@ function drawMiniLeg(r,idx,wdir,wspd){
   // Square canvas so this fills its grid cell exactly like the square compass beside it;
   // a wider-than-tall viewBox gets letterboxed by preserveAspectRatio and leaves bands.
   const W=360,H=360,cx=W/2,cy0=H/2,co=L.co,D=L.dist,mid=D/2;
-  const upT=interp(P_TWS,P_UP.twa,wspd), dnT=interp(P_TWS,P_DN.twa,wspd);
+  const upT=twaSailed(true,wspd), dnT=twaSailed(false,wspd);
   let target=null; if(L.pos==="Beat")target=upT; else if(L.pos==="Run")target=dnT;
   const effOff=(typeof TIDECTX!=="undefined"&&TIDECTX)?TIDECTX.off+elapsed:null;
   let stL=effOff!==null?tideAt(legMid(L),effOff,TIDECTX.range):null;
@@ -11971,7 +12226,7 @@ function miniLegRender(){
   let r=null;
   if(haveCourse){ try{ r=compute(state.card,windDir(),windSpd(10),windGust(),state.letter,state.num); }catch(e){ r=null; } }
   if(!r||!r.legs||!r.legs.length){ svg.innerHTML=""; return; }
-  const idx=Math.max(0,Math.min(state.leg,r.legs.length-1));
+  const idx=viewLeg();
   try{ drawMiniLeg(r,idx,windDir(),windSpd(10)); }catch(e){}
 }
 // ---------- step 7: leg advance and notices (v446) ----------
@@ -12177,15 +12432,17 @@ function legAdvanceWatch(){
     state.leg=Math.min(r.legs.length-1,state.leg+1);
     // The moment of rounding: everything before it is a leg already sailed, so the chart dims it.
     // It also tells you at a glance that the app knows where you are in the race.
-    ROUND.at=now; ROUND.leg=state.leg;
-    try{ raceRecEvent("round","mark",{leg:state.leg,at:now}); }catch(e){}
+    ROUND.at=now; ROUND.leg=state.leg; ROUNDS.push({leg:state.leg, at:now});
+    try{ raceRecEvent("round","mark",{leg:state.leg,at:now},"app"); }catch(e){}
     ADV.last=now; ADV.armed=false; ADV.minDist=Infinity; ADV.brgAtMin=null;
     TACK.hdg=null; TACK.turning=null; TACK.boards={stbd:null,port:null};
     const L=r.legs[state.leg];
     noticeSet("leg","Now leg "+(state.leg+1)+" of "+r.legs.length+", "+
       ((r.pts[state.leg]&&(r.pts[state.leg].name||r.pts[state.leg].lbl))||"")+" to "+
       ((r.pts[state.leg+1]&&(r.pts[state.leg+1].name||r.pts[state.leg+1].lbl))||"")+
-      (L?", "+L.pos.toLowerCase():""), ()=>{ state.leg=from; ROUND.at=roundPrev; ADV.last=Date.now(); });
+      (L?", "+L.pos.toLowerCase():""), ()=>{ state.leg=from; ROUND.at=roundPrev; ADV.last=Date.now();
+        // the undo removes the rounding it is undoing, or that leg's track would start there
+        for(let k=ROUNDS.length-1;k>=0;k--){ if(ROUNDS[k].at===now){ ROUNDS.splice(k,1); break; } } });
   }catch(e){}
 }
 function legStep(dir){                             // dir: -1 previous leg, +1 next leg (Course Analysis)
@@ -12193,7 +12450,11 @@ function legStep(dir){                             // dir: -1 previous leg, +1 n
   if(WIND.chosen&&WIND.numChosen){ try{ r=compute(state.card,windDir(),windSpd(10),windGust(),state.letter,state.num); }catch(err){ r=null; } }
   if(!r||!r.legs||!r.legs.length)return;
   const n=r.legs.length;
-  state.leg=dir>0?Math.min(n-1,state.leg+1):Math.max(0,state.leg-1);
+  // v578: the swipe moves what you are LOOKING AT, not what you are racing. The swipe itself is
+  // unchanged. Coming back onto the race leg returns the view to following it.
+  const cur=viewLeg();
+  const nv=dir>0?Math.min(n-1,cur+1):Math.max(0,cur-1);
+  state.view=(nv===state.leg)?null:nv;
   render();
   if(typeof GPS!=="undefined"&&GPS.last)try{ gpsRender(GPS.last); }catch(e){}
 }
