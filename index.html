@@ -641,7 +641,34 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
   </div>
   <div class="coastCard" style="margin-top:10px">
     <div class="coastCardHead">Course</div>
+    <!-- v582: the line is a mark of the course on the Turkey Shoot, and it has no fixed
+         position: it resolves to wherever you pinged it. Put it anywhere in the order. -->
+    <!-- Everything here resolves off the committee boat ping, so it holds good when the line
+         moves or is re-pinged. The committee gives the weather mark as a bearing and a distance
+         from itself, so that is how it is entered. -->
+    <div class="inrow" style="margin-top:4px;gap:5px">
+      <button class="pick pk-sm" id="coastalAddLine" style="flex:1">+ Line</button>
+      <button class="pick pk-sm" id="coastalAddPin"  style="flex:1">+ Pin</button>
+      <button class="pick pk-sm" id="coastalAddCV"   style="flex:1">+ CV</button>
+    </div>
+    <!-- Before the line is pinged, say which mark the committee boat is near. Everything that
+         resolves off the CV then has local knowledge behind it instead of the app's own
+         fallback, and is labelled assumed until you ping. -->
+    <div class="inrow" style="margin-top:5px;gap:5px;align-items:center">
+      <div style="flex:0 0 auto;font-size:12px;color:#6B5A20">CV is near</div>
+      <select id="cvNearSel" style="flex:1;min-width:0"></select>
+      <button class="pick pk-sm pk-pill" id="cvNearClear" style="flex:0 0 auto">\u00d7</button>
+    </div>
+    <div class="inrow" style="margin-top:5px;gap:5px;align-items:center">
+      <div style="flex:0 0 auto;font-size:12px;color:#6B5A20">Laid mark from CV</div>
+      <input id="laidBrg" type="number" inputmode="numeric" min="0" max="359" placeholder="343" style="flex:1;min-width:0">
+      <div style="flex:0 0 auto;font-size:12px;color:#6B5A20">&deg;</div>
+      <input id="laidNm" type="number" inputmode="decimal" min="0" step="0.05" placeholder="0.60" style="flex:1;min-width:0">
+      <div style="flex:0 0 auto;font-size:12px;color:#6B5A20">NM</div>
+      <button class="pick pk-sm pk-pill" id="coastalAddLaid" style="flex:0 0 auto">Add</button>
+    </div>
     <div id="coastalSeq" style="margin-top:2px"></div>
+    <div id="coastalUseMsg" style="font-size:12px;margin-top:4px;min-height:15px"></div>
     <div class="inrow" style="margin-top:8px">
       <div style="flex:1"><button class="pick" id="coastalUse" style="width:100%">Use this course</button></div>
       <div style="flex:0 0 84px"><button class="pick" id="coastalClear" style="width:100%">Clear</button></div>
@@ -1023,6 +1050,7 @@ svg.icsflag{display:inline-block;width:auto;height:auto;border:0;border-radius:0
     <div id="legPanel" class="legpan">
       <div id="legHead" style="font-size:13px;font-weight:800;color:#3A2A00;text-align:center;
            min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <div id="timeLimitTag" style="display:none;font-size:11px;color:#5B4A00;text-align:center;margin-top:2px"></div>
     </div>
     <div id="fitBtns" class="legpan" style="display:none"></div>
   </div>
@@ -2200,6 +2228,17 @@ R:["Ls Ks Vs Dp Xp","Ls Ks Vs Cp Xp","Ls Ks Vs Bp Xp","Ls Ks Vs Hp Xp","Ls Vs Xp
 const COASTAL={A:["Ep As"]};
 const CARDS={
  coastal:{btn:"Coastal",title:"Coastal \u00B7 custom course",vhf:"74",start:"cv",courses:COASTAL,hidden:true},
+ // AIB DBSC Turkey Shoot (v579). Seven Sunday mornings, 1 November to 13 December 2026, first
+ // gun 10:00, Channel 74. There is NO course card: the committee announces the course on the
+ // day, on the WhatsApp channel and on the VHF, so this card carries the series and the start
+ // and hands the course itself to the Coastal builder. Past courses have gone round the Muglins
+ // and round Dalkey Island.
+ // timeLimit: SI section 12, 12:30, and the committee may extend it on Channel 74 after a
+ // postponement. It is a wall-clock limit for the whole fleet, not a per-boat allowance.
+ // Not in the COURSE CARD row: it has no course card. It sits beside Coastal, with the other
+ // things whose course you build by hand.
+ turkey:{btn:"Turkey",title:"Sunday \u00B7 Turkey Shoot",vhf:"74",start:"cv",courses:COASTAL,coastal:true,
+         hidden:true, timeLimit:[12,30]},
  satcv:{btn:"Sat CV",title:"Saturday \u00B7 Committee Vessel",vhf:"74",start:"cv",courses:COURSES},
  sathut:{btn:"Sat Hut",title:"Saturday \u00B7 West Pier Hut",vhf:"68",start:"hut",courses:C2},
  thublue:{btn:"Thu Blue",title:"Thursday \u00B7 Blue Fleet",vhf:"74",start:"cv",courses:C3},
@@ -3331,7 +3370,8 @@ function arrivalInfo(r,idx,wdir,wspd){
 const $=id=>document.getElementById(id);
 // northUp defaults FALSE: the leg chart opens course-up, which is how you are looking at the
 // leg. Both this and viewMode are now settings on the Settings page and persist.
-let state={card:"thublue",letter:"A",num:1,leg:0,view:null,northUp:false,boat:"etap28i",viewMode:"both"};
+let state={card:"thublue",letter:"A",num:1,leg:0,view:null,northUp:false,boat:"etap28i",viewMode:"both",
+           tsStart:1};   // Turkey Shoot: which of the five starts you are in, 1 to 5
 let BOATCHOSEN=false;                            // the ETAP is the app's assumption until you press one
 // Four winds. "used" is what the whole app calculates from; it always equals one of the
 // other three, whichever was set last under these rules:
@@ -3890,6 +3930,15 @@ function myMarksEditPaint(){
   if(add)add.textContent=(MYEDIT==null)?"Add position":"Save changes";
   if(cw)cw.style.display=(MYEDIT==null)?"none":"";
 }
+// ---------- what the committee calls a mark (v584) ----------
+// The DBSC marks list gives short names. On Channel 74 you hear what the mark is called on the
+// water, and they are not the same word: "yellow outfall" is mark X, "Scotsman's Bay" is where
+// the inflatable is normally laid, which is mark W. Searching the spoken name must find it.
+const MARKALIAS={
+  X:["Yellow outfall","Outfall","Turning","Turning X"],
+  W:["Scotsman's Bay","Scotsmans Bay","Scotsmans"],
+  O:["Orange","Hut"]
+};
 function coastalFind(q){
   const s=(q||"").trim().toLowerCase();
   if(s.length<2)return [];
@@ -3899,7 +3948,11 @@ function coastalFind(q){
     if((m.name||"").toLowerCase().includes(s))out.push({key:null,name:m.name,lat:m.lat,lon:m.lon,dbsc:false,mine:true,myIdx:i});
   });
   for(const k in MARKS){ const m=MARKS[k];
-    if((m[0]||"").toLowerCase().includes(s))out.push({key:k,name:m[0],lat:m[1],lon:m[2],dbsc:true}); }
+    const alt=(MARKALIAS[k]||[]);
+    const hit=(m[0]||"").toLowerCase().includes(s)||alt.some(a=>a.toLowerCase().includes(s));
+    if(hit)out.push({key:k,name:m[0],lat:m[1],lon:m[2],dbsc:true,
+                     // show the name you searched for, so it is obvious the right mark came back
+                     alt:alt.find(a=>a.toLowerCase().includes(s))||null}); }
   try{
     for(const sm of SEAMARKS){
       if(!sm.n)continue;
@@ -3910,7 +3963,10 @@ function coastalFind(q){
   return out.slice(0,40);
 }
 function coastalAdd(hit){
-  COASTAL_SEQ.push({key:hit.key,name:hit.name,lat:hit.lat,lon:hit.lon,side:"P"});
+  // Keep the name you searched for in the course, so "Scotsman's Bay" reads back as that
+  // rather than as "Bay", while still being mark W.
+  const nm=hit.alt?(hit.alt+" ("+hit.name+")"):hit.name;
+  COASTAL_SEQ.push({key:hit.key,name:nm,lat:hit.lat,lon:hit.lon,side:"P"});
   coastalSave(); coastalRender();
 }
 function coastalRender(){
@@ -3939,27 +3995,156 @@ function coastalRender(){
   seq.innerHTML=COASTAL_SEQ.length
     ? COASTAL_SEQ.map((m,i)=>`<div style="display:flex;gap:6px;align-items:center;padding:3px 0;font-size:13px;color:#12283A">`+
         `<div style="flex:0 0 18px;color:#6B5A20">${i+1}</div>`+
-        `<div style="flex:1">${m.name}</div>`+
+        `<div style="flex:1">${(m.line||m.laid)
+            ? `<b>${m.name}</b> <span style="font-size:11px;color:${
+                linePinged()?"#1E8449":(lineReady()?"#8A5A00":"#B04A14")}">`+
+              `${linePinged()?(m.laid?"from the CV ping":"pinged")
+                 :lineReady()?("assumed, CV "+lineSource())
+                 :"needs the CV ping"}</span>`
+            : m.name}</div>`+
         `<button class="pick pk-sm coastalSide" data-i="${i}" style="flex:0 0 96px;`+
         `background:${m.side==="P"?"var(--port)":"var(--stbd)"};border-color:${m.side==="P"?"var(--port)":"var(--stbd)"};color:#fff">`+
         `${m.side==="P"?"leave to port":"leave to stbd"}</button>`+
         `<button class="pick coastalDel" data-i="${i}" style="flex:0 0 30px">\u00d7</button></div>`).join("")
     : `<div style="font-size:12px;color:#6B5A20">Add each mark in order. The last one is the finish. Tap the side button to change which side you leave a mark.</div>`;
+  { const sel=$("cvNearSel");
+    if(sel&&!sel.dataset.built){
+      sel.dataset.built="1";
+      const keys=Object.keys(MARKS).sort();
+      sel.innerHTML=`<option value="">not set</option>`+
+        keys.map(k=>`<option value="${k}">${k} \u00b7 ${MARKS[k][0]}</option>`).join("");
+      sel.addEventListener("change",()=>cvMarkSet(sel.value||null));
+    }
+    if(sel)sel.value=(START.cvMark&&START.cvMark.key)||"";
+    const cl=$("cvNearClear"); if(cl)cl.onclick=()=>{ cvMarkSet(null); const s2=$("cvNearSel"); if(s2)s2.value=""; }; }
+  { const b1=$("coastalAddLine"); if(b1)b1.onclick=()=>coastalAddLine("mid");
+    const b2=$("coastalAddPin");  if(b2)b2.onclick=()=>coastalAddLine("pin");
+    const b3=$("coastalAddCV");   if(b3)b3.onclick=()=>coastalAddLine("cv");
+    const b4=$("coastalAddLaid");
+    if(b4)b4.onclick=()=>{
+      const b=+(($("laidBrg")||{}).value), n=+(($("laidNm")||{}).value);
+      if(!isFinite(b)||!isFinite(n)||n<=0)return;      // nothing useful typed yet
+      COASTAL_SEQ.push(laidSeqEntry(b,n));
+      if($("laidBrg"))$("laidBrg").value="";
+      if($("laidNm"))$("laidNm").value="";
+      coastalSave(); coastalRender();
+    }; }
   seq.querySelectorAll(".coastalSide").forEach(b=>b.onclick=()=>{ const i=+b.dataset.i;
     COASTAL_SEQ[i].side=(COASTAL_SEQ[i].side==="P")?"S":"P"; coastalSave(); coastalRender(); });
   seq.querySelectorAll(".coastalDel").forEach(b=>b.onclick=()=>{ COASTAL_SEQ.splice(+b.dataset.i,1); coastalSave(); coastalRender(); });
+}
+// ---------- the START LINE as a mark in the sequence (v582) ----------
+// On the Turkey Shoot the course is announced on the morning and the line is a committee boat
+// and a limit mark laid that morning, so the line has no fixed position: it exists only as a
+// ping. A course that goes "start, Muglins, start" cannot be written with fixed marks.
+// So the sequence can hold a LINE entry. It carries no position of its own; it resolves to
+// wherever the line is pinged, each time the course is applied, so re-pinging moves it.
+const LINE_KEY="__line";
+// Three things on the line can be a mark of the course: the line itself (its middle), the pin
+// end, and the committee boat. The Turkey Shoot uses all of them: last week's course had
+// "Start pin to port" in the middle of it.
+function lineSeqEntry(end){
+  const e=(end==="pin"||end==="cv")?end:"mid";
+  const nm=(e==="pin")?"Start pin":(e==="cv")?"Committee boat":"Start line";
+  return {key:LINE_KEY, line:true, end:e, name:nm, side:"P"};
+}
+function linePos(end){
+  try{
+    const L=startLine();
+    if(!L||!L.cv||!L.pin)return null;
+    if(end==="pin")return {lat:L.pin[0], lon:L.pin[1], assumed:!!L.assumed};
+    if(end==="cv") return {lat:L.cv[0],  lon:L.cv[1],  assumed:!!L.assumed};
+    return {lat:(L.cv[0]+L.pin[0])/2, lon:(L.cv[1]+L.pin[1])/2, assumed:!!L.assumed};
+  }catch(e){ return null; }
+}
+// Is there a position to resolve a line or a laid mark against at all?
+function lineReady(){ return !!(START&&(START.cv||START.pin||START.cvMark)); }
+// Was it MEASURED, or is it where you said the committee boat was? Everything that shows a
+// resolved mark says which of the two it is.
+function linePinged(){ return !!(START&&(START.cv||START.pin)); }
+function lineSource(){
+  if(linePinged())return "pinged";
+  if(START&&START.cvMark)return "at "+START.cvMark.name;
+  return "none";
+}
+// Name a mark the committee boat is near, or clear it.
+function cvMarkSet(key){
+  if(!key){ START.cvMark=null; }
+  else{
+    const m=MARKS[key];
+    if(!m)return false;
+    START.cvMark={key, name:m[0], lat:m[1], lon:m[2]};
+  }
+  try{ startSave(); }catch(e){}
+  try{ coastalRender(); }catch(e){}
+  try{ render(); }catch(e){}
+  return true;
+}
+// ---------- a LAID mark, given off the committee boat (v583) ----------
+// The race committee gives the weather mark as a direction and a distance from itself, for
+// example 343 degrees and 0.6 miles. That is not a position until the committee boat is pinged,
+// and it moves if the boat is re-pinged or the committee shifts it, so it is stored as the
+// bearing and the distance and resolved each time the course is applied.
+function laidSeqEntry(brg,nm,label){
+  const b=((+brg)%360+360)%360, d=+nm;
+  return {laid:true, brg:b, nm:d, side:"P",
+          name:(label&&label.trim())||("Laid "+String(Math.round(b)).padStart(3,"0")+"\u00B0 / "+d.toFixed(2)+" NM")};
+}
+function laidPos(m){
+  if(!m||!isFinite(m.brg)||!isFinite(m.nm))return null;
+  if(!lineReady())return null;
+  const L=(()=>{ try{ return startLine(); }catch(e){ return null; } })();
+  if(!L||!L.cv)return null;
+  const p=offsetPos(L.cv,m.brg,m.nm);          // from the COMMITTEE BOAT, as the committee gives it
+  return {lat:p[0], lon:p[1]};
 }
 function coastalApply(){
   if(COASTAL_SEQ.length<2)return false;
   // Marks that are not bay marks join MARKS under their own keys, so every chart and every
   // calculation treats them as first-class marks for this race.
-  const toks=COASTAL_SEQ.map((m,i)=>{
+  // The engine already begins the course at the line and ends it at a finish, so a line entry
+  // at either end would make a leg of no length. Drop those two; what matters is a line entry
+  // in the MIDDLE, which is a real mark of the course (SI 5 allows the starting line mark),
+  // as in start, Muglins, line, Muglins, finish.
+  // Only the LINE ITSELF is implicit at the ends. The pin and the committee boat are named
+  // marks in their own right, and a laid mark certainly is, so none of those is ever trimmed.
+  const isEndLine=m=>m.line&&(!m.end||m.end==="mid");
+  let seqIn=COASTAL_SEQ.slice();
+  while(seqIn.length&&isEndLine(seqIn[0]))seqIn.shift();
+  while(seqIn.length&&isEndLine(seqIn[seqIn.length-1]))seqIn.pop();
+  // One mark is a whole course once the line is trimmed off both ends: start, round it, finish.
+  // That is the commonest Turkey Shoot course of all, so it must not be refused.
+  if(!seqIn.length)seqIn=COASTAL_SEQ.filter(m=>!isEndLine(m));
+  if(!seqIn.length)return false;
+  const toks=seqIn.map((m,i)=>{
     let k=m.key;
+    if(m.line){
+      // resolve the line NOW, to where it is currently pinged. Each entry gets its own key so
+      // a course that passes it twice carries two marks, not one repeated.
+      // startLine() will invent an assumed line when nothing is pinged, half a mile downwind of
+      // mark one. That is fine for a start, and quite wrong for a MARK of the course: this
+      // entry means "where I pinged it", so without a ping there is nothing to resolve to.
+      const p=lineReady()?linePos(m.end):null;
+      if(!p)return null;
+      k="L"+(i+1); MARKS[k]=[m.name||"Start line",p.lat,p.lon,"O"];
+      return k+(m.side==="S"?"s":"p");
+    }
+    if(m.laid){
+      // bearing and distance off the committee boat, resolved now
+      const p=laidPos(m);
+      if(!p)return null;
+      k="Z"+(i+1); MARKS[k]=[m.name,p.lat,p.lon,"O"];
+      return k+(m.side==="S"?"s":"p");
+    }
     if(!k){ k="X"+(i+1); MARKS[k]=[m.name,m.lat,m.lon,"O"]; }
     return k+(m.side==="S"?"s":"p");
   });
+  if(toks.indexOf(null)>=0)return false;      // the line is in the course but not yet pinged
   COASTAL.A[0]=toks.join(" ");
-  state.card="coastal"; state.letter="A"; state.num=1; state.leg=0;
+  // Keep the card you are on when it already builds its course by hand. Forcing "coastal" here
+  // threw away the Turkey Shoot card along with its start sequence and its time limit.
+  if(!cardIsCoastal())state.card="coastal";
+  state.letter="A"; state.num=1; state.leg=0;
   WIND.chosen=true; WIND.numChosen=true;
   try{ buildNums(); }catch(e){}
   try{ raceRecEvent("course","coastal",{seq:COASTAL.A[0]}); }catch(e){}
@@ -3971,7 +4156,25 @@ function coastalApply(){
 // the Coastal card button both go green and stay green. A flash said "pressed", which is not
 // the question you ask on the water. The truth is state.card, so a card button pressed
 // elsewhere takes the green away by itself.
-function coastalInUse(){ return state.card==="coastal"&&COASTAL_SEQ.length>=2; }
+// A card whose course is announced rather than printed has no letters or numbers to pick, the
+// same as a hand-built coastal course.
+// Put the line into the course. Used by the Add start line button and, on the Turkey Shoot,
+// automatically when the card is chosen: that course always begins at the line.
+function coastalAddLine(end){
+  COASTAL_SEQ.push(lineSeqEntry(end));
+  coastalSave(); coastalRender();
+}
+function coastalSeedLine(){
+  // only when the course is empty, so it never barges into one you are part-way through
+  if(COASTAL_SEQ.length)return false;
+  coastalAddLine();
+  return true;
+}
+function cardIsCoastal(){
+  const c=CARDS[state&&state.card];
+  return !!(c&&(c.coastal||state.card==="coastal"));
+}
+function coastalInUse(){ return cardIsCoastal()&&COASTAL_SEQ.length>=1&&(COASTAL.A[0]||"")!=="Ep As"; }
 function coastalInUsePaint(){
   const on=coastalInUse();
   [$("coastalUse"),$("coastalBtn")].forEach(b=>{
@@ -3984,7 +4187,8 @@ function modeBtnsInit(){
   const host=$("modebtns"); if(!host||host.dataset.built)return;
   host.dataset.built="1";
   host.innerHTML=`<button class="pick" id="coastalBtn">Coastal</button>`+
-    [1,2,3].map(()=>`<button class="pick" disabled style="opacity:.35">&nbsp;</button>`).join("");
+    `<button class="pick" id="turkeyBtn">Turkey</button>`+
+    [1,2].map(()=>`<button class="pick" disabled style="opacity:.35">&nbsp;</button>`).join("");
   const b=$("coastalBtn");
   if(b)b.onclick=()=>{
     myMarksLoad(); myMarksRender(); coastalLoad(); coastalRender();
@@ -3994,9 +4198,28 @@ function modeBtnsInit(){
     if(t&&!t.open){ t.open=true; try{t.dispatchEvent(new Event("toggle"));}catch(e){} }
     if(t&&t.scrollIntoView)t.scrollIntoView({block:"start",behavior:"smooth"});
   };
+  { const tb=$("turkeyBtn");
+    if(tb)tb.onclick=()=>{ try{ cardChoose("turkey"); }catch(e){} }; }
   const f=$("coastalFind"); if(f)f.addEventListener("input",coastalRender);
   const u=$("coastalUse");
-  if(u)u.onclick=()=>{ coastalApply(); };
+  if(u)u.onclick=()=>{
+    const ok=coastalApply();
+    const msg=$("coastalUseMsg");
+    if(msg){
+      if(ok){
+        const assumed=COASTAL_SEQ.some(m=>(m.line||m.laid))&&!linePinged();
+        msg.style.color=assumed?"#8A5A00":"#1E8449";
+        msg.textContent=assumed?("Course in use, with the CV "+lineSource()+". Ping to firm it up.")
+                               :"Course in use.";
+      }
+      else if(COASTAL_SEQ.some(m=>(m.line||m.laid))&&!lineReady()){
+        msg.style.color="#B04A14";
+        msg.textContent="Ping the committee boat, or say which mark it is near.";
+      } else if(COASTAL_SEQ.length<2){
+        msg.style.color="#B04A14"; msg.textContent="Add at least one mark.";
+      } else { msg.style.color="#B04A14"; msg.textContent="Could not build that course."; }
+    }
+  };
   const c=$("coastalClear");
   if(c)c.onclick=()=>{
     COASTAL_SEQ.length=0; coastalSave(); coastalRender();
@@ -5468,13 +5691,24 @@ const PROG={
   season:{tue:["2026-04-28","2026-08-25"], thu:["2026-04-23","2026-08-27"], sat:["2026-04-25","2026-09-26"]},
   noRace:["2026-06-06","2026-06-13","2026-06-27","2026-07-04"],        // waterfront club regattas
   satBlueHut:["2026-04-25","2026-05-02","2026-05-09","2026-05-16","2026-05-23",
-              "2026-08-01","2026-08-08","2026-08-15","2026-08-22"]
+              "2026-08-01","2026-08-08","2026-08-15","2026-08-22"],
+  // The Turkey Shoot runs outside the summer season windows above, so it is listed by date
+  // rather than by a window. Seven consecutive Sundays, no discards in 2026.
+  turkey:["2026-11-01","2026-11-08","2026-11-15","2026-11-22","2026-11-29",
+          "2026-12-06","2026-12-13"]
 };
 const RTSEQ={
   tue:{w1:[18,50], groups:[["c0","c1","c2","c45","b317"],["sb20"],["c3"],["ship"]]},  // Tuesday: grouped combined starts, West Pier Hut Ch 68
   thu:{w1:[18,35], groups:[["c0"],["c1"],["b317"],["c2"],["c3"],["c45"]]},            // Thursday Blue, committee vessel Ch 74
   sat:{w1:[13,30], groups:[["c0"],["c1"],["b317"],["c2"],["c45"],["c3"]]},           // Saturday committee vessel, first warning 13:30
-  sathut:{w1:[14,0], groups:[["c0"],["c1"],["b317"],["c2"],["c45"],["c3"]]}          // Saturday West Pier hut, first warning 14:00
+  sathut:{w1:[14,0], groups:[["c0"],["c1"],["b317"],["c2"],["c45"],["c3"]]},         // Saturday West Pier hut, first warning 14:00
+  // Turkey Shoot, from the 2026 sailing instructions: first warning 10:10 and first gun 10:15,
+  // then five starts five minutes apart to 10:35. The starts are by HANDICAP BAND, not by
+  // class, and the lists are emailed and read out on Channel 74 on the morning, so the app
+  // cannot work out which start you are in. You set it yourself (state.tsStart).
+  turkey:{w1:[10,10], starts:5,
+          flags:["D","C","G","T","O"],          // SI section 6, in order of start
+          groups:[["ts1"],["ts2"],["ts3"],["ts4"],["ts5"]]}
 };
 const RTCLASS={j122:{code:"c0",name:"Cruisers 0"}, j109:{code:"c1",name:"Cruisers 1"}, etap28i:{code:"c45",name:"Cruisers 4 & 5"}};
 // Class flags as flown by the committee, from the DBSC 2026 keelboat race times sheet.
@@ -5483,7 +5717,11 @@ const RTFLAG={
   c2:{name:"Cruisers 2",flag:"No. 2",ics:["2"]}, c3:{name:"Cruisers 3",flag:"No. 3",ics:["3"]},
   c45:{name:"Cruisers 4 & 5",flag:"No. 5",ics:["5"]},
   b317:{name:"Beneteau 31.7",flag:"No. 9",ics:["9"]},
-  sb20:{name:"SB20",flag:"No. 7",ics:["7"]}, ship:{name:"Shipman",flag:"W",ics:["W"]}
+  sb20:{name:"SB20",flag:"No. 7",ics:["7"]}, ship:{name:"Shipman",flag:"W",ics:["W"]},
+  // Turkey Shoot starts are flagged by letter, not by class numeral: SI section 6.
+  ts1:{name:"First start",flag:"D",ics:["D"]},  ts2:{name:"Second start",flag:"C",ics:["C"]},
+  ts3:{name:"Third start",flag:"G",ics:["G"]},  ts4:{name:"Fourth start",flag:"T",ics:["T"]},
+  ts5:{name:"Fifth start",flag:"O",ics:["O"]}
 };
 // International Code of Signals, drawn from the published blazons rather than from memory.
 // Numerals and the answering pendant are tapered pennants (5:9); letter flags are square.
@@ -5553,20 +5791,24 @@ function satCard(s,code){
 }
 // The gun for your class on a given card, on a given date.
 function gunOn(dateObj,card,code){
-  const day = card==="tuehut"?"tue" : card==="thublue"?"thu" : card==="sathut"?"sathut" : "sat";
+  const day = card==="tuehut"?"tue" : card==="thublue"?"thu" : card==="sathut"?"sathut"
+            : card==="turkey"?"turkey" : "sat";
   const seq=RTSEQ[day]; if(!seq)return null;
-  let idx=seq.groups.findIndex(g=>g.indexOf(code)>=0); if(idx<0)idx=0;
+  let idx;
+  if(day==="turkey")idx=startIdx(day);
+  else{ idx=seq.groups.findIndex(g=>g.indexOf(code)>=0); if(idx<0)idx=0; }
   const d=new Date(dateObj.getTime()); d.setHours(seq.w1[0],seq.w1[1],0,0);
   return d.getTime()+idx*300000+300000;                  // first warning, my warning, my gun
 }
 // Choosing a card by hand means choosing that day: jump to the next one that fits.
 function nextCardGun(card,fromMs){
   const code=(RTCLASS[state&&state.boat]||RTCLASS.etap28i).code;
-  const want = card==="tuehut"?2 : card==="thublue"?4 : 6;
+  const want = card==="tuehut"?2 : card==="thublue"?4 : card==="turkey"?0 : 6;
   const t0=(fromMs||Date.now())-2*3600000;
   for(let i=0;i<14;i++){
     const d=new Date((fromMs||Date.now())+i*86400000);
     if(d.getDay()!==want)continue;
+    if(card==="turkey"&&PROG.turkey.indexOf(ymd(d))<0)continue;   // only on a series Sunday
     const g=gunOn(d,card,code);
     if(g!=null&&g>t0)return g;
   }
@@ -5582,7 +5824,8 @@ function nextRace(fromMs){
     const d=new Date((fromMs||Date.now())+i*86400000);
     const s=ymd(d), dow=d.getDay();
     let card=null;
-    if(dow===2&&inSeason("tue",s))card="tuehut";
+    if(dow===0&&PROG.turkey.indexOf(s)>=0)card="turkey";
+    else if(dow===2&&inSeason("tue",s))card="tuehut";
     else if(dow===4&&inSeason("thu",s))card="thublue";
     else if(dow===6&&inSeason("sat",s)&&PROG.noRace.indexOf(s)<0)card=satCard(s,code);
     if(!card)continue;
@@ -5591,11 +5834,20 @@ function nextRace(fromMs){
   }
   return null;
 }
-function rtDay(){ const c=state&&state.card; if(c==="tuehut")return "tue"; if(c==="thublue")return "thu"; if(c==="sathut")return "sathut"; return "sat"; }
+function rtDay(){ const c=state&&state.card; if(c==="tuehut")return "tue"; if(c==="thublue")return "thu"; if(c==="sathut")return "sathut"; if(c==="turkey")return "turkey"; return "sat"; }
+// Which start am I in? On a class card it follows the boat's class. On the Turkey Shoot the
+// starts are handicap bands read out on the morning, so it follows what you set.
+function startIdx(day){
+  const seq=RTSEQ[day]; if(!seq)return 0;
+  if(day==="turkey")return Math.max(0,Math.min((seq.starts||5)-1,((state&&state.tsStart)||1)-1));
+  const cl=RTCLASS[state&&state.boat]||RTCLASS.etap28i;
+  const i=seq.groups.findIndex(g=>g.indexOf(cl.code)>=0);
+  return i<0?0:i;
+}
 function rtSeq(){
   const day=rtDay(), seq=RTSEQ[day];
   const cl=RTCLASS[state&&state.boat]||RTCLASS.etap28i;
-  let idx=seq.groups.findIndex(g=>g.indexOf(cl.code)>=0); if(idx<0)idx=0;
+  let idx=startIdx(day);
   const d=new Date(raceDayMs()); d.setHours(seq.w1[0],seq.w1[1],0,0); // W1 anchored to the race day, off the phone clock
   const W1=d.getTime(), warn=W1+idx*300000, gun=warn+300000;        // my warning, my start (gun)
   return {day,cl,idx,before:idx,W1,warn,gun};
@@ -5867,7 +6119,7 @@ const TRACK_BANDS=6, TRACK_OP_NEW=0.95, TRACK_OP_OLD=0.16;
 // v405, which makes a race record useless for telling which build produced it. The test suite
 // now fails if this and the service worker's cache name disagree, so a build cannot ship with
 // the two out of step.
-const CC_VER="v578";
+const CC_VER="v587";
 // ---------- RACE REPLAY (v572) ----------
 // A saved race already holds everything the app needs to drive itself: every sample carries
 // position, COG, SOG, heading and the leg. So a replay does not need a viewer of its own. It
@@ -6006,6 +6258,26 @@ function legSpan(k){
 function viewReset(){ state.view=null; try{render();}catch(e){} }
 // The bar always says the RACE leg, whatever the chart below has been swiped to. Looking at a
 // different leg adds where you are looking, so the two can never be confused.
+// The time limit, as a moment on the race day. Null on a card that has none.
+function timeLimitAt(){
+  const c=CARDS[state&&state.card];
+  if(!c||!c.timeLimit)return null;
+  try{ const d=new Date(raceDayMs()); d.setHours(c.timeLimit[0],c.timeLimit[1],0,0); return d.getTime(); }
+  catch(e){ return null; }
+}
+function timeLimitPaint(){
+  const el=$("timeLimitTag"); if(!el)return;
+  const lim=timeLimitAt();
+  if(lim==null){ el.textContent=""; el.style.display="none"; return; }
+  el.style.display="";
+  const left=lim-Date.now();
+  const hh=String(new Date(lim).getHours()).padStart(2,"0"),
+        mm=String(new Date(lim).getMinutes()).padStart(2,"0");
+  if(left<=0){ el.textContent="time limit "+hh+":"+mm+" \u00b7 expired"; el.style.color="var(--port)"; return; }
+  const m=Math.floor(left/60000);
+  el.textContent="time limit "+hh+":"+mm+" \u00b7 "+(m>=60?Math.floor(m/60)+"h "+(m%60)+"m":m+" min")+" left";
+  el.style.color=(m<=20)?"var(--start-ink)":"";   // the last twenty minutes decide a shortening
+}
 function raceLegPaint(){
   const tag=$("raceLegTag"), btn=$("racingThisLeg");
   const r=(typeof CURROUTE!=="undefined")?CURROUTE:null;
@@ -6457,7 +6729,7 @@ function garminCompassInit(){
   // The two v570 indicators change on their own: recording starts with the countdown, and the
   // rounding flash has to clear itself when it expires. Neither triggers a render, so repaint
   // them on this tick. Both are cheap style writes, not a full render.
-  setInterval(()=>{ try{ goRecPaint(); roundPaint(); }catch(e){} },1000);
+  setInterval(()=>{ try{ goRecPaint(); roundPaint(); timeLimitPaint(); }catch(e){} },1000);
 }
 // ---------- saved races ----------
 // Stored in IndexedDB rather than localStorage: a season of tracks would not fit in the ~5 MB
@@ -8238,12 +8510,26 @@ function buildPickers(){
     }
     render();RT.lastWhole=null;rtInfo();}};
   $("cardbtns").innerHTML=Object.keys(CARDS).filter(k=>!CARDS[k].hidden).map(k=>`<button class="pick" data-c="${k}">${CARDS[k].btn}</button>`).join("");
-  $("cardbtns").onclick=e=>{if(e.target.dataset.c){state.card=e.target.dataset.c;state.num=Math.min(state.num,(CARDS[state.card].courses[state.letter]||[]).length||8);buildNums();
+  $("cardbtns").onclick=e=>{if(e.target.dataset.c){cardChoose(e.target.dataset.c);}};
+  $("letters").innerHTML=WINDLTR.map(([l])=>`<button class="pick" data-l="${l}">${l}</button>`).join("");
+  // One path for choosing a card, whichever row the button is in.
+  function cardChoose(k){
+    state.card=k;state.num=Math.min(state.num,(CARDS[state.card].courses[state.letter]||[]).length||8);buildNums();
     TIME.cardChosen=true;                        // you picked the card, so the programme stops moving it
     {const g=nextCardGun(state.card,Date.now());
      if(g!=null){TIME.user=g; TIME.src="user"; TIME.viaNow=false;}}  // date and time follow that card's own day and sequence
-    render();RT.lastWhole=null;rtInfo();}};
-  $("letters").innerHTML=WINDLTR.map(([l])=>`<button class="pick" data-l="${l}">${l}</button>`).join("");
+    // A card with no course card of its own (the Turkey Shoot) takes you to the Coastal builder,
+    // because the course is announced on the morning and has to be tapped in.
+    if(CARDS[state.card]&&CARDS[state.card].coastal){
+      try{ myMarksLoad(); myMarksRender(); coastalLoad(); }catch(e){}
+      // this course always begins at the line, so put it in first and let the marks follow
+      try{ coastalSeedLine(); }catch(e){}
+      try{ coastalRender(); }catch(e){}
+      try{ tabPagesShow("boattab","COASTAL"); }catch(e){}
+    }
+    render();RT.lastWhole=null;rtInfo();
+  }
+  window.cardChoose=cardChoose;
   function buildNums(){
     const nmax=(CARDS[state.card].courses[state.letter]||[]).length||8;
     $("nums").innerHTML=Array.from({length:nmax},(_,i)=>i+1).map(n=>`<button class="pick" data-n="${n}">${n}</button>`).join("");
@@ -8510,7 +8796,12 @@ function render(){
    document.querySelectorAll("#cardbtns .pick").forEach(b=>{
      b.classList.toggle("on",b.dataset.c===state.card);
      b.classList.toggle("sug",sched!=null&&b.dataset.c===sched);
-   });}
+   });
+   // The Turkey Shoot is not in that row, so its own button carries the same grammar: blue
+   // fill when it is the card you chose, orange ring when the programme says it is today.
+   const tb=$("turkeyBtn");
+   if(tb){ tb.classList.toggle("on",state.card==="turkey");
+           tb.classList.toggle("sug",sched==="turkey"); }}
   document.querySelectorAll("#boatbtns .pick").forEach(b=>{
     const sel=(b.dataset.b===state.boat);
     b.classList.toggle("boaton",sel&&!!BOATCHOSEN);
@@ -8619,6 +8910,7 @@ function render(){
   try{coastalInUsePaint();}catch(e){}   // green follows state.card, whatever changed it
   try{goRecPaint();}catch(e){}          // GO says whether the race is being recorded
   try{raceLegPaint();}catch(e){}        // which leg the app believes you are racing
+  try{timeLimitPaint();}catch(e){}      // and how long the committee has given the fleet
   try{roundPaint();}catch(e){}          // the leg panel says when a rounding has been read
   try{vecDraw();}catch(e){}             // the geometry the advice rests on
   try{tideEffDraw();}catch(e){}         // and what that geometry costs in time
@@ -8928,7 +9220,8 @@ function buoySVG(x,y,pt,above){
 // lies back toward the other one. The line direction needed to apply that comes from the
 // two raw fixes, so it is solved twice: rough bearing first, then again once corrected.
 const M_PER_NM=1852;
-const START={cv:null,pin:null,entering:null,target:null,obsWind:null,obsTack:null,obsAt:0,obsTrusted:false,obsTide:null};
+const START={cv:null,pin:null,entering:null,target:null,obsWind:null,obsTack:null,obsAt:0,obsTrusted:false,obsTide:null,
+             cvMark:null};   // a mark you can see the CV near, used until the line is pinged
 let PING_MSG=null;                              // why the last Pin/CV press did not produce a fix
 let WINDPRESS={tack:null,ok:null};              // last Wind-beat press: which tack, and whether it took
 let PING_STATE={cv:null,pin:null};   // 'ok' | 'fail' | null (never tried), per end, for the Pin/CV button colour
@@ -9923,6 +10216,17 @@ function startLine(){
   // the line to starboard, so CV->PIN runs along wind-90; pinging the pin projects the other way.
   // Still flagged assumed, because the projected end is only as good as the current wind: if the
   // breeze shifts after the ping, that end swings with it and any bias it shows is an artefact.
+  // v587: nothing pinged, but you have told the app which mark the committee boat is near.
+  // That is local knowledge and beats the app's own fallback, which is half a mile downwind of
+  // mark one and knows nothing. It stays flagged assumed: it is where you say the boat is, not
+  // where it was measured.
+  if(!START.cv&&!START.pin&&START.cvMark){
+    const w0=startWind();
+    const brg0=norm(w0-90);
+    const cv0=[START.cvMark.lat,START.cvMark.lon];
+    return {cv:cv0, pin:offsetPos(cv0,brg0,DEFLINE/M_PER_NM), brg:brg0, len:DEFLINE,
+            up:norm(brg0+90), assumed:true, anchored:"mark", mark:START.cvMark.name};
+  }
   if((START.cv&&!START.pin)||(START.pin&&!START.cv)){
     const w=startWind();
     const brg=norm(w-90);                       // CV -> PIN
@@ -12300,6 +12604,7 @@ function settingsLoad(){
     if(typeof state!=="undefined"&&state){
       if(o.__viewMode)state.viewMode=o.__viewMode;
       if(o.__northUp!=null)state.northUp=!!o.__northUp;
+      if(o.__tsStart!=null)state.tsStart=Math.max(1,Math.min(5,+o.__tsStart||1));
     }
   }catch(e){}
 }
@@ -12308,6 +12613,7 @@ function settingsSave(){
     // the two leg-chart choices ride along, so they survive a restart like every other setting
     o.__viewMode=(state&&state.viewMode)||"both";
     o.__northUp=!!(state&&state.northUp);
+    o.__tsStart=(state&&state.tsStart)||1;
     localStorage.setItem("cc_settings",JSON.stringify(o)); }catch(e){}
 }
 function settingsChanged(){ return SETTINGS.filter(d=>window[d.k]!==d.def); }
@@ -12346,6 +12652,13 @@ function settingsRender(){
       [{v:"tide",t:"Tide"},{v:"wind",t:"Wind"},{v:"both",t:"Both"}],(state&&state.viewMode)||"both","data-vm")+
     choiceRow("Leg chart: orientation","Course-up puts the leg vertical, the way you are looking at it. North-up keeps north at the top.",
       [{v:"course",t:"Course-up"},{v:"north",t:"North-up"}],(state&&state.northUp)?"north":"course","data-orient")+
+    // The Turkey Shoot starts are handicap bands, emailed and read out on Channel 74 on the
+    // morning, so the app cannot know which one you are in. Guns: 10:15, 10:20, 10:25, 10:30,
+    // 10:35, flags D, C, G, T, O.
+    choiceRow("Turkey Shoot: my start",
+      "Five starts, five minutes apart from 10:15. The bands are announced on Channel 74 on the morning. "+
+      "1 = 10:15 flag D \u00b7 2 = 10:20 C \u00b7 3 = 10:25 G \u00b7 4 = 10:30 T \u00b7 5 = 10:35 O.",
+      [1,2,3,4,5].map(n=>({v:String(n),t:String(n)})),String((state&&state.tsStart)||1),"data-tsstart")+
     (ch.length?`<div style="margin-top:6px;font-size:12px;color:#8A5A00;font-weight:700">${ch.length} changed from default. Recorded with every race.</div>`:``)+
     SETTINGS.map(row).join("")+
     `<div style="margin-top:10px;text-align:right"><button class="pick pk-sm pk-pill" data-reset="__all">Reset all</button></div>`;
@@ -12356,6 +12669,13 @@ function settingsClick(ev){
   if(vm){ state.viewMode=vm.dataset.vm; settingsSave(); settingsRender(); try{render();}catch(e){} return; }
   const or=ev.target.closest?ev.target.closest("[data-orient]"):null;
   if(or){ state.northUp=(or.dataset.orient==="north"); settingsSave(); settingsRender(); try{render();}catch(e){} return; }
+  const tsb=ev.target.closest?ev.target.closest("[data-tsstart]"):null;
+  if(tsb){ state.tsStart=Math.max(1,Math.min(5,+tsb.dataset.tsstart||1));
+    settingsSave(); settingsRender();
+    // the gun moves with the start, so the date and time follow it
+    try{ if(state.card==="turkey"){ const g=nextCardGun("turkey",Date.now());
+         if(g!=null){ TIME.user=g; TIME.src="user"; TIME.viaNow=false; } } }catch(e){}
+    try{render(); RT.lastWhole=null; rtInfo();}catch(e){} return; }
   const b=ev.target.closest?ev.target.closest("[data-reset]"):null; if(!b)return;
   const k=b.dataset.reset;
   if(k==="__all")SETTINGS.forEach(d=>{window[d.k]=d.def;});
